@@ -21,6 +21,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../utils/assistant_regex.dart';
+import '../../../utils/chat_image_markdown.dart';
 import '../../chat/models/message_edit_result.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../../chat/widgets/message_edit_sheet.dart';
@@ -389,6 +390,25 @@ class HomePageController extends ChangeNotifier {
     switch (error) {
       case 'audio_attachment_unsupported':
         return l10n.homePageAudioAttachmentUnsupported;
+      case 'image_generation_prompt_required':
+      case 'missing_prompt':
+        return l10n.imageGenerationPromptRequired;
+      case 'missing_api_key':
+        return l10n.imageGenerationNoApiKey;
+      case 'missing_edit_image':
+        return l10n.imageGenerationImageRequired;
+      case 'image_generation_model_required':
+        return l10n.imageGenerationModelRequired;
+      case 'image_generation_model_unsupported':
+        return l10n.imageGenerationModelUnsupported;
+      case 'empty_image_response':
+        return l10n.imageGenerationEmptyResult;
+      case 'invalid_response':
+        return l10n.imageGenerationInvalidResponse;
+      case 'request_failed':
+        return l10n.imageGenerationRequestFailed;
+      case 'local_litert_model_too_large':
+        return l10n.localLiteRtModelTooLargeForDevice;
       default:
         return '${l10n.generationInterrupted}: $error';
     }
@@ -818,6 +838,26 @@ class HomePageController extends ChangeNotifier {
     } else {
       await regenerateAtMessage(newMsg);
     }
+  }
+
+  void continueImageGeneration(ChatMessage message) {
+    final imagePaths = ChatImageMarkdown.extractEditableImagePaths(
+      message.content,
+    );
+    if (imagePaths.isEmpty) return;
+
+    _mediaController.restoreInput(
+      ChatInputData(
+        text: _inputController.text,
+        imagePaths: imagePaths,
+        generateImage: true,
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_context.mounted) return;
+      _inputFocus.requestFocus();
+    });
+    notifyListeners();
   }
 
   Future<void> translateMessage(ChatMessage message) async {

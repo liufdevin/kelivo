@@ -6,9 +6,13 @@ import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/token_usage.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../../../core/providers/model_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/model_override_payload_parser.dart';
+import '../../../core/services/model_override_resolver.dart';
+import '../../../core/services/openai_image_service.dart';
 import '../../../utils/assistant_regex.dart';
 import '../../../core/models/assistant_regex.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
@@ -132,6 +136,71 @@ class ChatActions {
 
   bool _isReasoningModel(String providerKey, String modelId) {
     return generationController.isReasoningModel(providerKey, modelId);
+  }
+
+  bool _isDirectOpenAIImageModel(
+    SettingsProvider settings, {
+    required String providerKey,
+    required String modelId,
+  }) {
+    final cfg = settings.getProviderConfig(providerKey);
+    if (ProviderConfig.classify(providerKey, explicitType: cfg.providerType) !=
+        ProviderKind.openai) {
+      return false;
+    }
+    final ov = ModelOverridePayloadParser.modelOverride(
+      cfg.modelOverrides,
+      modelId,
+    );
+    final upstreamModelId = (ov['apiModelId'] ?? ov['api_model_id'] ?? modelId)
+        .toString()
+        .trim();
+    final effectiveUpstreamId = upstreamModelId.isEmpty
+        ? modelId
+        : upstreamModelId;
+    var info = ModelRegistry.infer(
+      ModelInfo(id: effectiveUpstreamId, displayName: effectiveUpstreamId),
+    );
+    if (ov.isNotEmpty) {
+      info = ModelOverrideResolver.applyModelOverride(info, ov);
+    }
+    final idLooksLikeImage =
+        effectiveUpstreamId.toLowerCase().contains('image') ||
+        modelId.toLowerCase().contains('image');
+    return idLooksLikeImage && info.output.contains(Modality.image);
+  }
+
+  @visibleForTesting
+  static String? imageGenerationPromptFromText(String text) {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return null;
+    final lower = trimmed.toLowerCase();
+    const commands = <String>[
+      '/image',
+      '/img',
+      '/draw',
+      '/生图',
+      '/画图',
+      '生图',
+      '画图',
+      '生成图片',
+    ];
+    for (final command in commands) {
+      final commandLower = command.toLowerCase();
+      if (lower == commandLower) return '';
+      if (lower.startsWith(commandLower)) {
+        final next = trimmed.substring(command.length);
+        if (next.isEmpty) return '';
+        if (next.startsWith(' ') ||
+            next.startsWith('\n') ||
+            next.startsWith('\t') ||
+            next.startsWith(':') ||
+            next.startsWith('：')) {
+          return next.replaceFirst(RegExp(r'^[\s:：]+'), '').trim();
+        }
+      }
+    }
+    return null;
   }
 
   bool _isReasoningEnabled(int? budget) {
@@ -283,8 +352,43 @@ class ChatActions {
     if (modelConfig.providerKey == null || modelConfig.modelId == null) {
       return ChatActionResult.noModel();
     }
-    final providerKey = modelConfig.providerKey!;
-    final modelId = modelConfig.modelId!;
+    final requestedImagePrompt = input.generateImage
+        ? content
+        : imageGenerationPromptFromText(content);
+    var providerKey = modelConfig.providerKey!;
+    var modelId = modelConfig.modelId!;
+    var useDirectImageApi = _isDirectOpenAIImageModel(
+      settings,
+      providerKey: providerKey,
+      modelId: modelId,
+    );
+    if (requestedImagePrompt != null &&
+        assistant?.imageModelProvider != null &&
+        assistant?.imageModelId != null) {
+      providerKey = assistant!.imageModelProvider!;
+      modelId = assistant.imageModelId!;
+      useDirectImageApi = _isDirectOpenAIImageModel(
+        settings,
+        providerKey: providerKey,
+        modelId: modelId,
+      );
+    }
+
+    if (requestedImagePrompt != null && requestedImagePrompt.isEmpty) {
+      return ChatActionResult.error('image_generation_prompt_required');
+    }
+
+    if (requestedImagePrompt != null && !useDirectImageApi) {
+      return ChatActionResult.error(
+        assistant?.imageModelProvider == null || assistant?.imageModelId == null
+            ? 'image_generation_model_required'
+            : 'image_generation_model_unsupported',
+      );
+    }
+
+    if (useDirectImageApi && content.isEmpty) {
+      return ChatActionResult.error('image_generation_prompt_required');
+    }
 
     if (_hasUnsupportedAudioAttachments(
       messages: _messages,
@@ -377,7 +481,17 @@ class ChatActions {
         generateTitleOnFinish: true,
       );
 
-      await _executeGeneration(ctx);
+      if (useDirectImageApi) {
+        unawaited(
+          _executeDirectOpenAIImageGeneration(
+            ctx,
+            prompt: requestedImagePrompt ?? content,
+            imagePaths: userImagePaths,
+          ),
+        );
+      } else {
+        await _executeGeneration(ctx);
+      }
       return ChatActionResult.success(assistantMessage);
     } catch (e) {
       // Ensure file processing indicator is cleared on error
@@ -440,8 +554,8 @@ class ChatActions {
     if (modelConfig.providerKey == null || modelConfig.modelId == null) {
       return ChatActionResult.noModel();
     }
-    final providerKey = modelConfig.providerKey!;
-    final modelId = modelConfig.modelId!;
+    var providerKey = modelConfig.providerKey!;
+    var modelId = modelConfig.modelId!;
 
     final projectedMessages = ChatActions.projectMessagesForRegenerationContext(
       messages: _messages,
@@ -468,6 +582,41 @@ class ChatActions {
         _messages.removeWhere((message) => removeIds.contains(message.id));
         onMessagesChanged?.call();
       }
+    }
+
+    final lastUserPrompt = _latestUserPromptText(
+      messageGenerationService.messageBuilderService.buildApiMessages(
+        messages: projectedMessages,
+        versionSelections: _versionSelections,
+        currentConversation: conversation,
+      ),
+    );
+    final requestedImagePrompt = imageGenerationPromptFromText(lastUserPrompt);
+    var useDirectImageApi = _isDirectOpenAIImageModel(
+      settings,
+      providerKey: providerKey,
+      modelId: modelId,
+    );
+    if (requestedImagePrompt != null &&
+        assistant?.imageModelProvider != null &&
+        assistant?.imageModelId != null) {
+      providerKey = assistant!.imageModelProvider!;
+      modelId = assistant.imageModelId!;
+      useDirectImageApi = _isDirectOpenAIImageModel(
+        settings,
+        providerKey: providerKey,
+        modelId: modelId,
+      );
+    }
+    if (requestedImagePrompt != null && requestedImagePrompt.isEmpty) {
+      return ChatActionResult.error('image_generation_prompt_required');
+    }
+    if (requestedImagePrompt != null && !useDirectImageApi) {
+      return ChatActionResult.error(
+        assistant?.imageModelProvider == null || assistant?.imageModelId == null
+            ? 'image_generation_model_required'
+            : 'image_generation_model_unsupported',
+      );
     }
 
     // Create assistant message placeholder (new version)
@@ -554,7 +703,19 @@ class ChatActions {
       generateTitleOnFinish: false,
     );
 
-    await _executeGeneration(ctx);
+    if (useDirectImageApi) {
+      unawaited(
+        _executeDirectOpenAIImageGeneration(
+          ctx,
+          prompt:
+              requestedImagePrompt ??
+              _latestUserPromptText(prepared.apiMessages),
+          imagePaths: userImagePaths,
+        ),
+      );
+    } else {
+      await _executeGeneration(ctx);
+    }
     return ChatActionResult.success(assistantMessage);
   }
 
@@ -692,6 +853,127 @@ class ChatActions {
     } catch (e) {
       await _handleStreamError(e, state);
     }
+  }
+
+  Future<void> _executeDirectOpenAIImageGeneration(
+    stream_ctrl.GenerationContext ctx, {
+    required String prompt,
+    required List<String> imagePaths,
+  }) async {
+    final messageId = ctx.assistantMessage.id;
+    final conversationId = ctx.assistantMessage.conversationId;
+    final startedAt = DateTime.now();
+    streamController.markStreamingStarted(messageId);
+
+    try {
+      final cleanPrompt = prompt.trim();
+      if (cleanPrompt.isEmpty) {
+        throw const OpenAIImageServiceException('missing_prompt');
+      }
+      final result = imagePaths.isNotEmpty
+          ? await OpenAIImageService.edit(
+              config: ctx.config,
+              prompt: cleanPrompt,
+              imagePaths: imagePaths,
+              model: ctx.modelId,
+            )
+          : await OpenAIImageService.generate(
+              config: ctx.config,
+              prompt: cleanPrompt,
+              model: ctx.modelId,
+            );
+
+      final stillStreaming = _messages.any(
+        (m) => m.id == messageId && m.isStreaming,
+      );
+      if (!stillStreaming) return;
+
+      final content = result.imagePaths.map((path) => '\n![]($path)\n').join();
+      final durationMs = DateTime.now().difference(startedAt).inMilliseconds;
+
+      streamController.markStreamingEnded(messageId);
+      streamController.cleanupTimers(messageId);
+      streamController.streamingContentNotifier.updateContent(
+        messageId,
+        content,
+        0,
+        durationMs: durationMs,
+      );
+
+      final sanitizedContent =
+          await MarkdownMediaSanitizer.replaceInlineBase64Images(content);
+      await chatService.updateMessage(
+        messageId,
+        content: sanitizedContent,
+        isStreaming: false,
+        durationMs: durationMs,
+      );
+
+      final index = _messages.indexWhere((m) => m.id == messageId);
+      if (index != -1) {
+        _messages[index] = _messages[index].copyWith(
+          content: sanitizedContent,
+          isStreaming: false,
+          durationMs: durationMs,
+        );
+        onMessagesChanged?.call();
+      }
+      streamController.removeStreamingNotifier(messageId);
+      _setConversationLoading(conversationId, false);
+
+      if (ctx.generateTitleOnFinish) {
+        onMaybeGenerateTitle?.call(conversationId);
+      }
+      onMaybeGenerateSummary?.call(conversationId);
+      onStreamFinished?.call();
+    } catch (e) {
+      final error = e is OpenAIImageServiceException ? e.message : e.toString();
+      await _finishDirectOpenAIImageGenerationWithError(ctx, error: error);
+    }
+  }
+
+  Future<void> _finishDirectOpenAIImageGenerationWithError(
+    stream_ctrl.GenerationContext ctx, {
+    required String error,
+  }) async {
+    final messageId = ctx.assistantMessage.id;
+    final conversationId = ctx.assistantMessage.conversationId;
+    streamController.markStreamingEnded(messageId);
+    streamController.cleanupTimers(messageId);
+    await chatService.updateMessage(
+      messageId,
+      content: error,
+      isStreaming: false,
+    );
+    final index = _messages.indexWhere((m) => m.id == messageId);
+    if (index != -1) {
+      _messages[index] = _messages[index].copyWith(
+        content: error,
+        isStreaming: false,
+      );
+      onMessagesChanged?.call();
+    }
+    streamController.removeStreamingNotifier(messageId);
+    _setConversationLoading(conversationId, false);
+    onStreamError?.call(error);
+    onStreamFinished?.call();
+  }
+
+  String _latestUserPromptText(List<Map<String, dynamic>> apiMessages) {
+    for (var i = apiMessages.length - 1; i >= 0; i--) {
+      final message = apiMessages[i];
+      if ((message['role'] ?? '').toString() != 'user') continue;
+      final raw = (message['content'] ?? '').toString();
+      return _stripAttachmentMarkers(raw);
+    }
+    return '';
+  }
+
+  String _stripAttachmentMarkers(String raw) {
+    return raw
+        .replaceAll(RegExp(r'\n?\[image:[^\]]+\]'), '')
+        .replaceAll(RegExp(r'\n?\[file:[^\]]+\]'), '')
+        .trim();
   }
 
   // ============================================================================

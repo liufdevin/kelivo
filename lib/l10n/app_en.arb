@@ -17,6 +17,7 @@
   "settingsPageProviders": "Providers",
   "settingsPageHotkeys": "Hotkeys",
   "settingsPageSearch": "Search",
+  "settingsPageImageGeneration": "Image Generation",
   "settingsPageTts": "TTS",
   "settingsPageMcp": "MCP",
   "settingsPageQuickPhrase": "Quick Phrase",
@@ -36,6 +37,61 @@
       }
     }
   },
+  "imageGenerationPageTitle": "Image Generation",
+  "imageGenerationProviderLabel": "Provider",
+  "imageGenerationModelLabel": "Model",
+  "imageGenerationModeLabel": "Mode",
+  "imageGenerationModeGenerate": "Generate",
+  "imageGenerationModeEdit": "Edit Image",
+  "imageGenerationPromptLabel": "Prompt",
+  "imageGenerationPromptHint": "Describe the image you want",
+  "imageGenerationSizeLabel": "Size",
+  "imageGenerationQualityLabel": "Quality",
+  "imageGenerationOutputFormatLabel": "Format",
+  "imageGenerationCountLabel": "Count",
+  "imageGenerationPickImages": "Pick Images",
+  "imageGenerationPickedImages": "{count} selected",
+  "@imageGenerationPickedImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageGenerationClearImages": "Clear",
+  "imageGenerationMaskNotSelected": "No mask selected",
+  "imageGenerationMaskSelected": "Mask selected",
+  "imageGenerationPickMask": "Pick Mask",
+  "imageGenerationClearMask": "Clear Mask",
+  "imageGenerationGenerateButton": "Generate Image",
+  "imageGenerationEditButton": "Edit Image",
+  "imageGenerationGenerating": "Generating…",
+  "imageGenerationNoProvider": "No enabled OpenAI-compatible provider",
+  "imageGenerationModelRequired": "Set an image model for this assistant first",
+  "imageGenerationModelUnsupported": "The selected image model is not an OpenAI-compatible image model",
+  "imageGenerationNoApiKey": "The selected provider has no API key",
+  "imageGenerationPromptRequired": "Enter a prompt first",
+  "imageGenerationImageRequired": "Select at least one input image",
+  "imageGenerationSuccess": "{count} image(s) generated",
+  "@imageGenerationSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageGenerationFailed": "Image request failed: {error}",
+  "@imageGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "imageGenerationEmptyResult": "The image API returned no image",
+  "imageGenerationInvalidResponse": "The image API returned an invalid response",
+  "imageGenerationRequestFailed": "Image request failed",
+  "imageGenerationResultTitle": "Results",
   "storageSpacePageTitle": "Storage Space",
   "storageSpaceRefreshTooltip": "Refresh",
   "storageSpaceLoadFailed": "Failed to load storage usage",
@@ -322,6 +378,9 @@
   "assistantEditUseAssistantNameTitle": "Use Assistant Name",
   "assistantEditChatModelTitle": "Chat Model",
   "assistantEditChatModelSubtitle": "Default chat model for this assistant (fallback to global)",
+  "assistantEditImageModelTitle": "Image Model",
+  "assistantEditImageModelSubtitle": "Used in chat when a message starts with /image, /img, 生图, or 画图",
+  "assistantEditImageModelUnset": "No image model",
   "assistantEditTemperatureDescription": "Controls randomness, range 0–2",
   "assistantEditTopPDescription": "Do not change unless you know what you are doing",
   "assistantEditParameterDisabled": "Disabled (uses provider default)",
@@ -730,6 +789,7 @@
   "chatMessageWidgetArguments": "Arguments",
   "chatMessageWidgetResult": "Result",
   "chatMessageWidgetImages": "Images",
+  "chatMessageWidgetContinueImageGeneration": "Edit image",
   "chatMessageWidgetCitationsCount": "Citations ({count})",
   "@chatMessageWidgetCitationsCount": {
     "placeholders": {
@@ -894,6 +954,7 @@
   "sideDrawerRename": "Rename",
   "chatInputBarHint": "Type a message for AI",
   "chatInputBarSelectModelTooltip": "Select Model",
+  "chatInputBarImageGenerationTooltip": "Image Generation",
   "chatInputBarOnlineSearchTooltip": "Online Search",
   "chatInputBarReasoningStrengthTooltip": "Reasoning Strength",
   "chatInputBarMcpServersTooltip": "MCP Servers",
@@ -1132,6 +1193,73 @@
   "providerDetailPageConfigTab": "Config",
   "providerDetailPageModelsTab": "Models",
   "providerDetailPageNetworkTab": "Network",
+  "localModelManagementEntryTitle": "Local Model Management",
+  "localModelManagementTitle": "Local Models",
+  "localModelManagementModeLabel": "Mode",
+  "localModelManagementLiteRtMode": "LiteRT-LM file",
+  "localModelManagementGgufMode": "GGUF file",
+  "localModelManagementOllamaMode": "Ollama / OpenAI-compatible",
+  "localModelManagementModelFileLabel": "Model file",
+  "localModelManagementFileStatusLabel": "File status",
+  "localModelManagementFileMissing": "File missing",
+  "localModelManagementFileSizeBytes": "{bytes} bytes",
+  "@localModelManagementFileSizeBytes": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementBaseUrlLabel": "Base URL",
+  "localModelManagementModelIdLabel": "Model ID",
+  "localModelManagementImportButton": "Import",
+  "localModelManagementDiscoverButton": "Discover",
+  "localModelManagementTestButton": "Test",
+  "localModelManagementTesting": "Testing...",
+  "localModelManagementDiscovering": "Discovering...",
+  "localModelManagementNoModelsFound": "No local models found.",
+  "localModelManagementDiscoveredModels": "Models",
+  "localModelManagementModelsUpdated": "Updated {count} model(s)",
+  "@localModelManagementModelsUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementTestSuccess": "Test succeeded",
+  "localModelManagementTestFailed": "Test failed: {error}",
+  "@localModelManagementTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementDiscoverFailed": "Discovery failed: {error}",
+  "@localModelManagementDiscoverFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportSuccess": "Imported {fileName}",
+  "@localModelManagementImportSuccess": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportFailed": "Import failed: {error}",
+  "@localModelManagementImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "providerDetailPageEnabledTitle": "Enabled",
   "providerDetailPageManageSectionTitle": "Manage",
   "providerDetailPageNameLabel": "Name",
@@ -1212,13 +1340,56 @@
   "providersPageModelsCountSuffix": " models",
   "providersPageModelsCountSingleSuffix": " models",
   "addProviderSheetTitle": "Add Provider",
+  "addProviderSheetOpenAiTab": "OpenAI",
+  "addProviderSheetGoogleTab": "Google",
+  "addProviderSheetClaudeTab": "Claude",
+  "addProviderSheetLocalTab": "Local",
   "addProviderSheetEnabledLabel": "Enabled",
   "addProviderSheetNameLabel": "Name",
+  "addProviderSheetApiKeyLabel": "API Key",
+  "addProviderSheetBaseUrlLabel": "Base URL",
   "addProviderSheetApiPathLabel": "API Path",
+  "addProviderSheetResponsesApiLabel": "Responses API",
+  "addProviderSheetVertexAiLabel": "Vertex AI",
   "addProviderSheetVertexAiLocationLabel": "Location",
   "addProviderSheetVertexAiProjectIdLabel": "Project ID",
   "addProviderSheetVertexAiServiceAccountJsonLabel": "Service Account JSON (paste or import)",
   "addProviderSheetImportJsonButton": "Import JSON",
+  "addProviderSheetLocalDefaultName": "Local Model",
+  "addProviderSheetLocalModeLiteRt": "LiteRT file",
+  "addProviderSheetLocalModeGguf": "GGUF file",
+  "addProviderSheetLocalModeOpenAICompatible": "Ollama / OpenAI-compatible",
+  "addProviderSheetLocalModelPathLabel": "LiteRT-LM model file",
+  "addProviderSheetLocalModelPathHint": "Import or paste a .litertlm model path",
+  "addProviderSheetImportLitertButton": "Import .litertlm",
+  "addProviderSheetLocalGgufModelPathLabel": "GGUF model file",
+  "addProviderSheetLocalGgufModelPathHint": "Import or paste a .gguf model path",
+  "addProviderSheetImportGgufButton": "Import .gguf",
+  "addProviderSheetLocalNoModelFile": "Choose a .litertlm model file first.",
+  "addProviderSheetLocalNoGgufModelFile": "Choose a .gguf model file first.",
+  "addProviderSheetLocalImported": "Imported {fileName}",
+  "@addProviderSheetLocalImported": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImporting": "Importing model...",
+  "addProviderSheetLocalImportingProgress": "Importing model... {percent}",
+  "@addProviderSheetLocalImportingProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImportNotLiteRt": "Please choose a .litertlm model file.",
+  "addProviderSheetLocalImportNotGguf": "Please choose a .gguf model file.",
+  "addProviderSheetLocalImportEmptyFile": "The selected model file is empty.",
+  "addProviderSheetLocalImportUnreadable": "Could not read the selected model file.",
+  "addProviderSheetLocalImportFailed": "Model import failed.",
+  "addProviderSheetLocalModelIdLabel": "Model ID",
   "addProviderSheetCancelButton": "Cancel",
   "addProviderSheetAddButton": "Add",
   "importProviderSheetTitle": "Import Provider",
@@ -1290,8 +1461,12 @@
   "searchServicesAddDialogBingLocal": "Local",
   "searchServicesAddDialogCancel": "Cancel",
   "searchServicesAddDialogAdd": "Add",
+  "searchServicesFieldApiKey": "API Key",
   "searchServicesAddDialogApiKeyRequired": "API Key is required",
   "searchServicesFieldCustomUrlOptional": "Custom URL (optional)",
+  "searchServicesFieldSearchEngineId": "Search engine ID",
+  "searchServicesFieldModelOptional": "Model (optional)",
+  "searchServicesAddDialogSearchEngineIdRequired": "Search engine ID is required",
   "searchServicesAddDialogInstanceUrl": "Instance URL",
   "searchServicesAddDialogUrlRequired": "URL is required",
   "searchServicesAddDialogEnginesOptional": "Engines (optional)",
@@ -1304,6 +1479,7 @@
   "searchServicesEditDialogSave": "Save",
   "searchServicesEditDialogBingLocalNoConfig": "No configuration required for Bing Local search.",
   "searchServicesEditDialogApiKeyRequired": "API Key is required",
+  "searchServicesEditDialogSearchEngineIdRequired": "Search engine ID is required",
   "searchServicesEditDialogInstanceUrl": "Instance URL",
   "searchServicesEditDialogUrlRequired": "URL is required",
   "searchServicesEditDialogEnginesOptional": "Engines (optional)",
@@ -1536,6 +1712,8 @@
   "searchProviderBingLocalDescription": "Uses web scraping to fetch Bing results. No API key required; may be unstable.",
   "searchProviderDuckDuckGoDescription": "Privacy-focused DuckDuckGo search via DDGS. No API key required; supports region selection.",
   "searchProviderBraveDescription": "Independent search engine by Brave. Privacy-focused with no tracking or profiling.",
+  "searchProviderGoogleDescription": "Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.",
+  "searchProviderGrokDescription": "xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.",
   "searchProviderExaDescription": "Neural search with semantic understanding. Great for research and finding specific content.",
   "searchProviderLinkUpDescription": "Search API with sourced answers. Provides both results and AI-generated summaries.",
   "searchProviderMetasoDescription": "Chinese search by Metaso. Optimized for Chinese content with AI capabilities.",
@@ -1552,6 +1730,8 @@
   "searchServiceNameSearXNG": "SearXNG",
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave Search",
+  "searchServiceNameGoogle": "Google",
+  "searchServiceNameGrok": "Grok",
   "searchServiceNameMetaso": "Metaso",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
@@ -1560,6 +1740,7 @@
   "searchServiceNameBocha": "Bocha",
   "searchProviderBochaDescription": "Bocha web search API. Accurate web results with optional summaries.",
   "generationInterrupted": "Generation interrupted",
+  "localLiteRtModelTooLargeForDevice": "This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.",
   "titleForLocale": "New Chat",
   "quickPhraseBackTooltip": "Back",
   "quickPhraseGlobalTitle": "Quick Phrase",

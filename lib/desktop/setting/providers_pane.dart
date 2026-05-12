@@ -260,9 +260,14 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
               if (ok != true) return;
               try {
                 for (final assistant in ap.assistants) {
-                  if (assistant.chatModelProvider == item.key) {
+                  final clearChat = assistant.chatModelProvider == item.key;
+                  final clearImage = assistant.imageModelProvider == item.key;
+                  if (clearChat || clearImage) {
                     await ap.updateAssistant(
-                      assistant.copyWith(clearChatModel: true),
+                      assistant.copyWith(
+                        clearChatModel: clearChat,
+                        clearImageModel: clearImage,
+                      ),
                     );
                   }
                 }
@@ -1128,9 +1133,16 @@ class _DesktopProviderDetailPaneState
                       await sp.clearSelectionsForProvider(widget.providerKey);
                       try {
                         for (final a in ap.assistants) {
-                          if (a.chatModelProvider == widget.providerKey) {
+                          final clearChat =
+                              a.chatModelProvider == widget.providerKey;
+                          final clearImage =
+                              a.imageModelProvider == widget.providerKey;
+                          if (clearChat || clearImage) {
                             await ap.updateAssistant(
-                              a.copyWith(clearChatModel: true),
+                              a.copyWith(
+                                clearChatModel: clearChat,
+                                clearImageModel: clearImage,
+                              ),
                             );
                           }
                         }
@@ -1195,69 +1207,6 @@ class _DesktopProviderDetailPaneState
                                 ..onTap = () async {
                                   final uri = Uri.parse(
                                     'https://dashboard.x-aio.com',
-                                  );
-                                  try {
-                                    final ok = await launchUrl(
-                                      uri,
-                                      mode: LaunchMode.externalApplication,
-                                    );
-                                    if (!ok) {
-                                      await launchUrl(uri);
-                                    }
-                                  } catch (_) {
-                                    await launchUrl(uri);
-                                  }
-                                },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              if (widget.providerKey.toLowerCase() == 'siliconflow') ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cs.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: cs.primary.withValues(alpha: 0.35),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '已内置硅基流动的免费模型，无需 API Key。若需更强大的模型，请申请并在此配置你自己的 API Key。',
-                        style: TextStyle(
-                          color: cs.onSurface.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text.rich(
-                        TextSpan(
-                          text: '官网：',
-                          style: TextStyle(
-                            color: cs.onSurface.withValues(alpha: 0.8),
-                          ),
-                          children: [
-                            TextSpan(
-                              text: 'https://siliconflow.cn',
-                              style: TextStyle(
-                                color: cs.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                              recognizer: TapGestureRecognizer()
-                                ..onTap = () async {
-                                  final uri = Uri.parse(
-                                    'https://siliconflow.cn',
                                   );
                                   try {
                                     final ok = await launchUrl(
@@ -4031,7 +3980,11 @@ class _DesktopProviderDetailPaneState
       ),
     );
     if (ok != true) return;
-    final cleared = cfg.copyWith(models: const [], modelOverrides: const {});
+    final cleared = cfg.copyWith(
+      models: const [],
+      cachedModels: const [],
+      modelOverrides: const {},
+    );
     await sp.setProviderConfig(widget.providerKey, cleared);
     if (!mounted) return;
     setState(() {
@@ -5946,10 +5899,18 @@ class _ModelRow extends StatelessWidget {
                   await sp.clearSelectionsForModel(providerKey, modelId);
                   try {
                     for (final a in ap.assistants) {
-                      if (a.chatModelProvider == providerKey &&
-                          a.chatModelId == modelId) {
+                      final clearChat =
+                          a.chatModelProvider == providerKey &&
+                          a.chatModelId == modelId;
+                      final clearImage =
+                          a.imageModelProvider == providerKey &&
+                          a.imageModelId == modelId;
+                      if (clearChat || clearImage) {
                         await ap.updateAssistant(
-                          a.copyWith(clearChatModel: true),
+                          a.copyWith(
+                            clearChatModel: clearChat,
+                            clearImageModel: clearImage,
+                          ),
                         );
                       }
                     }

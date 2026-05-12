@@ -10,9 +10,9 @@ import '../../mcp/pages/mcp_page.dart';
 import '../../assistant/pages/assistant_settings_page.dart';
 import 'about_page.dart';
 import 'tts_services_page.dart';
-import 'sponsor_page.dart';
 import 'log_viewer_page.dart';
 import '../../search/pages/search_services_page.dart';
+import '../../image_generation/pages/image_generation_page.dart';
 import '../../backup/pages/backup_page.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import '../../instruction_injection/pages/instruction_injection_page.dart';
@@ -20,7 +20,6 @@ import '../../world_book/pages/world_book_page.dart';
 import 'network_proxy_page.dart';
 import 'storage_space_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/haptics.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -227,6 +226,19 @@ class SettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosNavRow(
                 context,
+                icon: Lucide.Image,
+                label: l10n.settingsPageImageGeneration,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ImageGenerationPage(),
+                    ),
+                  );
+                },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
                 icon: Lucide.Volume2,
                 label: l10n.settingsPageTts,
                 onTap: () {
@@ -338,18 +350,6 @@ class SettingsPage extends StatelessWidget {
                   ).push(MaterialPageRoute(builder: (_) => const AboutPage()));
                 },
               ),
-              _iosDivider(context),
-              _iosNavRow(
-                context,
-                icon: Lucide.Library,
-                label: l10n.settingsPageDocs,
-                onTap: () async {
-                  final uri = Uri.parse('https://kelivo.psycheas.top/');
-                  if (!await launchUrl(uri, mode: LaunchMode.platformDefault)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-              ),
               if (settings.requestLogEnabled || settings.flutterLogEnabled) ...[
                 _iosDivider(context),
                 _iosNavRow(
@@ -363,17 +363,6 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               ],
-              _iosDivider(context),
-              _iosNavRow(
-                context,
-                icon: Lucide.Heart,
-                label: l10n.settingsPageSponsor,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SponsorPage()),
-                  );
-                },
-              ),
               // _iosDivider(context),
               // _iosNavRow(
               //   context,

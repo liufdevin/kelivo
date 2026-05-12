@@ -6,6 +6,7 @@ import '../../models/chat_message.dart';
 import '../../models/conversation.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/app_directories.dart';
+import '../../../utils/text_encoding_sanitizer.dart';
 
 class ChatService extends ChangeNotifier {
   static const String _conversationsBoxName = 'conversations';
@@ -56,6 +57,7 @@ class ChatService extends ChangeNotifier {
 
     // Migrate any persisted message content that references old iOS sandbox paths
     await _migrateSandboxPaths();
+    await _repairPersistedConversationTitles();
 
     // Reset any stale isStreaming flags left over from a previous app crash or
     // force-quit.  After a fresh launch no message can be actively streaming.
@@ -283,6 +285,22 @@ class ChatService extends ChangeNotifier {
     }
   }
 
+  Future<void> _repairPersistedConversationTitles() async {
+    try {
+      if (_conversationsBox.isEmpty) return;
+      for (final key in _conversationsBox.keys) {
+        final conversation = _conversationsBox.get(key);
+        if (conversation == null) continue;
+        final repaired = repairMojibakeText(conversation.title);
+        if (repaired == conversation.title) continue;
+        conversation.title = repaired;
+        await conversation.save();
+      }
+    } catch (_) {
+      // best-effort migration; ignore errors
+    }
+  }
+
   /// Reset stale isStreaming flags left over from a previous app crash or
   /// force-quit.  After a fresh launch no message can be actively streaming,
   /// so any persisted `isStreaming: true` is stale and must be cleared to
@@ -481,10 +499,11 @@ class ChatService extends ChangeNotifier {
 
   Future<void> renameConversation(String id, String newTitle) async {
     if (!_initialized) return;
+    final normalizedTitle = repairMojibakeText(newTitle);
 
     if (_draftConversations.containsKey(id)) {
       final draft = _draftConversations[id]!;
-      draft.title = newTitle;
+      draft.title = normalizedTitle;
       draft.updatedAt = DateTime.now();
       notifyListeners();
       return;
@@ -492,7 +511,7 @@ class ChatService extends ChangeNotifier {
     final conversation = _conversationsBox.get(id);
     if (conversation == null) return;
 
-    conversation.title = newTitle;
+    conversation.title = normalizedTitle;
     conversation.updatedAt = DateTime.now();
     await conversation.save();
     notifyListeners();

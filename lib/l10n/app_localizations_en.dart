@@ -64,6 +64,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageSearch => 'Search';
 
   @override
+  String get settingsPageImageGeneration => 'Image Generation';
+
+  @override
   String get settingsPageTts => 'TTS';
 
   @override
@@ -91,6 +94,118 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsPageFilesCount(int count, String size) {
     return '$count files · $size';
   }
+
+  @override
+  String get imageGenerationPageTitle => 'Image Generation';
+
+  @override
+  String get imageGenerationProviderLabel => 'Provider';
+
+  @override
+  String get imageGenerationModelLabel => 'Model';
+
+  @override
+  String get imageGenerationModeLabel => 'Mode';
+
+  @override
+  String get imageGenerationModeGenerate => 'Generate';
+
+  @override
+  String get imageGenerationModeEdit => 'Edit Image';
+
+  @override
+  String get imageGenerationPromptLabel => 'Prompt';
+
+  @override
+  String get imageGenerationPromptHint => 'Describe the image you want';
+
+  @override
+  String get imageGenerationSizeLabel => 'Size';
+
+  @override
+  String get imageGenerationQualityLabel => 'Quality';
+
+  @override
+  String get imageGenerationOutputFormatLabel => 'Format';
+
+  @override
+  String get imageGenerationCountLabel => 'Count';
+
+  @override
+  String get imageGenerationPickImages => 'Pick Images';
+
+  @override
+  String imageGenerationPickedImages(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get imageGenerationClearImages => 'Clear';
+
+  @override
+  String get imageGenerationMaskNotSelected => 'No mask selected';
+
+  @override
+  String get imageGenerationMaskSelected => 'Mask selected';
+
+  @override
+  String get imageGenerationPickMask => 'Pick Mask';
+
+  @override
+  String get imageGenerationClearMask => 'Clear Mask';
+
+  @override
+  String get imageGenerationGenerateButton => 'Generate Image';
+
+  @override
+  String get imageGenerationEditButton => 'Edit Image';
+
+  @override
+  String get imageGenerationGenerating => 'Generating…';
+
+  @override
+  String get imageGenerationNoProvider =>
+      'No enabled OpenAI-compatible provider';
+
+  @override
+  String get imageGenerationModelRequired =>
+      'Set an image model for this assistant first';
+
+  @override
+  String get imageGenerationModelUnsupported =>
+      'The selected image model is not an OpenAI-compatible image model';
+
+  @override
+  String get imageGenerationNoApiKey => 'The selected provider has no API key';
+
+  @override
+  String get imageGenerationPromptRequired => 'Enter a prompt first';
+
+  @override
+  String get imageGenerationImageRequired => 'Select at least one input image';
+
+  @override
+  String imageGenerationSuccess(int count) {
+    return '$count image(s) generated';
+  }
+
+  @override
+  String imageGenerationFailed(String error) {
+    return 'Image request failed: $error';
+  }
+
+  @override
+  String get imageGenerationEmptyResult => 'The image API returned no image';
+
+  @override
+  String get imageGenerationInvalidResponse =>
+      'The image API returned an invalid response';
+
+  @override
+  String get imageGenerationRequestFailed => 'Image request failed';
+
+  @override
+  String get imageGenerationResultTitle => 'Results';
 
   @override
   String get storageSpacePageTitle => 'Storage Space';
@@ -669,6 +784,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantEditChatModelSubtitle =>
       'Default chat model for this assistant (fallback to global)';
+
+  @override
+  String get assistantEditImageModelTitle => 'Image Model';
+
+  @override
+  String get assistantEditImageModelSubtitle =>
+      'Used in chat when a message starts with /image, /img, 生图, or 画图';
+
+  @override
+  String get assistantEditImageModelUnset => 'No image model';
 
   @override
   String get assistantEditTemperatureDescription =>
@@ -1697,6 +1822,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetImages => 'Images';
 
   @override
+  String get chatMessageWidgetContinueImageGeneration => 'Edit image';
+
+  @override
   String chatMessageWidgetCitationsCount(int count) {
     return 'Citations ($count)';
   }
@@ -2032,6 +2160,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarSelectModelTooltip => 'Select Model';
+
+  @override
+  String get chatInputBarImageGenerationTooltip => 'Image Generation';
 
   @override
   String get chatInputBarOnlineSearchTooltip => 'Online Search';
@@ -2578,6 +2709,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageNetworkTab => 'Network';
 
   @override
+  String get localModelManagementEntryTitle => 'Local Model Management';
+
+  @override
+  String get localModelManagementTitle => 'Local Models';
+
+  @override
+  String get localModelManagementModeLabel => 'Mode';
+
+  @override
+  String get localModelManagementLiteRtMode => 'LiteRT-LM file';
+
+  @override
+  String get localModelManagementGgufMode => 'GGUF file';
+
+  @override
+  String get localModelManagementOllamaMode => 'Ollama / OpenAI-compatible';
+
+  @override
+  String get localModelManagementModelFileLabel => 'Model file';
+
+  @override
+  String get localModelManagementFileStatusLabel => 'File status';
+
+  @override
+  String get localModelManagementFileMissing => 'File missing';
+
+  @override
+  String localModelManagementFileSizeBytes(int bytes) {
+    return '$bytes bytes';
+  }
+
+  @override
+  String get localModelManagementBaseUrlLabel => 'Base URL';
+
+  @override
+  String get localModelManagementModelIdLabel => 'Model ID';
+
+  @override
+  String get localModelManagementImportButton => 'Import';
+
+  @override
+  String get localModelManagementDiscoverButton => 'Discover';
+
+  @override
+  String get localModelManagementTestButton => 'Test';
+
+  @override
+  String get localModelManagementTesting => 'Testing...';
+
+  @override
+  String get localModelManagementDiscovering => 'Discovering...';
+
+  @override
+  String get localModelManagementNoModelsFound => 'No local models found.';
+
+  @override
+  String get localModelManagementDiscoveredModels => 'Models';
+
+  @override
+  String localModelManagementModelsUpdated(int count) {
+    return 'Updated $count model(s)';
+  }
+
+  @override
+  String get localModelManagementTestSuccess => 'Test succeeded';
+
+  @override
+  String localModelManagementTestFailed(String error) {
+    return 'Test failed: $error';
+  }
+
+  @override
+  String localModelManagementDiscoverFailed(String error) {
+    return 'Discovery failed: $error';
+  }
+
+  @override
+  String localModelManagementImportSuccess(String fileName) {
+    return 'Imported $fileName';
+  }
+
+  @override
+  String localModelManagementImportFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
   String get providerDetailPageEnabledTitle => 'Enabled';
 
   @override
@@ -2825,13 +3043,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addProviderSheetTitle => 'Add Provider';
 
   @override
+  String get addProviderSheetOpenAiTab => 'OpenAI';
+
+  @override
+  String get addProviderSheetGoogleTab => 'Google';
+
+  @override
+  String get addProviderSheetClaudeTab => 'Claude';
+
+  @override
+  String get addProviderSheetLocalTab => 'Local';
+
+  @override
   String get addProviderSheetEnabledLabel => 'Enabled';
 
   @override
   String get addProviderSheetNameLabel => 'Name';
 
   @override
+  String get addProviderSheetApiKeyLabel => 'API Key';
+
+  @override
+  String get addProviderSheetBaseUrlLabel => 'Base URL';
+
+  @override
   String get addProviderSheetApiPathLabel => 'API Path';
+
+  @override
+  String get addProviderSheetResponsesApiLabel => 'Responses API';
+
+  @override
+  String get addProviderSheetVertexAiLabel => 'Vertex AI';
 
   @override
   String get addProviderSheetVertexAiLocationLabel => 'Location';
@@ -2845,6 +3087,82 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addProviderSheetImportJsonButton => 'Import JSON';
+
+  @override
+  String get addProviderSheetLocalDefaultName => 'Local Model';
+
+  @override
+  String get addProviderSheetLocalModeLiteRt => 'LiteRT file';
+
+  @override
+  String get addProviderSheetLocalModeGguf => 'GGUF file';
+
+  @override
+  String get addProviderSheetLocalModeOpenAICompatible =>
+      'Ollama / OpenAI-compatible';
+
+  @override
+  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM model file';
+
+  @override
+  String get addProviderSheetLocalModelPathHint =>
+      'Import or paste a .litertlm model path';
+
+  @override
+  String get addProviderSheetImportLitertButton => 'Import .litertlm';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF model file';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathHint =>
+      'Import or paste a .gguf model path';
+
+  @override
+  String get addProviderSheetImportGgufButton => 'Import .gguf';
+
+  @override
+  String get addProviderSheetLocalNoModelFile =>
+      'Choose a .litertlm model file first.';
+
+  @override
+  String get addProviderSheetLocalNoGgufModelFile =>
+      'Choose a .gguf model file first.';
+
+  @override
+  String addProviderSheetLocalImported(String fileName) {
+    return 'Imported $fileName';
+  }
+
+  @override
+  String get addProviderSheetLocalImporting => 'Importing model...';
+
+  @override
+  String addProviderSheetLocalImportingProgress(String percent) {
+    return 'Importing model... $percent';
+  }
+
+  @override
+  String get addProviderSheetLocalImportNotLiteRt =>
+      'Please choose a .litertlm model file.';
+
+  @override
+  String get addProviderSheetLocalImportNotGguf =>
+      'Please choose a .gguf model file.';
+
+  @override
+  String get addProviderSheetLocalImportEmptyFile =>
+      'The selected model file is empty.';
+
+  @override
+  String get addProviderSheetLocalImportUnreadable =>
+      'Could not read the selected model file.';
+
+  @override
+  String get addProviderSheetLocalImportFailed => 'Model import failed.';
+
+  @override
+  String get addProviderSheetLocalModelIdLabel => 'Model ID';
 
   @override
   String get addProviderSheetCancelButton => 'Cancel';
@@ -3025,10 +3343,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesAddDialogAdd => 'Add';
 
   @override
+  String get searchServicesFieldApiKey => 'API Key';
+
+  @override
   String get searchServicesAddDialogApiKeyRequired => 'API Key is required';
 
   @override
   String get searchServicesFieldCustomUrlOptional => 'Custom URL (optional)';
+
+  @override
+  String get searchServicesFieldSearchEngineId => 'Search engine ID';
+
+  @override
+  String get searchServicesFieldModelOptional => 'Model (optional)';
+
+  @override
+  String get searchServicesAddDialogSearchEngineIdRequired =>
+      'Search engine ID is required';
 
   @override
   String get searchServicesAddDialogInstanceUrl => 'Instance URL';
@@ -3067,6 +3398,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServicesEditDialogApiKeyRequired => 'API Key is required';
+
+  @override
+  String get searchServicesEditDialogSearchEngineIdRequired =>
+      'Search engine ID is required';
 
   @override
   String get searchServicesEditDialogInstanceUrl => 'Instance URL';
@@ -3682,6 +4017,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Independent search engine by Brave. Privacy-focused with no tracking or profiling.';
 
   @override
+  String get searchProviderGoogleDescription =>
+      'Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.';
+
+  @override
+  String get searchProviderGrokDescription =>
+      'xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.';
+
+  @override
   String get searchProviderExaDescription =>
       'Neural search with semantic understanding. Great for research and finding specific content.';
 
@@ -3738,6 +4081,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceNameBrave => 'Brave Search';
 
   @override
+  String get searchServiceNameGoogle => 'Google';
+
+  @override
+  String get searchServiceNameGrok => 'Grok';
+
+  @override
   String get searchServiceNameMetaso => 'Metaso';
 
   @override
@@ -3762,6 +4111,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get generationInterrupted => 'Generation interrupted';
+
+  @override
+  String get localLiteRtModelTooLargeForDevice =>
+      'This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.';
 
   @override
   String get titleForLocale => 'New Chat';

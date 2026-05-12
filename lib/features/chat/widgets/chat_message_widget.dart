@@ -24,6 +24,7 @@ import 'package:intl/intl.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../utils/avatar_cache.dart';
 import '../../../utils/assistant_regex.dart';
+import '../../../utils/chat_image_markdown.dart';
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/tts_provider.dart';
 import '../../../shared/widgets/markdown_with_highlight.dart';
@@ -549,6 +550,7 @@ class ChatMessageWidget extends StatefulWidget {
   final VoidCallback? onTranslate;
   final VoidCallback? onSpeak;
   final VoidCallback? onMore;
+  final void Function(ChatMessage message)? onContinueImageGeneration;
   final VoidCallback? onEdit; // user: edit
   final VoidCallback? onDelete; // user: delete
   // Optional version switcher (branch) UI controls
@@ -595,6 +597,7 @@ class ChatMessageWidget extends StatefulWidget {
     this.onTranslate,
     this.onSpeak,
     this.onMore,
+    this.onContinueImageGeneration,
     this.onEdit,
     this.onDelete,
     this.versionIndex,
@@ -1945,6 +1948,9 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
     final assistant = _assistantForMessage();
+    final editableImagePaths = ChatImageMarkdown.extractEditableImagePaths(
+      widget.message.content,
+    );
 
     // Extract vendor inline <think>...</think> content (if present)
     final extractedThinking = _thinkingRegex
@@ -2371,6 +2377,27 @@ class _ChatMessageWidgetState extends State<ChatMessageWidget> {
                           ),
                         ),
                         const SizedBox(width: 6),
+                        if (editableImagePaths.isNotEmpty &&
+                            widget.onContinueImageGeneration != null) ...[
+                          SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: Center(
+                              child: IosIconButton(
+                                size: 16,
+                                padding: EdgeInsets.all(4),
+                                icon: Lucide.Wand2,
+                                semanticLabel: l10n
+                                    .chatMessageWidgetContinueImageGeneration,
+                                color: cs.onSurface.withValues(alpha: 0.9),
+                                onTap: () => widget.onContinueImageGeneration!(
+                                  widget.message,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
                         Consumer<TtsProvider>(
                           builder: (context, tts, _) => SizedBox(
                             width: 28,

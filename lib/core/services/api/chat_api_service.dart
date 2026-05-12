@@ -12,7 +12,10 @@ import '../../utils/openai_model_compat.dart';
 import '../network/dio_http_client.dart';
 import 'google_service_account_auth.dart';
 import '../../services/api_key_manager.dart';
-import 'package:Kelivo/secrets/fallback.dart';
+import '../local_gguf_service.dart';
+import '../local_litert_service.dart';
+import '../local_litert_prompt_builder.dart';
+import '../local_provider_config.dart';
 import '../../../utils/markdown_media_sanitizer.dart';
 import '../../../utils/unicode_sanitizer.dart';
 import 'builtin_tools.dart';
@@ -61,17 +64,6 @@ class ChatApiService {
 
   static String _apiKeyForRequest(ProviderConfig cfg, String modelId) {
     final orig = _effectiveApiKey(cfg).trim();
-    if (orig.isNotEmpty) return orig;
-    if ((cfg.id) == 'SiliconFlow') {
-      final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
-      if (!host.contains('siliconflow')) return orig;
-      final m = _apiModelId(cfg, modelId).toLowerCase();
-      final allowed = m == 'thudm/glm-4-9b-0414' || m == 'qwen/qwen3-8b';
-      final fallback = siliconflowFallbackKey.trim();
-      if (allowed && fallback.isNotEmpty) {
-        return fallback;
-      }
-    }
     return orig;
   }
 
@@ -396,85 +388,67 @@ class ChatApiService {
       _activeCancelTokens[rid] = cancelToken;
     }
     final safeMessages = _sanitizeMessages(messages);
-    final client = _clientFor(config, cancelToken);
 
     try {
-      if (kind == ProviderKind.openai) {
-        if (config.useResponseApi == true) {
-          yield* _sendOpenAIResponsesStream(
-            client,
-            config,
-            modelId,
-            safeMessages,
-            userImagePaths: userImagePaths,
-            thinkingBudget: thinkingBudget,
-            temperature: temperature,
-            topP: topP,
-            maxTokens: maxTokens,
-            tools: tools,
-            onToolCall: onToolCall,
-            extraHeaders: extraHeaders,
-            extraBody: extraBody,
-            stream: stream,
-          );
-        } else {
-          yield* _sendOpenAIChatCompletionsStream(
-            client,
-            config,
-            modelId,
-            safeMessages,
-            userImagePaths: userImagePaths,
-            thinkingBudget: thinkingBudget,
-            temperature: temperature,
-            topP: topP,
-            maxTokens: maxTokens,
-            tools: tools,
-            onToolCall: onToolCall,
-            extraHeaders: extraHeaders,
-            extraBody: extraBody,
-            stream: stream,
-          );
-        }
-      } else if (kind == ProviderKind.claude) {
-        yield* _sendClaudeStream(
-          client,
+      if (isLocalLiteRtProvider(config)) {
+        yield* _sendLocalLiteRtStream(
           config,
           modelId,
           safeMessages,
-          userImagePaths: userImagePaths,
-          thinkingBudget: thinkingBudget,
           temperature: temperature,
-          topP: topP,
-          maxTokens: maxTokens,
-          tools: tools,
-          onToolCall: onToolCall,
-          extraHeaders: extraHeaders,
-          extraBody: extraBody,
-          stream: stream,
         );
-      } else if (kind == ProviderKind.google) {
-        final isVertex = config.vertexAI == true;
-        final isVertexClaude =
-            isVertex && modelId.toLowerCase().startsWith('claude-');
-        if (isVertexClaude) {
-          yield* _sendGoogleVertexClaudeStream(
-            client: client,
-            config: config,
-            modelId: modelId,
-            messages: safeMessages,
-            userImagePaths: userImagePaths,
-            thinkingBudget: thinkingBudget,
-            temperature: temperature,
-            topP: topP,
-            maxTokens: maxTokens,
-            tools: tools,
-            onToolCall: onToolCall,
-            extraHeaders: extraHeaders,
-            extraBody: extraBody,
-            stream: stream,
-          );
-        } else if (isVertex) {
-          yield* _sendGoogleVertexStream(
+        return;
+      }
+      if (isLocalGgufProvider(config)) {
+        yield* _sendLocalGgufStream(
+          config,
+          modelId,
+          safeMessages,
+          temperature: temperature,
+        );
+        return;
+      }
+
+      final client = _clientFor(config, cancelToken);
+      try {
+        if (kind == ProviderKind.openai) {
+          if (config.useResponseApi == true) {
+            yield* _sendOpenAIResponsesStream(
+              client,
+              config,
+              modelId,
+              safeMessages,
+              userImagePaths: userImagePaths,
+              thinkingBudget: thinkingBudget,
+              temperature: temperature,
+              topP: topP,
+              maxTokens: maxTokens,
+              tools: tools,
+              onToolCall: onToolCall,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+              stream: stream,
+            );
+          } else {
+            yield* _sendOpenAIChatCompletionsStream(
+              client,
+              config,
+              modelId,
+              safeMessages,
+              userImagePaths: userImagePaths,
+              thinkingBudget: thinkingBudget,
+              temperature: temperature,
+              topP: topP,
+              maxTokens: maxTokens,
+              tools: tools,
+              onToolCall: onToolCall,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+              stream: stream,
+            );
+          }
+        } else if (kind == ProviderKind.claude) {
+          yield* _sendClaudeStream(
             client,
             config,
             modelId,
@@ -490,27 +464,67 @@ class ChatApiService {
             extraBody: extraBody,
             stream: stream,
           );
-        } else {
-          yield* _sendGoogleGeminiStream(
-            client,
-            config,
-            modelId,
-            safeMessages,
-            userImagePaths: userImagePaths,
-            thinkingBudget: thinkingBudget,
-            temperature: temperature,
-            topP: topP,
-            maxTokens: maxTokens,
-            tools: tools,
-            onToolCall: onToolCall,
-            extraHeaders: extraHeaders,
-            extraBody: extraBody,
-            stream: stream,
-          );
+        } else if (kind == ProviderKind.google) {
+          final isVertex = config.vertexAI == true;
+          final isVertexClaude =
+              isVertex && modelId.toLowerCase().startsWith('claude-');
+          if (isVertexClaude) {
+            yield* _sendGoogleVertexClaudeStream(
+              client: client,
+              config: config,
+              modelId: modelId,
+              messages: safeMessages,
+              userImagePaths: userImagePaths,
+              thinkingBudget: thinkingBudget,
+              temperature: temperature,
+              topP: topP,
+              maxTokens: maxTokens,
+              tools: tools,
+              onToolCall: onToolCall,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+              stream: stream,
+            );
+          } else if (isVertex) {
+            yield* _sendGoogleVertexStream(
+              client,
+              config,
+              modelId,
+              safeMessages,
+              userImagePaths: userImagePaths,
+              thinkingBudget: thinkingBudget,
+              temperature: temperature,
+              topP: topP,
+              maxTokens: maxTokens,
+              tools: tools,
+              onToolCall: onToolCall,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+              stream: stream,
+            );
+          } else {
+            yield* _sendGoogleGeminiStream(
+              client,
+              config,
+              modelId,
+              safeMessages,
+              userImagePaths: userImagePaths,
+              thinkingBudget: thinkingBudget,
+              temperature: temperature,
+              topP: topP,
+              maxTokens: maxTokens,
+              tools: tools,
+              onToolCall: onToolCall,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+              stream: stream,
+            );
+          }
         }
+      } finally {
+        client.close();
       }
     } finally {
-      client.close();
       if (rid.isNotEmpty) {
         final cur = _activeCancelTokens[rid];
         if (identical(cur, cancelToken)) {
@@ -537,6 +551,22 @@ class ChatApiService {
     final upstreamModelId = _apiModelId(config, modelId);
     final safePrompt = UnicodeSanitizer.sanitize(prompt);
     try {
+      if (isLocalLiteRtProvider(config)) {
+        return LocalLiteRtService.sendMessage(
+          modelPath: localLiteRtModelPath(config, modelId),
+          systemPrompt: 'You are a helpful assistant.',
+          prompt: safePrompt,
+          preferCpu: true,
+        );
+      }
+      if (isLocalGgufProvider(config)) {
+        return LocalGgufService.sendMessage(
+          modelPath: localGgufModelPath(config, modelId),
+          systemPrompt: 'You are a helpful assistant.',
+          prompt: safePrompt,
+          preferCpu: true,
+        );
+      }
       if (kind == ProviderKind.openai) {
         final url = _openAICompatibleUrl(config);
         Map<String, dynamic> body;
@@ -942,6 +972,43 @@ class ChatApiService {
       if (out != null) out.add(Map<String, dynamic>.from(m));
     }
     return out ?? messages;
+  }
+
+  static Stream<ChatStreamChunk> _sendLocalLiteRtStream(
+    ProviderConfig config,
+    String modelId,
+    List<Map<String, dynamic>> messages, {
+    double? temperature,
+  }) async* {
+    final transcript = buildLocalLiteRtPrompt(messages);
+    final text = await LocalLiteRtService.sendMessage(
+      modelPath: localLiteRtModelPath(config, modelId),
+      systemPrompt: transcript.systemPrompt,
+      prompt: transcript.prompt,
+      temperature: temperature,
+      preferCpu: true,
+    );
+    yield ChatStreamChunk(content: text, isDone: true, totalTokens: 0);
+  }
+
+  static Stream<ChatStreamChunk> _sendLocalGgufStream(
+    ProviderConfig config,
+    String modelId,
+    List<Map<String, dynamic>> messages, {
+    double? temperature,
+  }) async* {
+    final transcript = buildLocalLiteRtPrompt(messages);
+    await for (final token in LocalGgufService.sendMessageStream(
+      modelPath: localGgufModelPath(config, modelId),
+      systemPrompt: transcript.systemPrompt,
+      prompt: transcript.prompt,
+      temperature: temperature,
+      preferCpu: true,
+    )) {
+      if (token.isEmpty) continue;
+      yield ChatStreamChunk(content: token, isDone: false, totalTokens: 0);
+    }
+    yield ChatStreamChunk(content: '', isDone: true, totalTokens: 0);
   }
 
   static bool _isOff(int? budget) =>

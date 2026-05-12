@@ -29,7 +29,49 @@ enum DesktopSendShortcut { enter, ctrlEnter }
 
 enum _MigrationResult { noChange, applied, failed }
 
+class _LocalProviderConfig {
+  const _LocalProviderConfig({
+    required this.providerConfigs,
+    required this.providersOrder,
+    this.replaceExisting = false,
+  });
+
+  final Map<String, ProviderConfig> providerConfigs;
+  final List<String> providersOrder;
+  final bool replaceExisting;
+
+  _LocalProviderConfig copyWith({bool? replaceExisting}) =>
+      _LocalProviderConfig(
+        providerConfigs: providerConfigs,
+        providersOrder: providersOrder,
+        replaceExisting: replaceExisting ?? this.replaceExisting,
+      );
+}
+
+class _LocalProviderConfigSelection {
+  const _LocalProviderConfigSelection({
+    required this.path,
+    required this.baseDirectory,
+    required this.replaceExisting,
+  });
+
+  final String path;
+  final String? baseDirectory;
+  final bool replaceExisting;
+}
+
 class SettingsProvider extends ChangeNotifier {
+  static const String _localProviderConfigFileName =
+      'provider_configs.local.json';
+  static const String _localProviderConfigAssetPath =
+      'local_config/provider_configs.local.json';
+  static const String _localProviderConfigSelectionFileName =
+      'provider_config_source.json';
+  static const String _localProviderConfigSelectionAssetPath =
+      'local_config/provider_config_source.json';
+  static const String _localProviderConfigPathOverride = String.fromEnvironment(
+    'KELIVO_PROVIDER_CONFIG',
+  );
   static const String _providersOrderKey = 'providers_order_v1';
   static const String _providerGroupsKey =
       'provider_groups_v1'; // [{id,name,createdAt}]
@@ -1037,13 +1079,24 @@ class SettingsProvider extends ChangeNotifier {
         );
       } catch (_) {}
     }
-    if (_providerConfigs.isEmpty) {
-      // Seed a couple of sensible defaults on first launch, but do not recreate
-      // providers implicitly during later reads (e.g., when switching chats).
-      ensureProviderConfig('KelivoIN', defaultName: 'KelivoIN');
-      ensureProviderConfig('Tensdaq', defaultName: 'Tensdaq');
-      ensureProviderConfig('SiliconFlow', defaultName: 'SiliconFlow');
-      ensureProviderConfig('AIhubmix', defaultName: 'AIhubmix');
+
+    try {
+      final localProviderConfig = await _loadLocalProviderConfig();
+      if (localProviderConfig != null) {
+        await _mergeLocalProviderConfig(localProviderConfig);
+      }
+    } catch (e, st) {
+      try {
+        FlutterLogger.log(
+          '[SettingsProvider] local provider config load failed: $e\n$st',
+          tag: 'ProviderConfig',
+        );
+      } catch (_) {}
+      assert(() {
+        debugPrint('[SettingsProvider] local provider config load failed: $e');
+        debugPrint('$st');
+        return true;
+      }());
     }
 
     // kick off a one-time connectivity test for services (exclude local Bing)
@@ -1546,6 +1599,429 @@ class SettingsProvider extends ChangeNotifier {
   void setSearchConnection(String id, bool? value) {
     _searchConnection[id] = value;
     notifyListeners();
+  }
+
+  Future<_LocalProviderConfig?> _loadLocalProviderConfig() async {
+    final override = _localProviderConfigPathOverride.trim();
+    if (override.isNotEmpty) {
+      return _loadLocalProviderConfigFromSelectedPath(
+        _LocalProviderConfigSelection(
+          path: override,
+          baseDirectory: null,
+          replaceExisting: true,
+        ),
+      );
+    }
+
+    final selection = await _loadLocalProviderConfigSelection();
+    if (selection != null) {
+      return _loadLocalProviderConfigFromSelectedPath(selection);
+    }
+
+    for (final candidate in await _defaultLocalProviderConfigCandidates()) {
+      if (await candidate.exists()) {
+        final text = await candidate.readAsString();
+        return _decodeLocalProviderConfigText(text);
+      }
+    }
+
+    return _loadLocalProviderConfigFromAsset(_localProviderConfigAssetPath);
+  }
+
+  Future<_LocalProviderConfig?> _loadLocalProviderConfigFromAsset(
+    String assetPath,
+  ) async {
+    try {
+      final text = await rootBundle.loadString(assetPath);
+      if (text.trim().isEmpty) return null;
+      return _decodeLocalProviderConfigText(text);
+    } on FlutterError {
+      return null;
+    }
+  }
+
+  Future<_LocalProviderConfig?> _loadLocalProviderConfigFromSelectedPath(
+    _LocalProviderConfigSelection selection,
+  ) async {
+    final rawPath = selection.path.trim();
+    if (rawPath.isEmpty) {
+      throw const FormatException('Local provider config selection is empty.');
+    }
+
+    if (rawPath.startsWith('asset:')) {
+      final assetPath = rawPath.substring('asset:'.length).trim();
+      if (assetPath.isEmpty) {
+        throw const FormatException(
+          'Local provider config asset selection is empty.',
+        );
+      }
+      final config = await _loadLocalProviderConfigFromAsset(
+        _normalizeAssetPath(assetPath),
+      );
+      if (config != null) {
+        return config.copyWith(replaceExisting: selection.replaceExisting);
+      }
+      throw FlutterError(
+        'Selected local provider config asset not found: $assetPath',
+      );
+    }
+
+    for (final file in _selectedLocalProviderConfigFileCandidates(selection)) {
+      if (await file.exists()) {
+        final text = await file.readAsString();
+        return _decodeLocalProviderConfigText(
+          text,
+        ).copyWith(replaceExisting: selection.replaceExisting);
+      }
+    }
+
+    final config = await _loadLocalProviderConfigFromAsset(
+      _normalizeAssetPath(rawPath),
+    );
+    if (config != null) {
+      return config.copyWith(replaceExisting: selection.replaceExisting);
+    }
+
+    throw FileSystemException(
+      'Selected local provider config not found',
+      rawPath,
+    );
+  }
+
+  Future<_LocalProviderConfigSelection?>
+  _loadLocalProviderConfigSelection() async {
+    for (final candidate in await _localProviderConfigSelectionCandidates()) {
+      if (await candidate.exists()) {
+        final text = await candidate.readAsString();
+        final path = _decodeLocalProviderConfigSelectionText(text);
+        if (path == null) return null;
+        return _LocalProviderConfigSelection(
+          path: path,
+          baseDirectory: candidate.parent.path,
+          replaceExisting: _decodeLocalProviderConfigSelectionReplace(text),
+        );
+      }
+    }
+
+    try {
+      final text = await rootBundle.loadString(
+        _localProviderConfigSelectionAssetPath,
+      );
+      final path = _decodeLocalProviderConfigSelectionText(text);
+      if (path == null) return null;
+      return _LocalProviderConfigSelection(
+        path: path,
+        baseDirectory: null,
+        replaceExisting: _decodeLocalProviderConfigSelectionReplace(text),
+      );
+    } on FlutterError {
+      return null;
+    }
+  }
+
+  String? _decodeLocalProviderConfigSelectionText(String text) {
+    if (text.trim().isEmpty) return null;
+
+    final decoded = jsonDecode(text);
+    if (decoded is String) {
+      final path = decoded.trim();
+      return path.isEmpty ? null : path;
+    }
+    if (decoded is Map) {
+      final root = Map<String, dynamic>.from(decoded);
+      final path = (root['path'] ?? root['file'])?.toString().trim();
+      return path == null || path.isEmpty ? null : path;
+    }
+
+    throw const FormatException(
+      'Local provider config selection must be a string or map.',
+    );
+  }
+
+  bool _decodeLocalProviderConfigSelectionReplace(String text) {
+    if (text.trim().isEmpty) return false;
+
+    final decoded = jsonDecode(text);
+    if (decoded is! Map) return false;
+
+    final root = Map<String, dynamic>.from(decoded);
+    if (root['replaceExisting'] == true) return true;
+
+    final mergeMode = root['mergeMode']?.toString().trim().toLowerCase();
+    return mergeMode == 'replace' || mergeMode == 'override';
+  }
+
+  _LocalProviderConfig _decodeLocalProviderConfigText(String text) {
+    final decoded = jsonDecode(text);
+    if (decoded is! Map) {
+      throw const FormatException('Local provider config root must be a map.');
+    }
+
+    final root = Map<String, dynamic>.from(decoded);
+    final rawProviders = root['providers'];
+    if (rawProviders == null) {
+      throw const FormatException(
+        'Local provider config must contain a providers field.',
+      );
+    }
+
+    final providers = _decodeLocalProviderConfigs(rawProviders);
+    final providersOrder = _decodeLocalProviderOrder(
+      root['providersOrder'] ?? root['order'],
+    );
+    return _LocalProviderConfig(
+      providerConfigs: Map.unmodifiable(providers),
+      providersOrder: List.unmodifiable(providersOrder),
+    );
+  }
+
+  Future<List<File>> _defaultLocalProviderConfigCandidates() async {
+    final candidates = <String>[];
+    void addPath(String path) {
+      final normalized = path.trim();
+      if (normalized.isEmpty || candidates.contains(normalized)) return;
+      candidates.add(normalized);
+    }
+
+    addPath(_localProviderConfigAssetPath);
+    addPath(_joinPath(Directory.current.path, _localProviderConfigAssetPath));
+    addPath(_localProviderConfigFileName);
+    addPath(_joinPath(Directory.current.path, _localProviderConfigFileName));
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      addPath(_joinPath(exeDir, _localProviderConfigAssetPath));
+      addPath(_joinPath(exeDir, _localProviderConfigFileName));
+    } catch (_) {}
+    try {
+      final appDataDir = await AppDirectories.getAppDataDirectory();
+      addPath(_joinPath(appDataDir.path, _localProviderConfigAssetPath));
+      addPath(_joinPath(appDataDir.path, _localProviderConfigFileName));
+    } catch (_) {}
+
+    return [for (final path in candidates) File(path)];
+  }
+
+  Future<List<File>> _localProviderConfigSelectionCandidates() async {
+    final candidates = <String>[];
+    void addPath(String path) {
+      final normalized = path.trim();
+      if (normalized.isEmpty || candidates.contains(normalized)) return;
+      candidates.add(normalized);
+    }
+
+    addPath(_localProviderConfigSelectionAssetPath);
+    addPath(
+      _joinPath(Directory.current.path, _localProviderConfigSelectionAssetPath),
+    );
+    addPath(_localProviderConfigSelectionFileName);
+    addPath(
+      _joinPath(Directory.current.path, _localProviderConfigSelectionFileName),
+    );
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      addPath(_joinPath(exeDir, _localProviderConfigSelectionAssetPath));
+      addPath(_joinPath(exeDir, _localProviderConfigSelectionFileName));
+    } catch (_) {}
+    try {
+      final appDataDir = await AppDirectories.getAppDataDirectory();
+      addPath(
+        _joinPath(appDataDir.path, _localProviderConfigSelectionAssetPath),
+      );
+      addPath(
+        _joinPath(appDataDir.path, _localProviderConfigSelectionFileName),
+      );
+    } catch (_) {}
+
+    return [for (final path in candidates) File(path)];
+  }
+
+  List<File> _selectedLocalProviderConfigFileCandidates(
+    _LocalProviderConfigSelection selection,
+  ) {
+    final candidates = <String>[];
+    void addPath(String path) {
+      final normalized = path.trim();
+      if (normalized.isEmpty || candidates.contains(normalized)) return;
+      candidates.add(normalized);
+    }
+
+    final path = selection.path.trim();
+    addPath(path);
+    final selectedFile = File(path);
+    if (!selectedFile.isAbsolute) {
+      if (selection.baseDirectory != null) {
+        addPath(_joinPath(selection.baseDirectory!, path));
+      }
+      addPath(_joinPath(Directory.current.path, path));
+    }
+
+    return [for (final candidate in candidates) File(candidate)];
+  }
+
+  static String _normalizeAssetPath(String path) =>
+      path.trim().replaceAll('\\', '/');
+
+  static String _joinPath(String directory, String filename) {
+    if (directory.endsWith('/') || directory.endsWith('\\')) {
+      return '$directory$filename';
+    }
+    return '$directory${Platform.pathSeparator}$filename';
+  }
+
+  Map<String, ProviderConfig> _decodeLocalProviderConfigs(
+    Object? rawProviders,
+  ) {
+    final out = <String, ProviderConfig>{};
+
+    void addProvider(String key, Object? rawConfig) {
+      final normalizedKey = key.trim();
+      if (normalizedKey.isEmpty) {
+        throw const FormatException('Local provider key must not be empty.');
+      }
+      if (rawConfig is! Map) {
+        throw FormatException(
+          'Local provider "$normalizedKey" config must be a map.',
+        );
+      }
+      final json = Map<String, dynamic>.from(rawConfig);
+      json['id'] ??= normalizedKey;
+      json['name'] ??= normalizedKey;
+      final cfg = ProviderConfig.fromJson(json);
+      out[normalizedKey] = cfg.id == normalizedKey
+          ? cfg
+          : cfg.copyWith(id: normalizedKey);
+    }
+
+    if (rawProviders is Map) {
+      for (final entry in rawProviders.entries) {
+        addProvider(entry.key.toString(), entry.value);
+      }
+      return out;
+    }
+
+    if (rawProviders is List) {
+      for (final item in rawProviders) {
+        if (item is! Map) {
+          throw const FormatException(
+            'Local provider list entries must be maps.',
+          );
+        }
+        final json = Map<String, dynamic>.from(item);
+        final key = (json['id'] ?? json['key'] ?? json['name'])?.toString();
+        if (key == null || key.trim().isEmpty) {
+          throw const FormatException(
+            'Local provider list entry must contain id, key, or name.',
+          );
+        }
+        addProvider(key, json);
+      }
+      return out;
+    }
+
+    throw const FormatException(
+      'Local provider config providers field must be a map or list.',
+    );
+  }
+
+  List<String> _decodeLocalProviderOrder(Object? rawOrder) {
+    if (rawOrder == null) return const <String>[];
+    if (rawOrder is! List) {
+      throw const FormatException(
+        'Local provider config providersOrder field must be a list.',
+      );
+    }
+    return [
+      for (final entry in rawOrder)
+        if (entry.toString().trim().isNotEmpty) entry.toString().trim(),
+    ];
+  }
+
+  Future<void> _mergeLocalProviderConfig(_LocalProviderConfig config) async {
+    if (config.providerConfigs.isEmpty) return;
+
+    if (config.replaceExisting) {
+      final replaced = <String, ProviderConfig>{};
+      for (final entry in config.providerConfigs.entries) {
+        final persisted = _providerConfigs[entry.key];
+        replaced[entry.key] = persisted == null
+            ? entry.value
+            : _mergePersistedProviderModelCatalog(entry.value, persisted);
+      }
+      _providerConfigs = replaced;
+      await _clearSelectedModelOutsideLocalConfig(config);
+    } else {
+      final merged = Map<String, ProviderConfig>.from(_providerConfigs);
+      for (final entry in config.providerConfigs.entries) {
+        merged.putIfAbsent(entry.key, () => entry.value);
+      }
+      _providerConfigs = merged;
+    }
+
+    final preferredOrder = config.providersOrder.isEmpty
+        ? config.providerConfigs.keys
+        : config.providersOrder;
+    final knownKeys = _knownProviderKeys();
+    final nextOrder = <String>[];
+    final seen = <String>{};
+
+    void addKnown(String key) {
+      if (!knownKeys.contains(key) || !seen.add(key)) return;
+      nextOrder.add(key);
+    }
+
+    for (final key in preferredOrder) {
+      addKnown(key);
+    }
+    for (final key in _providersOrder) {
+      addKnown(key);
+    }
+    for (final key in config.providerConfigs.keys) {
+      addKnown(key);
+    }
+
+    _providersOrder = List.unmodifiable(nextOrder);
+  }
+
+  ProviderConfig _mergePersistedProviderModelCatalog(
+    ProviderConfig local,
+    ProviderConfig persisted,
+  ) {
+    List<String> mergeList(List<String> primary, List<String> secondary) {
+      final seen = <String>{};
+      return [
+        for (final id in [...primary, ...secondary])
+          if (seen.add(id)) id,
+      ];
+    }
+
+    final localModelIds = local.models.toSet();
+    final overrides = Map<String, dynamic>.from(local.modelOverrides);
+    for (final entry in persisted.modelOverrides.entries) {
+      if (!localModelIds.contains(entry.key)) {
+        overrides.putIfAbsent(entry.key, () => entry.value);
+      }
+    }
+
+    return local.copyWith(
+      models: mergeList(local.models, persisted.models),
+      cachedModels: mergeList(local.cachedModels, persisted.cachedModels),
+      modelOverrides: overrides,
+    );
+  }
+
+  Future<void> _clearSelectedModelOutsideLocalConfig(
+    _LocalProviderConfig config,
+  ) async {
+    final providerKey = _currentModelProvider;
+    if (providerKey == null) return;
+    if (config.providerConfigs.containsKey(providerKey)) return;
+
+    _currentModelProvider = null;
+    _currentModelId = null;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_selectedModelKey);
+    } catch (_) {}
   }
 
   Future<void> setProvidersOrder(List<String> order) async {
@@ -3709,6 +4185,7 @@ class ProviderConfig {
   // Google Vertex AI via service account JSON (paste or import)
   final String? serviceAccountJson; // google vertex ai only
   final List<String> models; // placeholder for future model management
+  final List<String> cachedModels; // last fetched provider model catalog
   // Per-model overrides (by logical model key).
   // Each entry may point to an upstream/vendor model id via `apiModelId` so that
   // multiple logical models can share the same backend model with different params.
@@ -3755,6 +4232,7 @@ class ProviderConfig {
     this.projectId,
     this.serviceAccountJson,
     this.models = const [],
+    this.cachedModels = const [],
     this.modelOverrides = const {},
     this.proxyEnabled,
     this.proxyType,
@@ -3787,6 +4265,7 @@ class ProviderConfig {
     String? projectId,
     String? serviceAccountJson,
     List<String>? models,
+    List<String>? cachedModels,
     Map<String, dynamic>? modelOverrides,
     bool? proxyEnabled,
     String? proxyType,
@@ -3814,6 +4293,7 @@ class ProviderConfig {
     projectId: projectId ?? this.projectId,
     serviceAccountJson: serviceAccountJson ?? this.serviceAccountJson,
     models: models ?? this.models,
+    cachedModels: cachedModels ?? this.cachedModels,
     modelOverrides: modelOverrides ?? this.modelOverrides,
     proxyEnabled: proxyEnabled ?? this.proxyEnabled,
     proxyType: proxyType ?? this.proxyType,
@@ -3848,6 +4328,7 @@ class ProviderConfig {
     'projectId': projectId,
     'serviceAccountJson': serviceAccountJson,
     'models': models,
+    'cachedModels': cachedModels,
     'modelOverrides': modelOverrides,
     'proxyEnabled': proxyEnabled,
     'proxyType': proxyType,
@@ -3883,6 +4364,9 @@ class ProviderConfig {
     serviceAccountJson: json['serviceAccountJson'] as String?,
     models:
         (json['models'] as List?)?.map((e) => e.toString()).toList() ??
+        const [],
+    cachedModels:
+        (json['cachedModels'] as List?)?.map((e) => e.toString()).toList() ??
         const [],
     modelOverrides:
         (json['modelOverrides'] as Map?)?.map(
@@ -3980,6 +4464,7 @@ class ProviderConfig {
           projectId: '',
           serviceAccountJson: '',
           models: const [],
+          cachedModels: const [],
           modelOverrides: const {},
           proxyEnabled: false,
           proxyHost: '',
@@ -4000,6 +4485,7 @@ class ProviderConfig {
           baseUrl: _defaultBase(key),
           providerType: ProviderKind.claude,
           models: const [],
+          cachedModels: const [],
           modelOverrides: const {},
           proxyEnabled: false,
           proxyHost: '',
@@ -4029,6 +4515,7 @@ class ProviderConfig {
               'mistral',
               'qwen-coder',
             ],
+            cachedModels: const ['mistral', 'qwen-coder'],
             modelOverrides: const {
               // 'openai-fast': {
               //   'type': 'chat',
@@ -4060,7 +4547,6 @@ class ProviderConfig {
             aihubmixAppCodeEnabled: false,
           );
         }
-        // Special-case SiliconFlow: prefill two partnered models
         if (lowerKey.contains('silicon')) {
           return ProviderConfig(
             id: key,
@@ -4071,21 +4557,9 @@ class ProviderConfig {
             providerType: ProviderKind.openai,
             chatPath: '/chat/completions',
             useResponseApi: false,
-            models: const ['THUDM/GLM-4-9B-0414', 'Qwen/Qwen3-8B'],
-            modelOverrides: const {
-              'THUDM/GLM-4-9B-0414': {
-                'type': 'chat',
-                'input': ['text'],
-                'output': ['text'],
-                'abilities': ['tool'],
-              },
-              'Qwen/Qwen3-8B': {
-                'type': 'chat',
-                'input': ['text'],
-                'output': ['text'],
-                'abilities': ['tool', 'reasoning'],
-              },
-            },
+            models: const [],
+            cachedModels: const [],
+            modelOverrides: const {},
             proxyEnabled: false,
             proxyHost: '',
             proxyPort: '8080',
@@ -4107,6 +4581,7 @@ class ProviderConfig {
           chatPath: '/chat/completions',
           useResponseApi: false,
           models: const [],
+          cachedModels: const [],
           modelOverrides: const {},
           proxyEnabled: false,
           proxyHost: '',

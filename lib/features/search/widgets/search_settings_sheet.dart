@@ -492,6 +492,8 @@ class _BrandBadge extends StatelessWidget {
     if (s is SearXNGOptions) return 'searxng';
     if (s is LinkUpOptions) return 'linkup';
     if (s is BraveOptions) return 'brave';
+    if (s is GoogleSearchOptions) return 'google';
+    if (s is GrokSearchOptions) return 'grok';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
     if (s is JinaOptions) return 'jina';

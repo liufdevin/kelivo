@@ -412,6 +412,142 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
         ),
         const SizedBox(height: 16),
 
+        // Image model card
+        Container(
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white10
+                : Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+              width: 0.6,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Lucide.Image, size: 18, color: cs.onSurface),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        l10n.assistantEditImageModelTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (a.imageModelProvider != null && a.imageModelId != null)
+                      Tooltip(
+                        message: l10n.defaultModelPageResetDefault,
+                        child: _TactileIconButton(
+                          icon: Lucide.RotateCcw,
+                          color: cs.onSurface,
+                          size: 20,
+                          onTap: () async {
+                            await context
+                                .read<AssistantProvider>()
+                                .updateAssistant(
+                                  a.copyWith(clearImageModel: true),
+                                );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.assistantEditImageModelSubtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _TactileRow(
+                  onTap: () async {
+                    final assistantProvider = context.read<AssistantProvider>();
+                    final sel = await showModelSelector(context);
+                    if (!context.mounted || sel == null) return;
+                    await assistantProvider.updateAssistant(
+                      a.copyWith(
+                        imageModelProvider: sel.providerKey,
+                        imageModelId: sel.modelId,
+                      ),
+                    );
+                  },
+                  pressedScale: 0.98,
+                  builder: (pressed) {
+                    final bg = isDark
+                        ? Colors.white10
+                        : const Color(0xFFF2F3F5);
+                    final overlay = isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.05);
+                    final pressedBg = Color.alphaBlend(overlay, bg);
+                    final settings = context.read<SettingsProvider>();
+                    String display = l10n.assistantEditImageModelUnset;
+                    if (a.imageModelProvider != null &&
+                        a.imageModelId != null) {
+                      try {
+                        final cfg = settings.getProviderConfig(
+                          a.imageModelProvider!,
+                        );
+                        final ov = cfg.modelOverrides[a.imageModelId] as Map?;
+                        final mdl =
+                            (ov != null &&
+                                (ov['name'] as String?)?.isNotEmpty == true)
+                            ? (ov['name'] as String)
+                            : a.imageModelId!;
+                        display = mdl;
+                      } catch (_) {
+                        display = a.imageModelId ?? '';
+                      }
+                    }
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOutCubic,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pressed ? pressedBg : bg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          _BrandAvatarLike(name: display, size: 24),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              display,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
         // Chat background (separate iOS card)
         Container(
           decoration: BoxDecoration(

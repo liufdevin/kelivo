@@ -42,6 +42,7 @@ import 'desktop_context_menu.dart';
 import '../shared/widgets/snackbar.dart';
 import 'setting/default_model_pane.dart';
 import 'setting/search_services_pane.dart';
+import '../features/image_generation/pages/image_generation_page.dart';
 import 'setting/mcp_pane.dart';
 import 'setting/tts_services_pane.dart';
 import 'setting/quick_phrases_pane.dart';
@@ -84,6 +85,7 @@ enum _SettingsMenuItem {
   providers,
   defaultModel,
   search,
+  imageGeneration,
   mcp,
   quickPhrases,
   instructionInjection,
@@ -179,6 +181,11 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           return const DesktopSearchServicesPane(
                             key: ValueKey('search'),
                           );
+                        case _SettingsMenuItem.imageGeneration:
+                          return const ImageGenerationPage(
+                            key: ValueKey('imageGeneration'),
+                            embedded: true,
+                          );
                         case _SettingsMenuItem.mcp:
                           return const DesktopMcpPane(key: ValueKey('mcp'));
                         case _SettingsMenuItem.networkProxy:
@@ -259,6 +266,11 @@ class _SettingsMenu extends StatelessWidget {
         l10n.settingsPageDefaultModel,
       ),
       (_SettingsMenuItem.search, lucide.Lucide.Earth, l10n.settingsPageSearch),
+      (
+        _SettingsMenuItem.imageGeneration,
+        lucide.Lucide.Image,
+        l10n.settingsPageImageGeneration,
+      ),
       (_SettingsMenuItem.mcp, lucide.Lucide.Terminal, l10n.settingsPageMcp),
       (
         _SettingsMenuItem.quickPhrases,

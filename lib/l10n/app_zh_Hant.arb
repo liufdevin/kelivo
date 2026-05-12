@@ -16,6 +16,7 @@
   "settingsPageDefaultModel": "預設模型",
   "settingsPageProviders": "供應商",
   "settingsPageSearch": "搜尋服務",
+  "settingsPageImageGeneration": "圖片生成",
   "settingsPageTts": "語音服務",
   "settingsPageMcp": "MCP",
   "settingsPageQuickPhrase": "快捷短语",
@@ -26,6 +27,40 @@
   "settingsPageChatStorage": "聊天記錄儲存",
   "settingsPageCalculating": "統計中…",
   "settingsPageFilesCount": "共 {count} 個檔案 · {size}",
+  "imageGenerationPageTitle": "圖片生成",
+  "imageGenerationProviderLabel": "供應商",
+  "imageGenerationModelLabel": "模型",
+  "imageGenerationModeLabel": "模式",
+  "imageGenerationModeGenerate": "文生圖",
+  "imageGenerationModeEdit": "以圖生圖",
+  "imageGenerationPromptLabel": "提示詞",
+  "imageGenerationPromptHint": "描述你想生成或修改的圖片",
+  "imageGenerationSizeLabel": "尺寸",
+  "imageGenerationQualityLabel": "品質",
+  "imageGenerationOutputFormatLabel": "格式",
+  "imageGenerationCountLabel": "數量",
+  "imageGenerationPickImages": "選擇圖片",
+  "imageGenerationPickedImages": "已選擇 {count} 張",
+  "imageGenerationClearImages": "清除",
+  "imageGenerationMaskNotSelected": "未選擇蒙版",
+  "imageGenerationMaskSelected": "已選擇蒙版",
+  "imageGenerationPickMask": "選擇蒙版",
+  "imageGenerationClearMask": "清除蒙版",
+  "imageGenerationGenerateButton": "生成圖片",
+  "imageGenerationEditButton": "編輯圖片",
+  "imageGenerationGenerating": "生成中…",
+  "imageGenerationNoProvider": "沒有啟用的 OpenAI 相容供應商",
+  "imageGenerationModelRequired": "請先為該助理設定生圖模型",
+  "imageGenerationModelUnsupported": "所選生圖模型不是 OpenAI 相容的圖片模型",
+  "imageGenerationNoApiKey": "目前供應商沒有 API Key",
+  "imageGenerationPromptRequired": "請先輸入提示詞",
+  "imageGenerationImageRequired": "請至少選擇一張輸入圖片",
+  "imageGenerationSuccess": "已生成 {count} 張圖片",
+  "imageGenerationFailed": "圖片請求失敗：{error}",
+  "imageGenerationEmptyResult": "圖片介面沒有返回圖片",
+  "imageGenerationInvalidResponse": "圖片介面返回格式無效",
+  "imageGenerationRequestFailed": "圖片請求失敗",
+  "imageGenerationResultTitle": "結果",
   "storageSpacePageTitle": "儲存空間",
   "storageSpaceRefreshTooltip": "重新整理",
   "storageSpaceLoadFailed": "載入失敗",
@@ -146,6 +181,9 @@
   "assistantEditUseAssistantNameTitle": "使用助理名字",
   "assistantEditChatModelTitle": "聊天模型",
   "assistantEditChatModelSubtitle": "為該助理設定預設聊天模型（未設定時使用全域預設）",
+  "assistantEditImageModelTitle": "生圖模型",
+  "assistantEditImageModelSubtitle": "聊天訊息以 /image、/img、生圖 或 畫圖 開頭時使用",
+  "assistantEditImageModelUnset": "未設定生圖模型",
   "assistantEditTemperatureDescription": "控制輸出的隨機性，範圍 0–2",
   "assistantEditTopPDescription": "請不要修改此值，除非你知道自己在做什麼",
   "assistantEditParameterDisabled": "已關閉（使用服務商預設）",
@@ -548,6 +586,7 @@
   "chatMessageWidgetArguments": "參數",
   "chatMessageWidgetResult": "結果",
   "chatMessageWidgetImages": "圖片",
+  "chatMessageWidgetContinueImageGeneration": "繼續改圖",
   "chatMessageWidgetCitationsCount": "共{count}條引用",
   "chatSelectionSelectedCountTitle": "已選擇{count}條訊息",
   "chatSelectionExportTxt": "TXT",
@@ -639,6 +678,7 @@
   "sideDrawerRename": "重新命名",
   "chatInputBarHint": "輸入訊息與AI聊天",
   "chatInputBarSelectModelTooltip": "選擇模型",
+  "chatInputBarImageGenerationTooltip": "圖片生成",
   "chatInputBarOnlineSearchTooltip": "聯網搜尋",
   "chatInputBarReasoningStrengthTooltip": "思維鏈強度",
   "chatInputBarMcpServersTooltip": "MCP伺服器",
@@ -808,6 +848,73 @@
   "providerDetailPageConfigTab": "設定",
   "providerDetailPageModelsTab": "模型",
   "providerDetailPageNetworkTab": "網路代理",
+  "localModelManagementEntryTitle": "本地模型管理",
+  "localModelManagementTitle": "本地模型",
+  "localModelManagementModeLabel": "模式",
+  "localModelManagementLiteRtMode": "LiteRT-LM 檔案",
+  "localModelManagementGgufMode": "GGUF 檔案",
+  "localModelManagementOllamaMode": "Ollama / OpenAI 相容",
+  "localModelManagementModelFileLabel": "模型檔案",
+  "localModelManagementFileStatusLabel": "檔案狀態",
+  "localModelManagementFileMissing": "檔案不存在",
+  "localModelManagementFileSizeBytes": "{bytes} 位元組",
+  "@localModelManagementFileSizeBytes": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementBaseUrlLabel": "Base URL",
+  "localModelManagementModelIdLabel": "模型 ID",
+  "localModelManagementImportButton": "匯入",
+  "localModelManagementDiscoverButton": "自動發現",
+  "localModelManagementTestButton": "測試",
+  "localModelManagementTesting": "正在測試...",
+  "localModelManagementDiscovering": "正在發現...",
+  "localModelManagementNoModelsFound": "未發現本地模型。",
+  "localModelManagementDiscoveredModels": "模型清單",
+  "localModelManagementModelsUpdated": "已更新 {count} 個模型",
+  "@localModelManagementModelsUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementTestSuccess": "測試成功",
+  "localModelManagementTestFailed": "測試失敗：{error}",
+  "@localModelManagementTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementDiscoverFailed": "發現失敗：{error}",
+  "@localModelManagementDiscoverFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportSuccess": "已匯入 {fileName}",
+  "@localModelManagementImportSuccess": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportFailed": "匯入失敗：{error}",
+  "@localModelManagementImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "providerDetailPageEnabledTitle": "是否啟用",
   "providerDetailPageManageSectionTitle": "管理",
   "providerDetailPageNameLabel": "名稱",
@@ -888,13 +995,56 @@
   "providersPageModelsCountSuffix": " models",
   "providersPageModelsCountSingleSuffix": "個模型",
   "addProviderSheetTitle": "新增供應商",
+  "addProviderSheetOpenAiTab": "OpenAI",
+  "addProviderSheetGoogleTab": "Google",
+  "addProviderSheetClaudeTab": "Claude",
+  "addProviderSheetLocalTab": "本機",
   "addProviderSheetEnabledLabel": "是否啟用",
   "addProviderSheetNameLabel": "名稱",
+  "addProviderSheetApiKeyLabel": "API Key",
+  "addProviderSheetBaseUrlLabel": "Base URL",
   "addProviderSheetApiPathLabel": "API 路徑",
+  "addProviderSheetResponsesApiLabel": "Responses API",
+  "addProviderSheetVertexAiLabel": "Vertex AI",
   "addProviderSheetVertexAiLocationLabel": "位置",
   "addProviderSheetVertexAiProjectIdLabel": "專案ID",
   "addProviderSheetVertexAiServiceAccountJsonLabel": "服務帳號 JSON（貼上或匯入）",
   "addProviderSheetImportJsonButton": "匯入 JSON",
+  "addProviderSheetLocalDefaultName": "本機模型",
+  "addProviderSheetLocalModeLiteRt": "LiteRT 檔案",
+  "addProviderSheetLocalModeGguf": "GGUF 檔案",
+  "addProviderSheetLocalModeOpenAICompatible": "Ollama / OpenAI 相容",
+  "addProviderSheetLocalModelPathLabel": "LiteRT-LM 模型檔案",
+  "addProviderSheetLocalModelPathHint": "匯入或貼上 .litertlm 模型路徑",
+  "addProviderSheetImportLitertButton": "匯入 .litertlm",
+  "addProviderSheetLocalGgufModelPathLabel": "GGUF 模型檔案",
+  "addProviderSheetLocalGgufModelPathHint": "匯入或貼上 .gguf 模型路徑",
+  "addProviderSheetImportGgufButton": "匯入 .gguf",
+  "addProviderSheetLocalNoModelFile": "請先選擇 .litertlm 模型檔案。",
+  "addProviderSheetLocalNoGgufModelFile": "請先選擇 .gguf 模型檔案。",
+  "addProviderSheetLocalImported": "已匯入 {fileName}",
+  "@addProviderSheetLocalImported": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImporting": "正在匯入模型...",
+  "addProviderSheetLocalImportingProgress": "正在匯入模型... {percent}",
+  "@addProviderSheetLocalImportingProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImportNotLiteRt": "請選擇 .litertlm 模型檔案。",
+  "addProviderSheetLocalImportNotGguf": "請選擇 .gguf 模型檔案。",
+  "addProviderSheetLocalImportEmptyFile": "選擇的模型檔案為空。",
+  "addProviderSheetLocalImportUnreadable": "無法讀取選擇的模型檔案。",
+  "addProviderSheetLocalImportFailed": "模型匯入失敗。",
+  "addProviderSheetLocalModelIdLabel": "模型 ID",
   "addProviderSheetCancelButton": "取消",
   "addProviderSheetAddButton": "新增",
   "importProviderSheetTitle": "匯入供應商",
@@ -949,8 +1099,12 @@
   "searchServicesAddDialogBingLocal": "本機",
   "searchServicesAddDialogCancel": "取消",
   "searchServicesAddDialogAdd": "新增",
+  "searchServicesFieldApiKey": "API Key",
   "searchServicesAddDialogApiKeyRequired": "API Key 必填",
   "searchServicesFieldCustomUrlOptional": "自訂 URL（可選）",
+  "searchServicesFieldSearchEngineId": "搜尋引擎 ID",
+  "searchServicesFieldModelOptional": "模型（可選）",
+  "searchServicesAddDialogSearchEngineIdRequired": "搜尋引擎 ID 必填",
   "searchServicesAddDialogInstanceUrl": "實例 URL",
   "searchServicesAddDialogUrlRequired": "URL 必填",
   "searchServicesAddDialogEnginesOptional": "搜尋引擎（可選）",
@@ -963,6 +1117,7 @@
   "searchServicesEditDialogSave": "儲存",
   "searchServicesEditDialogBingLocalNoConfig": "Bing 本機搜尋不需要設定。",
   "searchServicesEditDialogApiKeyRequired": "API Key 必填",
+  "searchServicesEditDialogSearchEngineIdRequired": "搜尋引擎 ID 必填",
   "searchServicesEditDialogInstanceUrl": "實例 URL",
   "searchServicesEditDialogUrlRequired": "URL 必填",
   "searchServicesEditDialogEnginesOptional": "搜尋引擎（可選）",
@@ -1170,6 +1325,8 @@
   "searchProviderBingLocalDescription": "使用網路抓取工具取得 Bing 搜尋結果。無需 API 金鑰，但可能不夠穩定。",
   "searchProviderDuckDuckGoDescription": "基於 DDGS 的 DuckDuckGo 隱私搜尋，無需 API 金鑰，支援設定地區。",
   "searchProviderBraveDescription": "Brave 獨立搜尋引擎。注重隱私，無追蹤或建立個人檔案。",
+  "searchProviderGoogleDescription": "透過 Custom Search JSON API 使用 Google 可程式化搜尋引擎。需要 API Key 和搜尋引擎 ID。",
+  "searchProviderGrokDescription": "透過 Chat Completions 使用 xAI Grok 即時搜尋。需要 xAI API Key 和支援搜尋的 Grok 模型。",
   "searchProviderExaDescription": "具備語義理解的神經搜尋引擎。適合研究與查找特定內容。",
   "searchProviderLinkUpDescription": "提供來源可追溯答案的搜尋 API，同時提供搜尋結果與 AI 摘要。",
   "modelFetchInvertTooltip": "反選",
@@ -1188,6 +1345,8 @@
   "searchServiceNameSearXNG": "SearXNG",
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave 搜尋",
+  "searchServiceNameGoogle": "Google",
+  "searchServiceNameGrok": "Grok",
   "searchServiceNameMetaso": "Metaso（秘塔）",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
@@ -1196,6 +1355,7 @@
   "searchServiceNameBocha": "博查",
   "searchProviderBochaDescription": "博查 AI 全網網頁搜尋，支援時間範圍與摘要，更適合 AI 使用。",
   "generationInterrupted": "生成已中斷",
+  "localLiteRtModelTooLargeForDevice": "這個本地模型對目前裝置過大。請使用更小的 LiteRT-LM 模型，例如 Gemma E2B。",
   "titleForLocale": "新對話",
   "miniMapTitle": "迷你地圖",
   "miniMapTooltip": "迷你地圖",

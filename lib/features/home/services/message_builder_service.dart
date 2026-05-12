@@ -194,6 +194,9 @@ class MessageBuilderService {
       if (m.role == 'assistant' && geminiThoughtSignatureHandler != null) {
         content = geminiThoughtSignatureHandler!(m, content);
       }
+      if (m.role == 'assistant') {
+        content = _sanitizeAssistantMediaForApiHistory(content);
+      }
       if (content.isEmpty) continue;
       final message = <String, dynamic>{
         'role': m.role == 'assistant' ? 'assistant' : 'user',
@@ -206,6 +209,28 @@ class MessageBuilderService {
     }
 
     return out;
+  }
+
+  String _sanitizeAssistantMediaForApiHistory(String raw) {
+    if (raw.isEmpty) return raw;
+    final hadMedia =
+        raw.contains('![') ||
+        raw.contains('[image:') ||
+        raw.contains('data:image/');
+    var cleaned = raw
+        .replaceAll(RegExp(r'!\[[^\]]*\]\((?:[^()]|\([^)]*\))*\)'), ' ')
+        .replaceAll(RegExp(r'\[image:[^\]]+\]'), ' ')
+        .replaceAll(
+          RegExp(
+            r'data:image\/[a-zA-Z0-9.+-]+;base64,[a-zA-Z0-9+/=\r\n]+',
+            multiLine: true,
+          ),
+          ' ',
+        )
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (cleaned.isEmpty && hadMedia) return 'Assistant generated an image.';
+    return cleaned;
   }
 
   ChatMessage? _latestPersistedMessage(ChatMessage message) {

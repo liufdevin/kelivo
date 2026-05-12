@@ -63,6 +63,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsPageSearch => '搜索服务';
 
   @override
+  String get settingsPageImageGeneration => '图片生成';
+
+  @override
   String get settingsPageTts => '语音服务';
 
   @override
@@ -90,6 +93,114 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsPageFilesCount(int count, String size) {
     return '共 $count 个文件 · $size';
   }
+
+  @override
+  String get imageGenerationPageTitle => '图片生成';
+
+  @override
+  String get imageGenerationProviderLabel => '供应商';
+
+  @override
+  String get imageGenerationModelLabel => '模型';
+
+  @override
+  String get imageGenerationModeLabel => '模式';
+
+  @override
+  String get imageGenerationModeGenerate => '文生图';
+
+  @override
+  String get imageGenerationModeEdit => '以图生图';
+
+  @override
+  String get imageGenerationPromptLabel => '提示词';
+
+  @override
+  String get imageGenerationPromptHint => '描述你想生成或修改的图片';
+
+  @override
+  String get imageGenerationSizeLabel => '尺寸';
+
+  @override
+  String get imageGenerationQualityLabel => '质量';
+
+  @override
+  String get imageGenerationOutputFormatLabel => '格式';
+
+  @override
+  String get imageGenerationCountLabel => '数量';
+
+  @override
+  String get imageGenerationPickImages => '选择图片';
+
+  @override
+  String imageGenerationPickedImages(int count) {
+    return '已选择 $count 张';
+  }
+
+  @override
+  String get imageGenerationClearImages => '清除';
+
+  @override
+  String get imageGenerationMaskNotSelected => '未选择蒙版';
+
+  @override
+  String get imageGenerationMaskSelected => '已选择蒙版';
+
+  @override
+  String get imageGenerationPickMask => '选择蒙版';
+
+  @override
+  String get imageGenerationClearMask => '清除蒙版';
+
+  @override
+  String get imageGenerationGenerateButton => '生成图片';
+
+  @override
+  String get imageGenerationEditButton => '编辑图片';
+
+  @override
+  String get imageGenerationGenerating => '生成中…';
+
+  @override
+  String get imageGenerationNoProvider => '没有启用的 OpenAI 兼容供应商';
+
+  @override
+  String get imageGenerationModelRequired => '请先为该助手设置生图模型';
+
+  @override
+  String get imageGenerationModelUnsupported => '所选生图模型不是 OpenAI 兼容的图片模型';
+
+  @override
+  String get imageGenerationNoApiKey => '当前供应商没有 API Key';
+
+  @override
+  String get imageGenerationPromptRequired => '请先输入提示词';
+
+  @override
+  String get imageGenerationImageRequired => '请至少选择一张输入图片';
+
+  @override
+  String imageGenerationSuccess(int count) {
+    return '已生成 $count 张图片';
+  }
+
+  @override
+  String imageGenerationFailed(String error) {
+    return '图片请求失败：$error';
+  }
+
+  @override
+  String get imageGenerationEmptyResult => '图片接口没有返回图片';
+
+  @override
+  String get imageGenerationInvalidResponse => '图片接口返回格式无效';
+
+  @override
+  String get imageGenerationRequestFailed => '图片请求失败';
+
+  @override
+  String get imageGenerationResultTitle => '结果';
 
   @override
   String get storageSpacePageTitle => '存储空间';
@@ -655,6 +766,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get assistantEditChatModelSubtitle => '为该助手设置默认聊天模型（未设置时使用全局默认）';
+
+  @override
+  String get assistantEditImageModelTitle => '生图模型';
+
+  @override
+  String get assistantEditImageModelSubtitle =>
+      '聊天消息以 /image、/img、生图 或 画图 开头时使用';
+
+  @override
+  String get assistantEditImageModelUnset => '未设置生图模型';
 
   @override
   String get assistantEditTemperatureDescription => '控制输出的随机性，范围 0–2';
@@ -1651,6 +1772,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatMessageWidgetImages => '图片';
 
   @override
+  String get chatMessageWidgetContinueImageGeneration => '继续改图';
+
+  @override
   String chatMessageWidgetCitationsCount(int count) {
     return '共$count条引用';
   }
@@ -1966,6 +2090,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatInputBarSelectModelTooltip => '选择模型';
+
+  @override
+  String get chatInputBarImageGenerationTooltip => '图片生成';
 
   @override
   String get chatInputBarOnlineSearchTooltip => '联网搜索';
@@ -2488,6 +2615,93 @@ class AppLocalizationsZh extends AppLocalizations {
   String get providerDetailPageNetworkTab => '网络代理';
 
   @override
+  String get localModelManagementEntryTitle => '本地模型管理';
+
+  @override
+  String get localModelManagementTitle => '本地模型';
+
+  @override
+  String get localModelManagementModeLabel => '模式';
+
+  @override
+  String get localModelManagementLiteRtMode => 'LiteRT-LM 文件';
+
+  @override
+  String get localModelManagementGgufMode => 'GGUF 文件';
+
+  @override
+  String get localModelManagementOllamaMode => 'Ollama / OpenAI 兼容';
+
+  @override
+  String get localModelManagementModelFileLabel => '模型文件';
+
+  @override
+  String get localModelManagementFileStatusLabel => '文件状态';
+
+  @override
+  String get localModelManagementFileMissing => '文件不存在';
+
+  @override
+  String localModelManagementFileSizeBytes(int bytes) {
+    return '$bytes 字节';
+  }
+
+  @override
+  String get localModelManagementBaseUrlLabel => 'Base URL';
+
+  @override
+  String get localModelManagementModelIdLabel => '模型 ID';
+
+  @override
+  String get localModelManagementImportButton => '导入';
+
+  @override
+  String get localModelManagementDiscoverButton => '自动发现';
+
+  @override
+  String get localModelManagementTestButton => '测试';
+
+  @override
+  String get localModelManagementTesting => '正在测试...';
+
+  @override
+  String get localModelManagementDiscovering => '正在发现...';
+
+  @override
+  String get localModelManagementNoModelsFound => '未发现本地模型。';
+
+  @override
+  String get localModelManagementDiscoveredModels => '模型列表';
+
+  @override
+  String localModelManagementModelsUpdated(int count) {
+    return '已更新 $count 个模型';
+  }
+
+  @override
+  String get localModelManagementTestSuccess => '测试成功';
+
+  @override
+  String localModelManagementTestFailed(String error) {
+    return '测试失败：$error';
+  }
+
+  @override
+  String localModelManagementDiscoverFailed(String error) {
+    return '发现失败：$error';
+  }
+
+  @override
+  String localModelManagementImportSuccess(String fileName) {
+    return '已导入 $fileName';
+  }
+
+  @override
+  String localModelManagementImportFailed(String error) {
+    return '导入失败：$error';
+  }
+
+  @override
   String get providerDetailPageEnabledTitle => '是否启用';
 
   @override
@@ -2729,13 +2943,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get addProviderSheetTitle => '添加供应商';
 
   @override
+  String get addProviderSheetOpenAiTab => 'OpenAI';
+
+  @override
+  String get addProviderSheetGoogleTab => 'Google';
+
+  @override
+  String get addProviderSheetClaudeTab => 'Claude';
+
+  @override
+  String get addProviderSheetLocalTab => '本地';
+
+  @override
   String get addProviderSheetEnabledLabel => '是否启用';
 
   @override
   String get addProviderSheetNameLabel => '名称';
 
   @override
+  String get addProviderSheetApiKeyLabel => 'API Key';
+
+  @override
+  String get addProviderSheetBaseUrlLabel => 'Base URL';
+
+  @override
   String get addProviderSheetApiPathLabel => 'API 路径';
+
+  @override
+  String get addProviderSheetResponsesApiLabel => 'Responses API';
+
+  @override
+  String get addProviderSheetVertexAiLabel => 'Vertex AI';
 
   @override
   String get addProviderSheetVertexAiLocationLabel => '位置';
@@ -2749,6 +2987,73 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get addProviderSheetImportJsonButton => '导入 JSON';
+
+  @override
+  String get addProviderSheetLocalDefaultName => '本地模型';
+
+  @override
+  String get addProviderSheetLocalModeLiteRt => 'LiteRT 文件';
+
+  @override
+  String get addProviderSheetLocalModeGguf => 'GGUF 文件';
+
+  @override
+  String get addProviderSheetLocalModeOpenAICompatible => 'Ollama / OpenAI 兼容';
+
+  @override
+  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM 模型文件';
+
+  @override
+  String get addProviderSheetLocalModelPathHint => '导入或粘贴 .litertlm 模型路径';
+
+  @override
+  String get addProviderSheetImportLitertButton => '导入 .litertlm';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF 模型文件';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathHint => '导入或粘贴 .gguf 模型路径';
+
+  @override
+  String get addProviderSheetImportGgufButton => '导入 .gguf';
+
+  @override
+  String get addProviderSheetLocalNoModelFile => '请先选择 .litertlm 模型文件。';
+
+  @override
+  String get addProviderSheetLocalNoGgufModelFile => '请先选择 .gguf 模型文件。';
+
+  @override
+  String addProviderSheetLocalImported(String fileName) {
+    return '已导入 $fileName';
+  }
+
+  @override
+  String get addProviderSheetLocalImporting => '正在导入模型...';
+
+  @override
+  String addProviderSheetLocalImportingProgress(String percent) {
+    return '正在导入模型... $percent';
+  }
+
+  @override
+  String get addProviderSheetLocalImportNotLiteRt => '请选择 .litertlm 模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportNotGguf => '请选择 .gguf 模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportEmptyFile => '选择的模型文件为空。';
+
+  @override
+  String get addProviderSheetLocalImportUnreadable => '无法读取选择的模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportFailed => '模型导入失败。';
+
+  @override
+  String get addProviderSheetLocalModelIdLabel => '模型 ID';
 
   @override
   String get addProviderSheetCancelButton => '取消';
@@ -2927,10 +3232,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServicesAddDialogAdd => '添加';
 
   @override
+  String get searchServicesFieldApiKey => 'API Key';
+
+  @override
   String get searchServicesAddDialogApiKeyRequired => 'API Key 必填';
 
   @override
   String get searchServicesFieldCustomUrlOptional => '自定义 URL（可选）';
+
+  @override
+  String get searchServicesFieldSearchEngineId => '搜索引擎 ID';
+
+  @override
+  String get searchServicesFieldModelOptional => '模型（可选）';
+
+  @override
+  String get searchServicesAddDialogSearchEngineIdRequired => '搜索引擎 ID 必填';
 
   @override
   String get searchServicesAddDialogInstanceUrl => '实例 URL';
@@ -2967,6 +3284,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get searchServicesEditDialogApiKeyRequired => 'API Key 必填';
+
+  @override
+  String get searchServicesEditDialogSearchEngineIdRequired => '搜索引擎 ID 必填';
 
   @override
   String get searchServicesEditDialogInstanceUrl => '实例 URL';
@@ -3538,6 +3858,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchProviderBraveDescription => 'Brave 独立搜索引擎。注重隐私，无跟踪或画像。';
 
   @override
+  String get searchProviderGoogleDescription =>
+      '通过 Custom Search JSON API 使用 Google 可编程搜索引擎。需要 API Key 和搜索引擎 ID。';
+
+  @override
+  String get searchProviderGrokDescription =>
+      '通过 Chat Completions 使用 xAI Grok 实时搜索。需要 xAI API Key 和支持搜索的 Grok 模型。';
+
+  @override
   String get searchProviderExaDescription => '具备语义理解的神经搜索引擎。适合研究与查找特定内容。';
 
   @override
@@ -3590,6 +3918,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchServiceNameBrave => 'Brave';
 
   @override
+  String get searchServiceNameGoogle => 'Google';
+
+  @override
+  String get searchServiceNameGrok => 'Grok';
+
+  @override
   String get searchServiceNameMetaso => '秘塔';
 
   @override
@@ -3614,6 +3948,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get generationInterrupted => '生成已中断';
+
+  @override
+  String get localLiteRtModelTooLargeForDevice =>
+      '这个本地模型对当前设备过大。请使用更小的 LiteRT-LM 模型，例如 Gemma E2B。';
 
   @override
   String get titleForLocale => '新对话';
@@ -4390,6 +4728,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get settingsPageSearch => '搜索服务';
 
   @override
+  String get settingsPageImageGeneration => '图片生成';
+
+  @override
   String get settingsPageTts => '语音服务';
 
   @override
@@ -4417,6 +4758,114 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String settingsPageFilesCount(int count, String size) {
     return '共 $count 个文件 · $size';
   }
+
+  @override
+  String get imageGenerationPageTitle => '图片生成';
+
+  @override
+  String get imageGenerationProviderLabel => '供应商';
+
+  @override
+  String get imageGenerationModelLabel => '模型';
+
+  @override
+  String get imageGenerationModeLabel => '模式';
+
+  @override
+  String get imageGenerationModeGenerate => '文生图';
+
+  @override
+  String get imageGenerationModeEdit => '以图生图';
+
+  @override
+  String get imageGenerationPromptLabel => '提示词';
+
+  @override
+  String get imageGenerationPromptHint => '描述你想生成或修改的图片';
+
+  @override
+  String get imageGenerationSizeLabel => '尺寸';
+
+  @override
+  String get imageGenerationQualityLabel => '质量';
+
+  @override
+  String get imageGenerationOutputFormatLabel => '格式';
+
+  @override
+  String get imageGenerationCountLabel => '数量';
+
+  @override
+  String get imageGenerationPickImages => '选择图片';
+
+  @override
+  String imageGenerationPickedImages(int count) {
+    return '已选择 $count 张';
+  }
+
+  @override
+  String get imageGenerationClearImages => '清除';
+
+  @override
+  String get imageGenerationMaskNotSelected => '未选择蒙版';
+
+  @override
+  String get imageGenerationMaskSelected => '已选择蒙版';
+
+  @override
+  String get imageGenerationPickMask => '选择蒙版';
+
+  @override
+  String get imageGenerationClearMask => '清除蒙版';
+
+  @override
+  String get imageGenerationGenerateButton => '生成图片';
+
+  @override
+  String get imageGenerationEditButton => '编辑图片';
+
+  @override
+  String get imageGenerationGenerating => '生成中…';
+
+  @override
+  String get imageGenerationNoProvider => '没有启用的 OpenAI 兼容供应商';
+
+  @override
+  String get imageGenerationModelRequired => '请先为该助手设置生图模型';
+
+  @override
+  String get imageGenerationModelUnsupported => '所选生图模型不是 OpenAI 兼容的图片模型';
+
+  @override
+  String get imageGenerationNoApiKey => '当前供应商没有 API Key';
+
+  @override
+  String get imageGenerationPromptRequired => '请先输入提示词';
+
+  @override
+  String get imageGenerationImageRequired => '请至少选择一张输入图片';
+
+  @override
+  String imageGenerationSuccess(int count) {
+    return '已生成 $count 张图片';
+  }
+
+  @override
+  String imageGenerationFailed(String error) {
+    return '图片请求失败：$error';
+  }
+
+  @override
+  String get imageGenerationEmptyResult => '图片接口没有返回图片';
+
+  @override
+  String get imageGenerationInvalidResponse => '图片接口返回格式无效';
+
+  @override
+  String get imageGenerationRequestFailed => '图片请求失败';
+
+  @override
+  String get imageGenerationResultTitle => '结果';
 
   @override
   String get storageSpacePageTitle => '存储空间';
@@ -4982,6 +5431,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get assistantEditChatModelSubtitle => '为该助手设置默认聊天模型（未设置时使用全局默认）';
+
+  @override
+  String get assistantEditImageModelTitle => '生图模型';
+
+  @override
+  String get assistantEditImageModelSubtitle =>
+      '聊天消息以 /image、/img、生图 或 画图 开头时使用';
+
+  @override
+  String get assistantEditImageModelUnset => '未设置生图模型';
 
   @override
   String get assistantEditTemperatureDescription => '控制输出的随机性，范围 0–2';
@@ -5978,6 +6437,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get chatMessageWidgetImages => '图片';
 
   @override
+  String get chatMessageWidgetContinueImageGeneration => '继续改图';
+
+  @override
   String chatMessageWidgetCitationsCount(int count) {
     return '共$count条引用';
   }
@@ -6293,6 +6755,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get chatInputBarSelectModelTooltip => '选择模型';
+
+  @override
+  String get chatInputBarImageGenerationTooltip => '图片生成';
 
   @override
   String get chatInputBarOnlineSearchTooltip => '联网搜索';
@@ -6815,6 +7280,93 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get providerDetailPageNetworkTab => '网络代理';
 
   @override
+  String get localModelManagementEntryTitle => '本地模型管理';
+
+  @override
+  String get localModelManagementTitle => '本地模型';
+
+  @override
+  String get localModelManagementModeLabel => '模式';
+
+  @override
+  String get localModelManagementLiteRtMode => 'LiteRT-LM 文件';
+
+  @override
+  String get localModelManagementGgufMode => 'GGUF 文件';
+
+  @override
+  String get localModelManagementOllamaMode => 'Ollama / OpenAI 兼容';
+
+  @override
+  String get localModelManagementModelFileLabel => '模型文件';
+
+  @override
+  String get localModelManagementFileStatusLabel => '文件状态';
+
+  @override
+  String get localModelManagementFileMissing => '文件不存在';
+
+  @override
+  String localModelManagementFileSizeBytes(int bytes) {
+    return '$bytes 字节';
+  }
+
+  @override
+  String get localModelManagementBaseUrlLabel => 'Base URL';
+
+  @override
+  String get localModelManagementModelIdLabel => '模型 ID';
+
+  @override
+  String get localModelManagementImportButton => '导入';
+
+  @override
+  String get localModelManagementDiscoverButton => '自动发现';
+
+  @override
+  String get localModelManagementTestButton => '测试';
+
+  @override
+  String get localModelManagementTesting => '正在测试...';
+
+  @override
+  String get localModelManagementDiscovering => '正在发现...';
+
+  @override
+  String get localModelManagementNoModelsFound => '未发现本地模型。';
+
+  @override
+  String get localModelManagementDiscoveredModels => '模型列表';
+
+  @override
+  String localModelManagementModelsUpdated(int count) {
+    return '已更新 $count 个模型';
+  }
+
+  @override
+  String get localModelManagementTestSuccess => '测试成功';
+
+  @override
+  String localModelManagementTestFailed(String error) {
+    return '测试失败：$error';
+  }
+
+  @override
+  String localModelManagementDiscoverFailed(String error) {
+    return '发现失败：$error';
+  }
+
+  @override
+  String localModelManagementImportSuccess(String fileName) {
+    return '已导入 $fileName';
+  }
+
+  @override
+  String localModelManagementImportFailed(String error) {
+    return '导入失败：$error';
+  }
+
+  @override
   String get providerDetailPageEnabledTitle => '是否启用';
 
   @override
@@ -7056,13 +7608,37 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get addProviderSheetTitle => '添加供应商';
 
   @override
+  String get addProviderSheetOpenAiTab => 'OpenAI';
+
+  @override
+  String get addProviderSheetGoogleTab => 'Google';
+
+  @override
+  String get addProviderSheetClaudeTab => 'Claude';
+
+  @override
+  String get addProviderSheetLocalTab => '本地';
+
+  @override
   String get addProviderSheetEnabledLabel => '是否启用';
 
   @override
   String get addProviderSheetNameLabel => '名称';
 
   @override
+  String get addProviderSheetApiKeyLabel => 'API Key';
+
+  @override
+  String get addProviderSheetBaseUrlLabel => 'Base URL';
+
+  @override
   String get addProviderSheetApiPathLabel => 'API 路径';
+
+  @override
+  String get addProviderSheetResponsesApiLabel => 'Responses API';
+
+  @override
+  String get addProviderSheetVertexAiLabel => 'Vertex AI';
 
   @override
   String get addProviderSheetVertexAiLocationLabel => '位置';
@@ -7076,6 +7652,73 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get addProviderSheetImportJsonButton => '导入 JSON';
+
+  @override
+  String get addProviderSheetLocalDefaultName => '本地模型';
+
+  @override
+  String get addProviderSheetLocalModeLiteRt => 'LiteRT 文件';
+
+  @override
+  String get addProviderSheetLocalModeGguf => 'GGUF 文件';
+
+  @override
+  String get addProviderSheetLocalModeOpenAICompatible => 'Ollama / OpenAI 兼容';
+
+  @override
+  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM 模型文件';
+
+  @override
+  String get addProviderSheetLocalModelPathHint => '导入或粘贴 .litertlm 模型路径';
+
+  @override
+  String get addProviderSheetImportLitertButton => '导入 .litertlm';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF 模型文件';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathHint => '导入或粘贴 .gguf 模型路径';
+
+  @override
+  String get addProviderSheetImportGgufButton => '导入 .gguf';
+
+  @override
+  String get addProviderSheetLocalNoModelFile => '请先选择 .litertlm 模型文件。';
+
+  @override
+  String get addProviderSheetLocalNoGgufModelFile => '请先选择 .gguf 模型文件。';
+
+  @override
+  String addProviderSheetLocalImported(String fileName) {
+    return '已导入 $fileName';
+  }
+
+  @override
+  String get addProviderSheetLocalImporting => '正在导入模型...';
+
+  @override
+  String addProviderSheetLocalImportingProgress(String percent) {
+    return '正在导入模型... $percent';
+  }
+
+  @override
+  String get addProviderSheetLocalImportNotLiteRt => '请选择 .litertlm 模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportNotGguf => '请选择 .gguf 模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportEmptyFile => '选择的模型文件为空。';
+
+  @override
+  String get addProviderSheetLocalImportUnreadable => '无法读取选择的模型文件。';
+
+  @override
+  String get addProviderSheetLocalImportFailed => '模型导入失败。';
+
+  @override
+  String get addProviderSheetLocalModelIdLabel => '模型 ID';
 
   @override
   String get addProviderSheetCancelButton => '取消';
@@ -7254,10 +7897,22 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServicesAddDialogAdd => '添加';
 
   @override
+  String get searchServicesFieldApiKey => 'API Key';
+
+  @override
   String get searchServicesAddDialogApiKeyRequired => 'API Key 必填';
 
   @override
   String get searchServicesFieldCustomUrlOptional => '自定义 URL（可选）';
+
+  @override
+  String get searchServicesFieldSearchEngineId => '搜索引擎 ID';
+
+  @override
+  String get searchServicesFieldModelOptional => '模型（可选）';
+
+  @override
+  String get searchServicesAddDialogSearchEngineIdRequired => '搜索引擎 ID 必填';
 
   @override
   String get searchServicesAddDialogInstanceUrl => '实例 URL';
@@ -7294,6 +7949,9 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get searchServicesEditDialogApiKeyRequired => 'API Key 必填';
+
+  @override
+  String get searchServicesEditDialogSearchEngineIdRequired => '搜索引擎 ID 必填';
 
   @override
   String get searchServicesEditDialogInstanceUrl => '实例 URL';
@@ -7865,6 +8523,14 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchProviderBraveDescription => 'Brave 独立搜索引擎。注重隐私，无跟踪或画像。';
 
   @override
+  String get searchProviderGoogleDescription =>
+      '通过 Custom Search JSON API 使用 Google 可编程搜索引擎。需要 API Key 和搜索引擎 ID。';
+
+  @override
+  String get searchProviderGrokDescription =>
+      '通过 Chat Completions 使用 xAI Grok 实时搜索。需要 xAI API Key 和支持搜索的 Grok 模型。';
+
+  @override
   String get searchProviderExaDescription => '具备语义理解的神经搜索引擎。适合研究与查找特定内容。';
 
   @override
@@ -7917,6 +8583,12 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get searchServiceNameBrave => 'Brave';
 
   @override
+  String get searchServiceNameGoogle => 'Google';
+
+  @override
+  String get searchServiceNameGrok => 'Grok';
+
+  @override
   String get searchServiceNameMetaso => '秘塔';
 
   @override
@@ -7941,6 +8613,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get generationInterrupted => '生成已中断';
+
+  @override
+  String get localLiteRtModelTooLargeForDevice =>
+      '这个本地模型对当前设备过大。请使用更小的 LiteRT-LM 模型，例如 Gemma E2B。';
 
   @override
   String get titleForLocale => '新对话';
@@ -8717,6 +9393,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get settingsPageSearch => '搜尋服務';
 
   @override
+  String get settingsPageImageGeneration => '圖片生成';
+
+  @override
   String get settingsPageTts => '語音服務';
 
   @override
@@ -8744,6 +9423,114 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String settingsPageFilesCount(int count, String size) {
     return '共 $count 個檔案 · $size';
   }
+
+  @override
+  String get imageGenerationPageTitle => '圖片生成';
+
+  @override
+  String get imageGenerationProviderLabel => '供應商';
+
+  @override
+  String get imageGenerationModelLabel => '模型';
+
+  @override
+  String get imageGenerationModeLabel => '模式';
+
+  @override
+  String get imageGenerationModeGenerate => '文生圖';
+
+  @override
+  String get imageGenerationModeEdit => '以圖生圖';
+
+  @override
+  String get imageGenerationPromptLabel => '提示詞';
+
+  @override
+  String get imageGenerationPromptHint => '描述你想生成或修改的圖片';
+
+  @override
+  String get imageGenerationSizeLabel => '尺寸';
+
+  @override
+  String get imageGenerationQualityLabel => '品質';
+
+  @override
+  String get imageGenerationOutputFormatLabel => '格式';
+
+  @override
+  String get imageGenerationCountLabel => '數量';
+
+  @override
+  String get imageGenerationPickImages => '選擇圖片';
+
+  @override
+  String imageGenerationPickedImages(int count) {
+    return '已選擇 $count 張';
+  }
+
+  @override
+  String get imageGenerationClearImages => '清除';
+
+  @override
+  String get imageGenerationMaskNotSelected => '未選擇蒙版';
+
+  @override
+  String get imageGenerationMaskSelected => '已選擇蒙版';
+
+  @override
+  String get imageGenerationPickMask => '選擇蒙版';
+
+  @override
+  String get imageGenerationClearMask => '清除蒙版';
+
+  @override
+  String get imageGenerationGenerateButton => '生成圖片';
+
+  @override
+  String get imageGenerationEditButton => '編輯圖片';
+
+  @override
+  String get imageGenerationGenerating => '生成中…';
+
+  @override
+  String get imageGenerationNoProvider => '沒有啟用的 OpenAI 相容供應商';
+
+  @override
+  String get imageGenerationModelRequired => '請先為該助理設定生圖模型';
+
+  @override
+  String get imageGenerationModelUnsupported => '所選生圖模型不是 OpenAI 相容的圖片模型';
+
+  @override
+  String get imageGenerationNoApiKey => '目前供應商沒有 API Key';
+
+  @override
+  String get imageGenerationPromptRequired => '請先輸入提示詞';
+
+  @override
+  String get imageGenerationImageRequired => '請至少選擇一張輸入圖片';
+
+  @override
+  String imageGenerationSuccess(int count) {
+    return '已生成 $count 張圖片';
+  }
+
+  @override
+  String imageGenerationFailed(String error) {
+    return '圖片請求失敗：$error';
+  }
+
+  @override
+  String get imageGenerationEmptyResult => '圖片介面沒有返回圖片';
+
+  @override
+  String get imageGenerationInvalidResponse => '圖片介面返回格式無效';
+
+  @override
+  String get imageGenerationRequestFailed => '圖片請求失敗';
+
+  @override
+  String get imageGenerationResultTitle => '結果';
 
   @override
   String get storageSpacePageTitle => '儲存空間';
@@ -9309,6 +10096,16 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get assistantEditChatModelSubtitle => '為該助理設定預設聊天模型（未設定時使用全域預設）';
+
+  @override
+  String get assistantEditImageModelTitle => '生圖模型';
+
+  @override
+  String get assistantEditImageModelSubtitle =>
+      '聊天訊息以 /image、/img、生圖 或 畫圖 開頭時使用';
+
+  @override
+  String get assistantEditImageModelUnset => '未設定生圖模型';
 
   @override
   String get assistantEditTemperatureDescription => '控制輸出的隨機性，範圍 0–2';
@@ -10304,6 +11101,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get chatMessageWidgetImages => '圖片';
 
   @override
+  String get chatMessageWidgetContinueImageGeneration => '繼續改圖';
+
+  @override
   String chatMessageWidgetCitationsCount(int count) {
     return '共$count條引用';
   }
@@ -10619,6 +11419,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get chatInputBarSelectModelTooltip => '選擇模型';
+
+  @override
+  String get chatInputBarImageGenerationTooltip => '圖片生成';
 
   @override
   String get chatInputBarOnlineSearchTooltip => '聯網搜尋';
@@ -11141,6 +11944,93 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get providerDetailPageNetworkTab => '網路代理';
 
   @override
+  String get localModelManagementEntryTitle => '本地模型管理';
+
+  @override
+  String get localModelManagementTitle => '本地模型';
+
+  @override
+  String get localModelManagementModeLabel => '模式';
+
+  @override
+  String get localModelManagementLiteRtMode => 'LiteRT-LM 檔案';
+
+  @override
+  String get localModelManagementGgufMode => 'GGUF 檔案';
+
+  @override
+  String get localModelManagementOllamaMode => 'Ollama / OpenAI 相容';
+
+  @override
+  String get localModelManagementModelFileLabel => '模型檔案';
+
+  @override
+  String get localModelManagementFileStatusLabel => '檔案狀態';
+
+  @override
+  String get localModelManagementFileMissing => '檔案不存在';
+
+  @override
+  String localModelManagementFileSizeBytes(int bytes) {
+    return '$bytes 位元組';
+  }
+
+  @override
+  String get localModelManagementBaseUrlLabel => 'Base URL';
+
+  @override
+  String get localModelManagementModelIdLabel => '模型 ID';
+
+  @override
+  String get localModelManagementImportButton => '匯入';
+
+  @override
+  String get localModelManagementDiscoverButton => '自動發現';
+
+  @override
+  String get localModelManagementTestButton => '測試';
+
+  @override
+  String get localModelManagementTesting => '正在測試...';
+
+  @override
+  String get localModelManagementDiscovering => '正在發現...';
+
+  @override
+  String get localModelManagementNoModelsFound => '未發現本地模型。';
+
+  @override
+  String get localModelManagementDiscoveredModels => '模型清單';
+
+  @override
+  String localModelManagementModelsUpdated(int count) {
+    return '已更新 $count 個模型';
+  }
+
+  @override
+  String get localModelManagementTestSuccess => '測試成功';
+
+  @override
+  String localModelManagementTestFailed(String error) {
+    return '測試失敗：$error';
+  }
+
+  @override
+  String localModelManagementDiscoverFailed(String error) {
+    return '發現失敗：$error';
+  }
+
+  @override
+  String localModelManagementImportSuccess(String fileName) {
+    return '已匯入 $fileName';
+  }
+
+  @override
+  String localModelManagementImportFailed(String error) {
+    return '匯入失敗：$error';
+  }
+
+  @override
   String get providerDetailPageEnabledTitle => '是否啟用';
 
   @override
@@ -11382,13 +12272,37 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get addProviderSheetTitle => '新增供應商';
 
   @override
+  String get addProviderSheetOpenAiTab => 'OpenAI';
+
+  @override
+  String get addProviderSheetGoogleTab => 'Google';
+
+  @override
+  String get addProviderSheetClaudeTab => 'Claude';
+
+  @override
+  String get addProviderSheetLocalTab => '本機';
+
+  @override
   String get addProviderSheetEnabledLabel => '是否啟用';
 
   @override
   String get addProviderSheetNameLabel => '名稱';
 
   @override
+  String get addProviderSheetApiKeyLabel => 'API Key';
+
+  @override
+  String get addProviderSheetBaseUrlLabel => 'Base URL';
+
+  @override
   String get addProviderSheetApiPathLabel => 'API 路徑';
+
+  @override
+  String get addProviderSheetResponsesApiLabel => 'Responses API';
+
+  @override
+  String get addProviderSheetVertexAiLabel => 'Vertex AI';
 
   @override
   String get addProviderSheetVertexAiLocationLabel => '位置';
@@ -11402,6 +12316,73 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get addProviderSheetImportJsonButton => '匯入 JSON';
+
+  @override
+  String get addProviderSheetLocalDefaultName => '本機模型';
+
+  @override
+  String get addProviderSheetLocalModeLiteRt => 'LiteRT 檔案';
+
+  @override
+  String get addProviderSheetLocalModeGguf => 'GGUF 檔案';
+
+  @override
+  String get addProviderSheetLocalModeOpenAICompatible => 'Ollama / OpenAI 相容';
+
+  @override
+  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM 模型檔案';
+
+  @override
+  String get addProviderSheetLocalModelPathHint => '匯入或貼上 .litertlm 模型路徑';
+
+  @override
+  String get addProviderSheetImportLitertButton => '匯入 .litertlm';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF 模型檔案';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathHint => '匯入或貼上 .gguf 模型路徑';
+
+  @override
+  String get addProviderSheetImportGgufButton => '匯入 .gguf';
+
+  @override
+  String get addProviderSheetLocalNoModelFile => '請先選擇 .litertlm 模型檔案。';
+
+  @override
+  String get addProviderSheetLocalNoGgufModelFile => '請先選擇 .gguf 模型檔案。';
+
+  @override
+  String addProviderSheetLocalImported(String fileName) {
+    return '已匯入 $fileName';
+  }
+
+  @override
+  String get addProviderSheetLocalImporting => '正在匯入模型...';
+
+  @override
+  String addProviderSheetLocalImportingProgress(String percent) {
+    return '正在匯入模型... $percent';
+  }
+
+  @override
+  String get addProviderSheetLocalImportNotLiteRt => '請選擇 .litertlm 模型檔案。';
+
+  @override
+  String get addProviderSheetLocalImportNotGguf => '請選擇 .gguf 模型檔案。';
+
+  @override
+  String get addProviderSheetLocalImportEmptyFile => '選擇的模型檔案為空。';
+
+  @override
+  String get addProviderSheetLocalImportUnreadable => '無法讀取選擇的模型檔案。';
+
+  @override
+  String get addProviderSheetLocalImportFailed => '模型匯入失敗。';
+
+  @override
+  String get addProviderSheetLocalModelIdLabel => '模型 ID';
 
   @override
   String get addProviderSheetCancelButton => '取消';
@@ -11579,10 +12560,22 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get searchServicesAddDialogAdd => '新增';
 
   @override
+  String get searchServicesFieldApiKey => 'API Key';
+
+  @override
   String get searchServicesAddDialogApiKeyRequired => 'API Key 必填';
 
   @override
   String get searchServicesFieldCustomUrlOptional => '自訂 URL（可選）';
+
+  @override
+  String get searchServicesFieldSearchEngineId => '搜尋引擎 ID';
+
+  @override
+  String get searchServicesFieldModelOptional => '模型（可選）';
+
+  @override
+  String get searchServicesAddDialogSearchEngineIdRequired => '搜尋引擎 ID 必填';
 
   @override
   String get searchServicesAddDialogInstanceUrl => '實例 URL';
@@ -11619,6 +12612,9 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get searchServicesEditDialogApiKeyRequired => 'API Key 必填';
+
+  @override
+  String get searchServicesEditDialogSearchEngineIdRequired => '搜尋引擎 ID 必填';
 
   @override
   String get searchServicesEditDialogInstanceUrl => '實例 URL';
@@ -12190,6 +13186,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get searchProviderBraveDescription => 'Brave 獨立搜尋引擎。注重隱私，無追蹤或建立個人檔案。';
 
   @override
+  String get searchProviderGoogleDescription =>
+      '透過 Custom Search JSON API 使用 Google 可程式化搜尋引擎。需要 API Key 和搜尋引擎 ID。';
+
+  @override
+  String get searchProviderGrokDescription =>
+      '透過 Chat Completions 使用 xAI Grok 即時搜尋。需要 xAI API Key 和支援搜尋的 Grok 模型。';
+
+  @override
   String get searchProviderExaDescription => '具備語義理解的神經搜尋引擎。適合研究與查找特定內容。';
 
   @override
@@ -12243,6 +13247,12 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get searchServiceNameBrave => 'Brave 搜尋';
 
   @override
+  String get searchServiceNameGoogle => 'Google';
+
+  @override
+  String get searchServiceNameGrok => 'Grok';
+
+  @override
   String get searchServiceNameMetaso => 'Metaso（秘塔）';
 
   @override
@@ -12267,6 +13277,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get generationInterrupted => '生成已中斷';
+
+  @override
+  String get localLiteRtModelTooLargeForDevice =>
+      '這個本地模型對目前裝置過大。請使用更小的 LiteRT-LM 模型，例如 Gemma E2B。';
 
   @override
   String get titleForLocale => '新對話';

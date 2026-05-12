@@ -23,6 +23,8 @@ class Assistant {
   final bool useAssistantName; // replace model name in chat with assistant name
   final String? chatModelProvider; // null -> use global default
   final String? chatModelId; // null -> use global default
+  final String? imageModelProvider; // null -> no assistant image model
+  final String? imageModelId; // null -> no assistant image model
   final double? temperature; // null to disable; else 0.0 - 2.0
   final double? topP; // null to disable; else 0.0 - 1.0
   final int contextMessageSize; // number of previous messages to include
@@ -58,6 +60,8 @@ class Assistant {
     this.useAssistantName = false,
     this.chatModelProvider,
     this.chatModelId,
+    this.imageModelProvider,
+    this.imageModelId,
     this.temperature,
     this.topP,
     this.contextMessageSize = 64,
@@ -87,6 +91,8 @@ class Assistant {
     bool? useAssistantName,
     String? chatModelProvider,
     String? chatModelId,
+    String? imageModelProvider,
+    String? imageModelId,
     double? temperature,
     double? topP,
     int? contextMessageSize,
@@ -107,6 +113,7 @@ class Assistant {
     List<PresetMessage>? presetMessages,
     List<AssistantRegex>? regexRules,
     bool clearChatModel = false,
+    bool clearImageModel = false,
     bool clearAvatar = false,
     bool clearTemperature = false,
     bool clearTopP = false,
@@ -124,6 +131,12 @@ class Assistant {
           ? null
           : (chatModelProvider ?? this.chatModelProvider),
       chatModelId: clearChatModel ? null : (chatModelId ?? this.chatModelId),
+      imageModelProvider: clearImageModel
+          ? null
+          : (imageModelProvider ?? this.imageModelProvider),
+      imageModelId: clearImageModel
+          ? null
+          : (imageModelId ?? this.imageModelId),
       temperature: clearTemperature ? null : (temperature ?? this.temperature),
       topP: clearTopP ? null : (topP ?? this.topP),
       contextMessageSize: contextMessageSize ?? this.contextMessageSize,
@@ -158,6 +171,8 @@ class Assistant {
     'useAssistantName': useAssistantName,
     'chatModelProvider': chatModelProvider,
     'chatModelId': chatModelId,
+    'imageModelProvider': imageModelProvider,
+    'imageModelId': imageModelId,
     'temperature': temperature,
     'topP': topP,
     'contextMessageSize': contextMessageSize,
@@ -187,6 +202,8 @@ class Assistant {
     useAssistantName: json['useAssistantName'] as bool? ?? false,
     chatModelProvider: json['chatModelProvider'] as String?,
     chatModelId: json['chatModelId'] as String?,
+    imageModelProvider: json['imageModelProvider'] as String?,
+    imageModelId: json['imageModelId'] as String?,
     temperature: (json['temperature'] as num?)?.toDouble(),
     topP: (json['topP'] as num?)?.toDouble(),
     contextMessageSize: (json['contextMessageSize'] as num?)?.toInt() ?? 64,

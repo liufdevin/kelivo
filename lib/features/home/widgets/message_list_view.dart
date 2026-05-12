@@ -20,6 +20,7 @@ typedef OnRegenerateMessage = void Function(ChatMessage message);
 typedef OnResendMessage = void Function(ChatMessage message);
 typedef OnTranslateMessage = void Function(ChatMessage message);
 typedef OnEditMessage = void Function(ChatMessage message);
+typedef OnContinueImageGeneration = void Function(ChatMessage message);
 typedef OnDeleteMessage =
     Future<void> Function(
       ChatMessage message,
@@ -95,6 +96,7 @@ class MessageListView extends StatelessWidget {
     this.onResendMessage,
     this.onTranslateMessage,
     this.onEditMessage,
+    this.onContinueImageGeneration,
     this.onDeleteMessage,
     this.onDeleteAllVersions,
     this.onForkConversation,
@@ -152,6 +154,7 @@ class MessageListView extends StatelessWidget {
   final OnResendMessage? onResendMessage;
   final OnTranslateMessage? onTranslateMessage;
   final OnEditMessage? onEditMessage;
+  final OnContinueImageGeneration? onContinueImageGeneration;
   final OnDeleteMessage? onDeleteMessage;
   final OnDeleteAllVersions? onDeleteAllVersions;
   final OnForkConversation? onForkConversation;
@@ -569,6 +572,9 @@ class MessageListView extends StatelessWidget {
           : null,
       onEdit: (message.role == 'user' || message.role == 'assistant')
           ? () => onEditMessage?.call(message)
+          : null,
+      onContinueImageGeneration: message.role == 'assistant'
+          ? (message) => onContinueImageGeneration?.call(message)
           : null,
       onDelete: message.role == 'user'
           ? () => onDeleteMessage?.call(message, byGroup)

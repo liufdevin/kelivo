@@ -20,6 +20,16 @@ Future<InternetAddress?> _resolveProxyAddress(String host) async {
   }
 }
 
+String? _headerValueIgnoreCase(Map<String, String> headers, String name) {
+  final target = name.toLowerCase();
+  for (final entry in headers.entries) {
+    if (entry.key.toLowerCase() == target) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
 ConnectionTask<Socket> _directConnection(Uri uri, SecurityContext? context) {
   if (uri.scheme == 'https') {
     final Future<SecureSocket> socket = SecureSocket.connect(
@@ -159,13 +169,12 @@ class DioHttpClient extends http.BaseClient {
     final uri = request.url;
     final method = request.method.toUpperCase();
 
-    final reqHeaders = Map<String, String>.from(request.headers);
-    reqHeaders.putIfAbsent('User-Agent', () => 'Kelivo');
-
     List<int> bodyBytes = const <int>[];
     try {
       bodyBytes = await request.finalize().toBytes();
     } catch (_) {}
+    final reqHeaders = Map<String, String>.from(request.headers);
+    reqHeaders.putIfAbsent('User-Agent', () => 'Kelivo');
 
     if (RequestLogger.enabled) {
       RequestLogger.logLine('[REQ $reqId] $method $uri');
@@ -192,6 +201,7 @@ class DioHttpClient extends http.BaseClient {
         options: Options(
           method: method,
           headers: reqHeaders,
+          contentType: _headerValueIgnoreCase(reqHeaders, 'content-type'),
           responseType: ResponseType.stream,
           followRedirects: request.followRedirects,
           maxRedirects: request.maxRedirects,

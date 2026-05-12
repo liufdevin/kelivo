@@ -596,6 +596,8 @@ class _BrandBadge extends StatelessWidget {
     if (s is SearXNGOptions) return 'searxng';
     if (s is LinkUpOptions) return 'linkup';
     if (s is BraveOptions) return 'brave';
+    if (s is GoogleSearchOptions) return 'google';
+    if (s is GrokSearchOptions) return 'grok';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
     if (s is JinaOptions) return 'jina';
@@ -769,6 +771,9 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
     'url': TextEditingController(),
     'tavilyUrl': TextEditingController(),
     'exaUrl': TextEditingController(),
+    'grokUrl': TextEditingController(),
+    'searchEngineId': TextEditingController(),
+    'model': TextEditingController(),
     'engines': TextEditingController(),
     'language': TextEditingController(),
     'username': TextEditingController(),
@@ -866,7 +871,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return [
           TextField(
             controller: _controllers['apiKey'],
-            decoration: deco('API Key'),
+            decoration: deco(l10n.searchServicesFieldApiKey),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -881,7 +886,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return [
           TextField(
             controller: _controllers['apiKey'],
-            decoration: deco('API Key'),
+            decoration: deco(l10n.searchServicesFieldApiKey),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -889,6 +894,41 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
             decoration: _deskInputDecoration(context).copyWith(
               labelText: l10n.searchServicesFieldCustomUrlOptional,
               hintText: ExaOptions.defaultUrl,
+            ),
+          ),
+        ];
+      case 'google':
+        return [
+          TextField(
+            controller: _controllers['apiKey'],
+            decoration: deco(l10n.searchServicesFieldApiKey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['searchEngineId'],
+            decoration: deco(l10n.searchServicesFieldSearchEngineId),
+          ),
+        ];
+      case 'grok':
+        return [
+          TextField(
+            controller: _controllers['apiKey'],
+            decoration: deco(l10n.searchServicesFieldApiKey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['model'],
+            decoration: _deskInputDecoration(context).copyWith(
+              labelText: l10n.searchServicesFieldModelOptional,
+              hintText: GrokSearchOptions.defaultModel,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['grokUrl'],
+            decoration: _deskInputDecoration(context).copyWith(
+              labelText: l10n.searchServicesFieldCustomUrlOptional,
+              hintText: GrokSearchOptions.defaultUrl,
             ),
           ),
         ];
@@ -903,7 +943,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return [
           TextField(
             controller: _controllers['apiKey'],
-            decoration: deco('API Key'),
+            decoration: deco(l10n.searchServicesFieldApiKey),
           ),
         ];
       case 'searxng':
@@ -976,6 +1016,19 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return LinkUpOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'brave':
         return BraveOptions(id: id, apiKey: _controllers['apiKey']!.text);
+      case 'google':
+        return GoogleSearchOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          searchEngineId: _controllers['searchEngineId']!.text.trim(),
+        );
+      case 'grok':
+        return GrokSearchOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          model: _controllers['model']!.text.trim(),
+          url: _controllers['grokUrl']!.text.trim(),
+        );
       case 'metaso':
         return MetasoOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'jina':
@@ -1030,6 +1083,15 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is BraveOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+    } else if (s is GoogleSearchOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+      _controllers['searchEngineId'] = TextEditingController(
+        text: s.searchEngineId,
+      );
+    } else if (s is GrokSearchOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+      _controllers['model'] = TextEditingController(text: s.model);
+      _controllers['url'] = TextEditingController(text: s.url);
     } else if (s is MetasoOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is OllamaOptions) {
@@ -1120,7 +1182,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       return [
         TextField(
           controller: _controllers['apiKey'],
-          decoration: deco('API Key'),
+          decoration: deco(l10n.searchServicesFieldApiKey),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -1135,7 +1197,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       return [
         TextField(
           controller: _controllers['apiKey'],
-          decoration: deco('API Key'),
+          decoration: deco(l10n.searchServicesFieldApiKey),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -1143,6 +1205,41 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           decoration: _deskInputDecoration(context).copyWith(
             labelText: l10n.searchServicesFieldCustomUrlOptional,
             hintText: ExaOptions.defaultUrl,
+          ),
+        ),
+      ];
+    } else if (s is GoogleSearchOptions) {
+      return [
+        TextField(
+          controller: _controllers['apiKey'],
+          decoration: deco(l10n.searchServicesFieldApiKey),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['searchEngineId'],
+          decoration: deco(l10n.searchServicesFieldSearchEngineId),
+        ),
+      ];
+    } else if (s is GrokSearchOptions) {
+      return [
+        TextField(
+          controller: _controllers['apiKey'],
+          decoration: deco(l10n.searchServicesFieldApiKey),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['model'],
+          decoration: _deskInputDecoration(context).copyWith(
+            labelText: l10n.searchServicesFieldModelOptional,
+            hintText: GrokSearchOptions.defaultModel,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['url'],
+          decoration: _deskInputDecoration(context).copyWith(
+            labelText: l10n.searchServicesFieldCustomUrlOptional,
+            hintText: GrokSearchOptions.defaultUrl,
           ),
         ),
       ];
@@ -1157,7 +1254,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       return [
         TextField(
           controller: _controllers['apiKey'],
-          decoration: deco('API Key'),
+          decoration: deco(l10n.searchServicesFieldApiKey),
         ),
       ];
     } else if (s is DuckDuckGoOptions) {
@@ -1241,6 +1338,21 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     if (s is BraveOptions) {
       return BraveOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
     }
+    if (s is GoogleSearchOptions) {
+      return GoogleSearchOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        searchEngineId: _controllers['searchEngineId']!.text.trim(),
+      );
+    }
+    if (s is GrokSearchOptions) {
+      return GrokSearchOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        model: _controllers['model']!.text.trim(),
+        url: _controllers['url']!.text.trim(),
+      );
+    }
     if (s is MetasoOptions) {
       return MetasoOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
     }
@@ -1281,6 +1393,8 @@ class _ServiceTypeChipsState extends State<_ServiceTypeChips> {
     (type: 'searxng', name: 'SearXNG', brand: 'searxng'),
     (type: 'linkup', name: 'LinkUp', brand: 'linkup'),
     (type: 'brave', name: 'Brave', brand: 'brave'),
+    (type: 'google', name: 'Google', brand: 'google'),
+    (type: 'grok', name: 'Grok', brand: 'grok'),
     (type: 'metaso', name: 'Metaso', brand: 'metaso'),
     (type: 'jina', name: 'Jina', brand: 'jina'),
     (type: 'ollama', name: 'Ollama', brand: 'ollama'),

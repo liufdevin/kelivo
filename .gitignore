@@ -58,6 +58,8 @@ internationalization.md
 /macos/Podfile.lock
 /desiredFileName.txt
 /lib/secrets/fallback.dart
+provider_configs.local.json
+local_config/provider_configs.local.json
 .claude/settings.local.json
 /.codex/
 /.agent/

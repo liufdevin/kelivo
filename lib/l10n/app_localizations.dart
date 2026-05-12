@@ -208,6 +208,12 @@ abstract class AppLocalizations {
   /// **'Search'**
   String get settingsPageSearch;
 
+  /// No description provided for @settingsPageImageGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Generation'**
+  String get settingsPageImageGeneration;
+
   /// No description provided for @settingsPageTts.
   ///
   /// In en, this message translates to:
@@ -261,6 +267,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} files · {size}'**
   String settingsPageFilesCount(int count, String size);
+
+  /// No description provided for @imageGenerationPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Generation'**
+  String get imageGenerationPageTitle;
+
+  /// No description provided for @imageGenerationProviderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Provider'**
+  String get imageGenerationProviderLabel;
+
+  /// No description provided for @imageGenerationModelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get imageGenerationModelLabel;
+
+  /// No description provided for @imageGenerationModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get imageGenerationModeLabel;
+
+  /// No description provided for @imageGenerationModeGenerate.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate'**
+  String get imageGenerationModeGenerate;
+
+  /// No description provided for @imageGenerationModeEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Image'**
+  String get imageGenerationModeEdit;
+
+  /// No description provided for @imageGenerationPromptLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt'**
+  String get imageGenerationPromptLabel;
+
+  /// No description provided for @imageGenerationPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the image you want'**
+  String get imageGenerationPromptHint;
+
+  /// No description provided for @imageGenerationSizeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get imageGenerationSizeLabel;
+
+  /// No description provided for @imageGenerationQualityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get imageGenerationQualityLabel;
+
+  /// No description provided for @imageGenerationOutputFormatLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Format'**
+  String get imageGenerationOutputFormatLabel;
+
+  /// No description provided for @imageGenerationCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Count'**
+  String get imageGenerationCountLabel;
+
+  /// No description provided for @imageGenerationPickImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Images'**
+  String get imageGenerationPickImages;
+
+  /// No description provided for @imageGenerationPickedImages.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String imageGenerationPickedImages(int count);
+
+  /// No description provided for @imageGenerationClearImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get imageGenerationClearImages;
+
+  /// No description provided for @imageGenerationMaskNotSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No mask selected'**
+  String get imageGenerationMaskNotSelected;
+
+  /// No description provided for @imageGenerationMaskSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Mask selected'**
+  String get imageGenerationMaskSelected;
+
+  /// No description provided for @imageGenerationPickMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick Mask'**
+  String get imageGenerationPickMask;
+
+  /// No description provided for @imageGenerationClearMask.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Mask'**
+  String get imageGenerationClearMask;
+
+  /// No description provided for @imageGenerationGenerateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Image'**
+  String get imageGenerationGenerateButton;
+
+  /// No description provided for @imageGenerationEditButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Image'**
+  String get imageGenerationEditButton;
+
+  /// No description provided for @imageGenerationGenerating.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating…'**
+  String get imageGenerationGenerating;
+
+  /// No description provided for @imageGenerationNoProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'No enabled OpenAI-compatible provider'**
+  String get imageGenerationNoProvider;
+
+  /// No description provided for @imageGenerationModelRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Set an image model for this assistant first'**
+  String get imageGenerationModelRequired;
+
+  /// No description provided for @imageGenerationModelUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected image model is not an OpenAI-compatible image model'**
+  String get imageGenerationModelUnsupported;
+
+  /// No description provided for @imageGenerationNoApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected provider has no API key'**
+  String get imageGenerationNoApiKey;
+
+  /// No description provided for @imageGenerationPromptRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a prompt first'**
+  String get imageGenerationPromptRequired;
+
+  /// No description provided for @imageGenerationImageRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Select at least one input image'**
+  String get imageGenerationImageRequired;
+
+  /// No description provided for @imageGenerationSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} image(s) generated'**
+  String imageGenerationSuccess(int count);
+
+  /// No description provided for @imageGenerationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image request failed: {error}'**
+  String imageGenerationFailed(String error);
+
+  /// No description provided for @imageGenerationEmptyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'The image API returned no image'**
+  String get imageGenerationEmptyResult;
+
+  /// No description provided for @imageGenerationInvalidResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The image API returned an invalid response'**
+  String get imageGenerationInvalidResponse;
+
+  /// No description provided for @imageGenerationRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Image request failed'**
+  String get imageGenerationRequestFailed;
+
+  /// No description provided for @imageGenerationResultTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get imageGenerationResultTitle;
 
   /// No description provided for @storageSpacePageTitle.
   ///
@@ -1330,6 +1540,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Default chat model for this assistant (fallback to global)'**
   String get assistantEditChatModelSubtitle;
+
+  /// No description provided for @assistantEditImageModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Model'**
+  String get assistantEditImageModelTitle;
+
+  /// No description provided for @assistantEditImageModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used in chat when a message starts with /image, /img, 生图, or 画图'**
+  String get assistantEditImageModelSubtitle;
+
+  /// No description provided for @assistantEditImageModelUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'No image model'**
+  String get assistantEditImageModelUnset;
 
   /// No description provided for @assistantEditTemperatureDescription.
   ///
@@ -3257,6 +3485,12 @@ abstract class AppLocalizations {
   /// **'Images'**
   String get chatMessageWidgetImages;
 
+  /// No description provided for @chatMessageWidgetContinueImageGeneration.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit image'**
+  String get chatMessageWidgetContinueImageGeneration;
+
   /// No description provided for @chatMessageWidgetCitationsCount.
   ///
   /// In en, this message translates to:
@@ -3844,6 +4078,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select Model'**
   String get chatInputBarSelectModelTooltip;
+
+  /// No description provided for @chatInputBarImageGenerationTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Generation'**
+  String get chatInputBarImageGenerationTooltip;
 
   /// No description provided for @chatInputBarOnlineSearchTooltip.
   ///
@@ -4832,6 +5072,156 @@ abstract class AppLocalizations {
   /// **'Network'**
   String get providerDetailPageNetworkTab;
 
+  /// No description provided for @localModelManagementEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Model Management'**
+  String get localModelManagementEntryTitle;
+
+  /// No description provided for @localModelManagementTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Models'**
+  String get localModelManagementTitle;
+
+  /// No description provided for @localModelManagementModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mode'**
+  String get localModelManagementModeLabel;
+
+  /// No description provided for @localModelManagementLiteRtMode.
+  ///
+  /// In en, this message translates to:
+  /// **'LiteRT-LM file'**
+  String get localModelManagementLiteRtMode;
+
+  /// No description provided for @localModelManagementGgufMode.
+  ///
+  /// In en, this message translates to:
+  /// **'GGUF file'**
+  String get localModelManagementGgufMode;
+
+  /// No description provided for @localModelManagementOllamaMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama / OpenAI-compatible'**
+  String get localModelManagementOllamaMode;
+
+  /// No description provided for @localModelManagementModelFileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model file'**
+  String get localModelManagementModelFileLabel;
+
+  /// No description provided for @localModelManagementFileStatusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'File status'**
+  String get localModelManagementFileStatusLabel;
+
+  /// No description provided for @localModelManagementFileMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'File missing'**
+  String get localModelManagementFileMissing;
+
+  /// No description provided for @localModelManagementFileSizeBytes.
+  ///
+  /// In en, this message translates to:
+  /// **'{bytes} bytes'**
+  String localModelManagementFileSizeBytes(int bytes);
+
+  /// No description provided for @localModelManagementBaseUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Base URL'**
+  String get localModelManagementBaseUrlLabel;
+
+  /// No description provided for @localModelManagementModelIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get localModelManagementModelIdLabel;
+
+  /// No description provided for @localModelManagementImportButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get localModelManagementImportButton;
+
+  /// No description provided for @localModelManagementDiscoverButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover'**
+  String get localModelManagementDiscoverButton;
+
+  /// No description provided for @localModelManagementTestButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Test'**
+  String get localModelManagementTestButton;
+
+  /// No description provided for @localModelManagementTesting.
+  ///
+  /// In en, this message translates to:
+  /// **'Testing...'**
+  String get localModelManagementTesting;
+
+  /// No description provided for @localModelManagementDiscovering.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovering...'**
+  String get localModelManagementDiscovering;
+
+  /// No description provided for @localModelManagementNoModelsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No local models found.'**
+  String get localModelManagementNoModelsFound;
+
+  /// No description provided for @localModelManagementDiscoveredModels.
+  ///
+  /// In en, this message translates to:
+  /// **'Models'**
+  String get localModelManagementDiscoveredModels;
+
+  /// No description provided for @localModelManagementModelsUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {count} model(s)'**
+  String localModelManagementModelsUpdated(int count);
+
+  /// No description provided for @localModelManagementTestSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Test succeeded'**
+  String get localModelManagementTestSuccess;
+
+  /// No description provided for @localModelManagementTestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Test failed: {error}'**
+  String localModelManagementTestFailed(String error);
+
+  /// No description provided for @localModelManagementDiscoverFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Discovery failed: {error}'**
+  String localModelManagementDiscoverFailed(String error);
+
+  /// No description provided for @localModelManagementImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {fileName}'**
+  String localModelManagementImportSuccess(String fileName);
+
+  /// No description provided for @localModelManagementImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String localModelManagementImportFailed(String error);
+
   /// No description provided for @providerDetailPageEnabledTitle.
   ///
   /// In en, this message translates to:
@@ -5312,6 +5702,30 @@ abstract class AppLocalizations {
   /// **'Add Provider'**
   String get addProviderSheetTitle;
 
+  /// No description provided for @addProviderSheetOpenAiTab.
+  ///
+  /// In en, this message translates to:
+  /// **'OpenAI'**
+  String get addProviderSheetOpenAiTab;
+
+  /// No description provided for @addProviderSheetGoogleTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get addProviderSheetGoogleTab;
+
+  /// No description provided for @addProviderSheetClaudeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude'**
+  String get addProviderSheetClaudeTab;
+
+  /// No description provided for @addProviderSheetLocalTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Local'**
+  String get addProviderSheetLocalTab;
+
   /// No description provided for @addProviderSheetEnabledLabel.
   ///
   /// In en, this message translates to:
@@ -5324,11 +5738,35 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get addProviderSheetNameLabel;
 
+  /// No description provided for @addProviderSheetApiKeyLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get addProviderSheetApiKeyLabel;
+
+  /// No description provided for @addProviderSheetBaseUrlLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Base URL'**
+  String get addProviderSheetBaseUrlLabel;
+
   /// No description provided for @addProviderSheetApiPathLabel.
   ///
   /// In en, this message translates to:
   /// **'API Path'**
   String get addProviderSheetApiPathLabel;
+
+  /// No description provided for @addProviderSheetResponsesApiLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Responses API'**
+  String get addProviderSheetResponsesApiLabel;
+
+  /// No description provided for @addProviderSheetVertexAiLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Vertex AI'**
+  String get addProviderSheetVertexAiLabel;
 
   /// No description provided for @addProviderSheetVertexAiLocationLabel.
   ///
@@ -5353,6 +5791,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Import JSON'**
   String get addProviderSheetImportJsonButton;
+
+  /// No description provided for @addProviderSheetLocalDefaultName.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Model'**
+  String get addProviderSheetLocalDefaultName;
+
+  /// No description provided for @addProviderSheetLocalModeLiteRt.
+  ///
+  /// In en, this message translates to:
+  /// **'LiteRT file'**
+  String get addProviderSheetLocalModeLiteRt;
+
+  /// No description provided for @addProviderSheetLocalModeGguf.
+  ///
+  /// In en, this message translates to:
+  /// **'GGUF file'**
+  String get addProviderSheetLocalModeGguf;
+
+  /// No description provided for @addProviderSheetLocalModeOpenAICompatible.
+  ///
+  /// In en, this message translates to:
+  /// **'Ollama / OpenAI-compatible'**
+  String get addProviderSheetLocalModeOpenAICompatible;
+
+  /// No description provided for @addProviderSheetLocalModelPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'LiteRT-LM model file'**
+  String get addProviderSheetLocalModelPathLabel;
+
+  /// No description provided for @addProviderSheetLocalModelPathHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Import or paste a .litertlm model path'**
+  String get addProviderSheetLocalModelPathHint;
+
+  /// No description provided for @addProviderSheetImportLitertButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import .litertlm'**
+  String get addProviderSheetImportLitertButton;
+
+  /// No description provided for @addProviderSheetLocalGgufModelPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GGUF model file'**
+  String get addProviderSheetLocalGgufModelPathLabel;
+
+  /// No description provided for @addProviderSheetLocalGgufModelPathHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Import or paste a .gguf model path'**
+  String get addProviderSheetLocalGgufModelPathHint;
+
+  /// No description provided for @addProviderSheetImportGgufButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Import .gguf'**
+  String get addProviderSheetImportGgufButton;
+
+  /// No description provided for @addProviderSheetLocalNoModelFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a .litertlm model file first.'**
+  String get addProviderSheetLocalNoModelFile;
+
+  /// No description provided for @addProviderSheetLocalNoGgufModelFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a .gguf model file first.'**
+  String get addProviderSheetLocalNoGgufModelFile;
+
+  /// No description provided for @addProviderSheetLocalImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {fileName}'**
+  String addProviderSheetLocalImported(String fileName);
+
+  /// No description provided for @addProviderSheetLocalImporting.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing model...'**
+  String get addProviderSheetLocalImporting;
+
+  /// No description provided for @addProviderSheetLocalImportingProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing model... {percent}'**
+  String addProviderSheetLocalImportingProgress(String percent);
+
+  /// No description provided for @addProviderSheetLocalImportNotLiteRt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a .litertlm model file.'**
+  String get addProviderSheetLocalImportNotLiteRt;
+
+  /// No description provided for @addProviderSheetLocalImportNotGguf.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a .gguf model file.'**
+  String get addProviderSheetLocalImportNotGguf;
+
+  /// No description provided for @addProviderSheetLocalImportEmptyFile.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected model file is empty.'**
+  String get addProviderSheetLocalImportEmptyFile;
+
+  /// No description provided for @addProviderSheetLocalImportUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the selected model file.'**
+  String get addProviderSheetLocalImportUnreadable;
+
+  /// No description provided for @addProviderSheetLocalImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Model import failed.'**
+  String get addProviderSheetLocalImportFailed;
+
+  /// No description provided for @addProviderSheetLocalModelIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID'**
+  String get addProviderSheetLocalModelIdLabel;
 
   /// No description provided for @addProviderSheetCancelButton.
   ///
@@ -5696,6 +6260,12 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get searchServicesAddDialogAdd;
 
+  /// No description provided for @searchServicesFieldApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get searchServicesFieldApiKey;
+
   /// No description provided for @searchServicesAddDialogApiKeyRequired.
   ///
   /// In en, this message translates to:
@@ -5707,6 +6277,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Custom URL (optional)'**
   String get searchServicesFieldCustomUrlOptional;
+
+  /// No description provided for @searchServicesFieldSearchEngineId.
+  ///
+  /// In en, this message translates to:
+  /// **'Search engine ID'**
+  String get searchServicesFieldSearchEngineId;
+
+  /// No description provided for @searchServicesFieldModelOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Model (optional)'**
+  String get searchServicesFieldModelOptional;
+
+  /// No description provided for @searchServicesAddDialogSearchEngineIdRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Search engine ID is required'**
+  String get searchServicesAddDialogSearchEngineIdRequired;
 
   /// No description provided for @searchServicesAddDialogInstanceUrl.
   ///
@@ -5779,6 +6367,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'API Key is required'**
   String get searchServicesEditDialogApiKeyRequired;
+
+  /// No description provided for @searchServicesEditDialogSearchEngineIdRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Search engine ID is required'**
+  String get searchServicesEditDialogSearchEngineIdRequired;
 
   /// No description provided for @searchServicesEditDialogInstanceUrl.
   ///
@@ -6860,6 +7454,18 @@ abstract class AppLocalizations {
   /// **'Independent search engine by Brave. Privacy-focused with no tracking or profiling.'**
   String get searchProviderBraveDescription;
 
+  /// No description provided for @searchProviderGoogleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.'**
+  String get searchProviderGoogleDescription;
+
+  /// No description provided for @searchProviderGrokDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.'**
+  String get searchProviderGrokDescription;
+
   /// No description provided for @searchProviderExaDescription.
   ///
   /// In en, this message translates to:
@@ -6956,6 +7562,18 @@ abstract class AppLocalizations {
   /// **'Brave Search'**
   String get searchServiceNameBrave;
 
+  /// No description provided for @searchServiceNameGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Google'**
+  String get searchServiceNameGoogle;
+
+  /// No description provided for @searchServiceNameGrok.
+  ///
+  /// In en, this message translates to:
+  /// **'Grok'**
+  String get searchServiceNameGrok;
+
   /// No description provided for @searchServiceNameMetaso.
   ///
   /// In en, this message translates to:
@@ -7003,6 +7621,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Generation interrupted'**
   String get generationInterrupted;
+
+  /// No description provided for @localLiteRtModelTooLargeForDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.'**
+  String get localLiteRtModelTooLargeForDevice;
 
   /// No description provided for @titleForLocale.
   ///

@@ -775,6 +775,8 @@ class _HomePageState extends State<HomePage>
         onResendMessage: (message) => _controller.regenerateAtMessage(message),
         onTranslateMessage: (message) => _controller.translateMessage(message),
         onEditMessage: (message) => _controller.editMessage(message),
+        onContinueImageGeneration: (message) =>
+            _controller.continueImageGeneration(message),
         onDeleteMessage: (message, byGroup) =>
             _handleDeleteMessage(context, message, byGroup),
         onDeleteAllVersions: (message, byGroup) => _handleDeleteMessage(

@@ -47,7 +47,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver =
     RouteObserver<ModalRoute<dynamic>>();
-bool _didCheckUpdates = false; // one-time update check flag
 bool _didEnsureAssistants = false; // ensure defaults after l10n ready
 
 Future<void> main() async {
@@ -190,15 +189,6 @@ class MyApp extends StatelessWidget {
               }
             } catch (_) {}
           });
-          // One-time app update check after first build
-          if (settings.showAppUpdates && !_didCheckUpdates) {
-            _didCheckUpdates = true;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              try {
-                context.read<UpdateProvider>().checkForUpdates();
-              } catch (_) {}
-            });
-          }
           return DynamicColorBuilder(
             builder: (lightDynamic, darkDynamic) {
               // if (lightDynamic != null) {

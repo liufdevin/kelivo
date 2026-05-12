@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/local_litert_model_store.dart';
+import '../../../core/services/local_provider_config.dart';
 import '../../../icons/lucide_adapter.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../../l10n/app_localizations.dart';
@@ -24,6 +26,8 @@ Future<String?> showAddProviderSheet(BuildContext context) async {
   );
 }
 
+enum _LocalProviderMode { liteRt, gguf, openAICompatible }
+
 class _AddProviderSheet extends StatefulWidget {
   const _AddProviderSheet();
   @override
@@ -32,7 +36,7 @@ class _AddProviderSheet extends StatefulWidget {
 
 class _AddProviderSheetState extends State<_AddProviderSheet>
     with SingleTickerProviderStateMixin {
-  late final TabController _tab = TabController(length: 3, vsync: this);
+  late final TabController _tab = TabController(length: 4, vsync: this);
 
   @override
   void initState() {
@@ -48,6 +52,25 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
   void dispose() {
     _tab.removeListener(_onTabChanged);
     _tab.dispose();
+    _openaiName.dispose();
+    _openaiKey.dispose();
+    _openaiBase.dispose();
+    _openaiPath.dispose();
+    _googleName.dispose();
+    _googleKey.dispose();
+    _googleBase.dispose();
+    _googleLocation.dispose();
+    _googleProject.dispose();
+    _googleSaJson.dispose();
+    _claudeName.dispose();
+    _claudeKey.dispose();
+    _claudeBase.dispose();
+    _localName.dispose();
+    _localModelPath.dispose();
+    _localModel.dispose();
+    _localOpenAIKey.dispose();
+    _localOpenAIBase.dispose();
+    _localOpenAIModel.dispose();
     super.dispose();
   }
 
@@ -90,6 +113,38 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
   late final TextEditingController _claudeBase = TextEditingController(
     text: 'https://api.anthropic.com/v1',
   );
+
+  // Local LiteRT-LM runtime
+  bool _localEnabled = true;
+  bool _localNameInitialized = false;
+  _LocalProviderMode _localMode = _LocalProviderMode.liteRt;
+  bool _localImporting = false;
+  LocalLiteRtImportProgress? _localImportProgress;
+  late final TextEditingController _localName = TextEditingController();
+  late final TextEditingController _localModelPath = TextEditingController();
+  late final TextEditingController _localModel = TextEditingController(
+    text: defaultLocalLiteRtModelId,
+  );
+  late final TextEditingController _localOpenAIKey = TextEditingController(
+    text: defaultLocalProviderApiKey,
+  );
+  late final TextEditingController _localOpenAIBase = TextEditingController(
+    text: defaultLocalProviderBaseUrl,
+  );
+  late final TextEditingController _localOpenAIModel = TextEditingController(
+    text: defaultLocalProviderModelId,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_localNameInitialized) {
+      _localName.text = AppLocalizations.of(
+        context,
+      )!.addProviderSheetLocalDefaultName;
+      _localNameInitialized = true;
+    }
+  }
 
   Widget _inputRow({
     required String label,
@@ -206,7 +261,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
               onChanged: (v) => setState(() => _openaiEnabled = v),
             ),
             _switchRow(
-              label: 'Response API',
+              label: l10n.addProviderSheetResponsesApiLabel,
               value: _openaiUseResponse,
               onChanged: (v) => setState(() => _openaiUseResponse = v),
             ),
@@ -218,9 +273,15 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           controller: _openaiName,
         ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Key', controller: _openaiKey),
+        _inputRow(
+          label: l10n.addProviderSheetApiKeyLabel,
+          controller: _openaiKey,
+        ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Base Url', controller: _openaiBase),
+        _inputRow(
+          label: l10n.addProviderSheetBaseUrlLabel,
+          controller: _openaiBase,
+        ),
         const SizedBox(height: 10),
         if (!_openaiUseResponse)
           _inputRow(
@@ -244,7 +305,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
               onChanged: (v) => setState(() => _googleEnabled = v),
             ),
             _switchRow(
-              label: 'Vertex AI',
+              label: l10n.addProviderSheetVertexAiLabel,
               value: _googleVertex,
               onChanged: (v) => setState(() => _googleVertex = v),
             ),
@@ -257,9 +318,15 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         ),
         const SizedBox(height: 10),
         if (!_googleVertex) ...[
-          _inputRow(label: 'API Key', controller: _googleKey),
+          _inputRow(
+            label: l10n.addProviderSheetApiKeyLabel,
+            controller: _googleKey,
+          ),
           const SizedBox(height: 10),
-          _inputRow(label: 'API Base Url', controller: _googleBase),
+          _inputRow(
+            label: l10n.addProviderSheetBaseUrlLabel,
+            controller: _googleBase,
+          ),
           const SizedBox(height: 10),
         ],
         if (_googleVertex) ...[
@@ -310,11 +377,335 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           controller: _claudeName,
         ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Key', controller: _claudeKey),
+        _inputRow(
+          label: l10n.addProviderSheetApiKeyLabel,
+          controller: _claudeKey,
+        ),
         const SizedBox(height: 10),
-        _inputRow(label: 'API Base Url', controller: _claudeBase),
+        _inputRow(
+          label: l10n.addProviderSheetBaseUrlLabel,
+          controller: _claudeBase,
+        ),
       ],
     );
+  }
+
+  Widget _localForm(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _iosCard(
+          children: [
+            _switchRow(
+              label: l10n.addProviderSheetEnabledLabel,
+              value: _localEnabled,
+              onChanged: (v) => setState(() => _localEnabled = v),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _localModePicker(l10n),
+        const SizedBox(height: 10),
+        _inputRow(
+          label: l10n.addProviderSheetNameLabel,
+          controller: _localName,
+        ),
+        const SizedBox(height: 10),
+        switch (_localMode) {
+          _LocalProviderMode.liteRt => _localLiteRtForm(l10n),
+          _LocalProviderMode.gguf => _localGgufForm(l10n),
+          _LocalProviderMode.openAICompatible => _localOpenAICompatibleForm(
+            l10n,
+          ),
+        },
+      ],
+    );
+  }
+
+  void _setLocalMode(_LocalProviderMode mode) {
+    setState(() {
+      if (mode == _LocalProviderMode.liteRt &&
+          _localModel.text.trim() == defaultLocalGgufModelId) {
+        _localModel.text = defaultLocalLiteRtModelId;
+      } else if (mode == _LocalProviderMode.gguf &&
+          _localModel.text.trim() == defaultLocalLiteRtModelId) {
+        _localModel.text = defaultLocalGgufModelId;
+      }
+      _localMode = mode;
+    });
+  }
+
+  Widget _localModePicker(AppLocalizations l10n) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white10 : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
+          width: 0.6,
+        ),
+      ),
+      child: Row(
+        children: [
+          _localModeSegment(
+            label: l10n.addProviderSheetLocalModeLiteRt,
+            selected: _localMode == _LocalProviderMode.liteRt,
+            onTap: () => _setLocalMode(_LocalProviderMode.liteRt),
+          ),
+          const SizedBox(width: 6),
+          _localModeSegment(
+            label: l10n.addProviderSheetLocalModeGguf,
+            selected: _localMode == _LocalProviderMode.gguf,
+            onTap: () => _setLocalMode(_LocalProviderMode.gguf),
+          ),
+          const SizedBox(width: 6),
+          _localModeSegment(
+            label: l10n.addProviderSheetLocalModeOpenAICompatible,
+            selected: _localMode == _LocalProviderMode.openAICompatible,
+            onTap: () => _setLocalMode(_LocalProviderMode.openAICompatible),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _localModeSegment({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected
+                ? cs.primary.withValues(alpha: 0.14)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: selected
+                  ? cs.primary
+                  : cs.onSurface.withValues(alpha: 0.82),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _localLiteRtForm(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _inputRow(
+          label: l10n.addProviderSheetLocalModelPathLabel,
+          controller: _localModelPath,
+          hint: l10n.addProviderSheetLocalModelPathHint,
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _localImporting ? null : _importLocalLiteRtModel,
+            icon: const Icon(Icons.file_open, size: 16),
+            label: Text(l10n.addProviderSheetImportLitertButton),
+          ),
+        ),
+        if (_localImporting) ...[
+          const SizedBox(height: 8),
+          _localImportProgressBar(l10n),
+        ],
+        const SizedBox(height: 10),
+        _inputRow(
+          label: l10n.addProviderSheetLocalModelIdLabel,
+          controller: _localModel,
+          hint: defaultLocalLiteRtModelId,
+        ),
+      ],
+    );
+  }
+
+  Widget _localGgufForm(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _inputRow(
+          label: l10n.addProviderSheetLocalGgufModelPathLabel,
+          controller: _localModelPath,
+          hint: l10n.addProviderSheetLocalGgufModelPathHint,
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _localImporting ? null : _importLocalGgufModel,
+            icon: const Icon(Icons.file_open, size: 16),
+            label: Text(l10n.addProviderSheetImportGgufButton),
+          ),
+        ),
+        if (_localImporting) ...[
+          const SizedBox(height: 8),
+          _localImportProgressBar(l10n),
+        ],
+        const SizedBox(height: 10),
+        _inputRow(
+          label: l10n.addProviderSheetLocalModelIdLabel,
+          controller: _localModel,
+          hint: defaultLocalGgufModelId,
+        ),
+      ],
+    );
+  }
+
+  Widget _localOpenAICompatibleForm(AppLocalizations l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _inputRow(
+          label: l10n.addProviderSheetBaseUrlLabel,
+          controller: _localOpenAIBase,
+          hint: defaultLocalProviderBaseUrl,
+        ),
+        const SizedBox(height: 10),
+        _inputRow(
+          label: l10n.addProviderSheetApiKeyLabel,
+          controller: _localOpenAIKey,
+          hint: defaultLocalProviderApiKey,
+        ),
+        const SizedBox(height: 10),
+        _inputRow(
+          label: l10n.addProviderSheetLocalModelIdLabel,
+          controller: _localOpenAIModel,
+          hint: defaultLocalProviderModelId,
+        ),
+      ],
+    );
+  }
+
+  Widget _localImportProgressBar(AppLocalizations l10n) {
+    final progress = _localImportProgress;
+    final fraction = progress?.fraction;
+    final percent = fraction == null
+        ? null
+        : '${(fraction * 100).clamp(0, 100).toStringAsFixed(0)}%';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(value: fraction),
+        const SizedBox(height: 6),
+        Text(
+          percent == null
+              ? l10n.addProviderSheetLocalImporting
+              : l10n.addProviderSheetLocalImportingProgress(percent),
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.66),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _localImportErrorMessage(AppLocalizations l10n, Object error) {
+    if (error is LocalLiteRtImportException) {
+      return switch (error.error) {
+        LocalLiteRtImportError.notLiteRtModel =>
+          l10n.addProviderSheetLocalImportNotLiteRt,
+        LocalLiteRtImportError.notGgufModel =>
+          l10n.addProviderSheetLocalImportNotGguf,
+        LocalLiteRtImportError.emptyFile =>
+          l10n.addProviderSheetLocalImportEmptyFile,
+        LocalLiteRtImportError.unreadableSource =>
+          l10n.addProviderSheetLocalImportUnreadable,
+      };
+    }
+    return l10n.addProviderSheetLocalImportFailed;
+  }
+
+  Future<void> _importLocalLiteRtModel() async {
+    await _importLocalModel(
+      pick: LocalLiteRtModelStore.pickAndImportModel,
+      defaultModelId: defaultLocalLiteRtModelId,
+    );
+  }
+
+  Future<void> _importLocalGgufModel() async {
+    await _importLocalModel(
+      pick: LocalLiteRtModelStore.pickAndImportGgufModel,
+      defaultModelId: defaultLocalGgufModelId,
+    );
+  }
+
+  Future<void> _importLocalModel({
+    required Future<ImportedLocalLiteRtModel?> Function({
+      void Function(LocalLiteRtImportProgress progress)? onProgress,
+    })
+    pick,
+    required String defaultModelId,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      setState(() {
+        _localImporting = true;
+        _localImportProgress = null;
+      });
+      final imported = await pick(
+        onProgress: (progress) {
+          if (!mounted) return;
+          setState(() => _localImportProgress = progress);
+        },
+      );
+      if (imported == null) return;
+      _localModelPath.text = imported.path;
+      _localModel.text = imported.modelId.isEmpty
+          ? defaultModelId
+          : imported.modelId;
+      if (!mounted) return;
+      setState(() {
+        _localImporting = false;
+        _localImportProgress = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.addProviderSheetLocalImported(imported.fileName)),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _localImporting = false;
+        _localImportProgress = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_localImportErrorMessage(l10n, e))),
+      );
+    } finally {
+      if (mounted && _localImporting) {
+        setState(() {
+          _localImporting = false;
+          _localImportProgress = null;
+        });
+      }
+    }
   }
 
   Future<void> _onAdd() async {
@@ -417,7 +808,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
       );
       await settings.setProviderConfig(keyName, cfg);
       createdKey = keyName;
-    } else {
+    } else if (idx == 2) {
       final rawName = _claudeName.text.trim();
       final display = rawName.isEmpty ? 'Claude' : rawName;
       final keyName = uniqueKey('Claude', display);
@@ -441,6 +832,55 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         proxyPassword: '',
         aihubmixAppCodeEnabled: promo,
       );
+      await settings.setProviderConfig(keyName, cfg);
+      createdKey = keyName;
+    } else {
+      final l10n = AppLocalizations.of(context)!;
+      final rawName = _localName.text.trim();
+      final display = rawName.isEmpty
+          ? l10n.addProviderSheetLocalDefaultName
+          : rawName;
+      final requiresLocalFile =
+          _localMode == _LocalProviderMode.liteRt ||
+          _localMode == _LocalProviderMode.gguf;
+      if (requiresLocalFile && _localModelPath.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _localMode == _LocalProviderMode.gguf
+                  ? l10n.addProviderSheetLocalNoGgufModelFile
+                  : l10n.addProviderSheetLocalNoModelFile,
+            ),
+          ),
+        );
+        return;
+      }
+      final keyName = uniqueKey('Local', display);
+      final cfg = switch (_localMode) {
+        _LocalProviderMode.liteRt => buildLocalLiteRtProviderConfig(
+          id: keyName,
+          enabled: _localEnabled,
+          name: display,
+          modelPath: _localModelPath.text.trim(),
+          modelId: _localModel.text.trim(),
+        ),
+        _LocalProviderMode.gguf => buildLocalGgufProviderConfig(
+          id: keyName,
+          enabled: _localEnabled,
+          name: display,
+          modelPath: _localModelPath.text.trim(),
+          modelId: _localModel.text.trim(),
+        ),
+        _LocalProviderMode.openAICompatible =>
+          buildLocalOpenAICompatibleProviderConfig(
+            id: keyName,
+            enabled: _localEnabled,
+            name: display,
+            apiKey: _localOpenAIKey.text.trim(),
+            baseUrl: _localOpenAIBase.text.trim(),
+            modelId: _localOpenAIModel.text.trim(),
+          ),
+      };
       await settings.setProviderConfig(keyName, cfg);
       createdKey = keyName;
     }
@@ -516,7 +956,12 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _SegTabBar(
                   controller: _tab,
-                  tabs: const ['OpenAI', 'Google', 'Claude'],
+                  tabs: [
+                    l10n.addProviderSheetOpenAiTab,
+                    l10n.addProviderSheetGoogleTab,
+                    l10n.addProviderSheetClaudeTab,
+                    l10n.addProviderSheetLocalTab,
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -535,6 +980,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
                               if (idx == 0) _openaiForm(l10n),
                               if (idx == 1) _googleForm(l10n),
                               if (idx == 2) _claudeForm(l10n),
+                              if (idx == 3) _localForm(l10n),
                             ],
                           );
                         },

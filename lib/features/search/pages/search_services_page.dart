@@ -579,6 +579,8 @@ class _BrandBadge extends StatelessWidget {
     if (s is SearXNGOptions) return 'searxng';
     if (s is LinkUpOptions) return 'linkup';
     if (s is BraveOptions) return 'brave';
+    if (s is GoogleSearchOptions) return 'google';
+    if (s is GrokSearchOptions) return 'grok';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
     if (s is JinaOptions) return 'jina';
@@ -744,6 +746,8 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
     final services = [
       {'type': 'bing_local', 'name': l10n.searchServiceNameBingLocal},
       {'type': 'duckduckgo', 'name': l10n.searchServiceNameDuckDuckGo},
+      {'type': 'google', 'name': l10n.searchServiceNameGoogle},
+      {'type': 'grok', 'name': l10n.searchServiceNameGrok},
       {'type': 'tavily', 'name': l10n.searchServiceNameTavily},
       {'type': 'exa', 'name': l10n.searchServiceNameExa},
       {'type': 'zhipu', 'name': l10n.searchServiceNameZhipu},
@@ -793,6 +797,10 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         return l10n.searchServiceNameBingLocal;
       case 'duckduckgo':
         return l10n.searchServiceNameDuckDuckGo;
+      case 'google':
+        return l10n.searchServiceNameGoogle;
+      case 'grok':
+        return l10n.searchServiceNameGrok;
       case 'tavily':
         return l10n.searchServiceNameTavily;
       case 'exa':
@@ -947,7 +955,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         return [
           buildTextField(
             key: 'apiKey',
-            label: 'API Key',
+            label: l10n.searchServicesFieldApiKey,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return l10n.searchServicesAddDialogApiKeyRequired;
@@ -966,7 +974,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         return [
           buildTextField(
             key: 'apiKey',
-            label: 'API Key',
+            label: l10n.searchServicesFieldApiKey,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return l10n.searchServicesAddDialogApiKeyRequired;
@@ -981,6 +989,55 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
             hint: ExaOptions.defaultUrl,
           ),
         ];
+      case 'google':
+        return [
+          buildTextField(
+            key: 'apiKey',
+            label: l10n.searchServicesFieldApiKey,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return l10n.searchServicesAddDialogApiKeyRequired;
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          buildTextField(
+            key: 'searchEngineId',
+            label: l10n.searchServicesFieldSearchEngineId,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return l10n.searchServicesAddDialogSearchEngineIdRequired;
+              }
+              return null;
+            },
+          ),
+        ];
+      case 'grok':
+        return [
+          buildTextField(
+            key: 'apiKey',
+            label: l10n.searchServicesFieldApiKey,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return l10n.searchServicesAddDialogApiKeyRequired;
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          buildTextField(
+            key: 'model',
+            label: l10n.searchServicesFieldModelOptional,
+            hint: GrokSearchOptions.defaultModel,
+          ),
+          const SizedBox(height: 12),
+          buildTextField(
+            key: 'grokUrl',
+            label: l10n.searchServicesFieldCustomUrlOptional,
+            hint: GrokSearchOptions.defaultUrl,
+          ),
+        ];
       case 'zhipu':
       case 'linkup':
       case 'brave':
@@ -992,7 +1049,7 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         return [
           buildTextField(
             key: 'apiKey',
-            label: 'API Key',
+            label: l10n.searchServicesFieldApiKey,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return l10n.searchServicesAddDialogApiKeyRequired;
@@ -1082,6 +1139,19 @@ class _AddServiceBottomSheetState extends State<_AddServiceBottomSheet> {
         return LinkUpOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'brave':
         return BraveOptions(id: id, apiKey: _controllers['apiKey']!.text);
+      case 'google':
+        return GoogleSearchOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          searchEngineId: _controllers['searchEngineId']!.text.trim(),
+        );
+      case 'grok':
+        return GrokSearchOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          model: _controllers['model']!.text.trim(),
+          url: _controllers['grokUrl']!.text.trim(),
+        );
       case 'metaso':
         return MetasoOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'jina':
@@ -1141,6 +1211,15 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     } else if (service is BraveOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
+    } else if (service is GoogleSearchOptions) {
+      _controllers['apiKey'] = TextEditingController(text: service.apiKey);
+      _controllers['searchEngineId'] = TextEditingController(
+        text: service.searchEngineId,
+      );
+    } else if (service is GrokSearchOptions) {
+      _controllers['apiKey'] = TextEditingController(text: service.apiKey);
+      _controllers['model'] = TextEditingController(text: service.model);
+      _controllers['url'] = TextEditingController(text: service.url);
     } else if (service is MetasoOptions) {
       _controllers['apiKey'] = TextEditingController(text: service.apiKey);
     } else if (service is OllamaOptions) {
@@ -1298,7 +1377,7 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       return [
         buildTextField(
           key: 'apiKey',
-          label: 'API Key',
+          label: l10n.searchServicesFieldApiKey,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return l10n.searchServicesEditDialogApiKeyRequired;
@@ -1317,7 +1396,7 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       return [
         buildTextField(
           key: 'apiKey',
-          label: 'API Key',
+          label: l10n.searchServicesFieldApiKey,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return l10n.searchServicesEditDialogApiKeyRequired;
@@ -1332,6 +1411,55 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
           hint: ExaOptions.defaultUrl,
         ),
       ];
+    } else if (service is GoogleSearchOptions) {
+      return [
+        buildTextField(
+          key: 'apiKey',
+          label: l10n.searchServicesFieldApiKey,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return l10n.searchServicesEditDialogApiKeyRequired;
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
+          key: 'searchEngineId',
+          label: l10n.searchServicesFieldSearchEngineId,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return l10n.searchServicesEditDialogSearchEngineIdRequired;
+            }
+            return null;
+          },
+        ),
+      ];
+    } else if (service is GrokSearchOptions) {
+      return [
+        buildTextField(
+          key: 'apiKey',
+          label: l10n.searchServicesFieldApiKey,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return l10n.searchServicesEditDialogApiKeyRequired;
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
+          key: 'model',
+          label: l10n.searchServicesFieldModelOptional,
+          hint: GrokSearchOptions.defaultModel,
+        ),
+        const SizedBox(height: 12),
+        buildTextField(
+          key: 'url',
+          label: l10n.searchServicesFieldCustomUrlOptional,
+          hint: GrokSearchOptions.defaultUrl,
+        ),
+      ];
     } else if (service is ZhipuOptions ||
         service is LinkUpOptions ||
         service is BraveOptions ||
@@ -1342,7 +1470,7 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       return [
         buildTextField(
           key: 'apiKey',
-          label: 'API Key',
+          label: l10n.searchServicesFieldApiKey,
           validator: (value) {
             if (value == null || value.isEmpty) {
               return l10n.searchServicesEditDialogApiKeyRequired;
@@ -1431,6 +1559,19 @@ class _EditServiceSheetState extends State<_EditServiceSheet> {
       );
     } else if (service is BraveOptions) {
       return BraveOptions(id: service.id, apiKey: _controllers['apiKey']!.text);
+    } else if (service is GoogleSearchOptions) {
+      return GoogleSearchOptions(
+        id: service.id,
+        apiKey: _controllers['apiKey']!.text,
+        searchEngineId: _controllers['searchEngineId']!.text.trim(),
+      );
+    } else if (service is GrokSearchOptions) {
+      return GrokSearchOptions(
+        id: service.id,
+        apiKey: _controllers['apiKey']!.text,
+        model: _controllers['model']!.text.trim(),
+        url: _controllers['url']!.text.trim(),
+      );
     } else if (service is MetasoOptions) {
       return MetasoOptions(
         id: service.id,
@@ -1548,6 +1689,10 @@ class _ServiceIcon extends StatelessWidget {
         return 'linkup';
       case 'brave':
         return 'brave';
+      case 'google':
+        return 'google';
+      case 'grok':
+        return 'grok';
       case 'metaso':
         return 'metaso';
       case 'jina':

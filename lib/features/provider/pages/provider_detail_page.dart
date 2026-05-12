@@ -20,12 +20,15 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../core/services/model_override_resolver.dart';
+import '../../../core/services/local_provider_config.dart';
+import '../../../core/services/provider_model_catalog_cache.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/model_tag_wrap.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import 'multi_key_manager_page.dart';
+import 'local_model_management_page.dart';
 import 'provider_network_page.dart';
 import '../../../core/services/haptics.dart';
 import '../../provider/widgets/provider_avatar.dart';
@@ -264,9 +267,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                     // Clear assistant-level model selections that reference this provider
                     try {
                       for (final a in assistantProvider.assistants) {
-                        if (a.chatModelProvider == widget.keyName) {
+                        final clearChat = a.chatModelProvider == widget.keyName;
+                        final clearImage =
+                            a.imageModelProvider == widget.keyName;
+                        if (clearChat || clearImage) {
                           await assistantProvider.updateAssistant(
-                            a.copyWith(clearChatModel: true),
+                            a.copyWith(
+                              clearChatModel: clearChat,
+                              clearImageModel: clearImage,
+                            ),
                           );
                         }
                       }
@@ -613,59 +622,6 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           ),
           const SizedBox(height: 12),
         ],
-        if (widget.keyName.toLowerCase() == 'siliconflow') ...[
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: cs.primary.withValues(alpha: 0.35)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '已内置硅基流动的免费模型，无需 API Key。若需更强大的模型，请申请并在此配置你自己的 API Key。',
-                  style: TextStyle(color: cs.onSurface.withValues(alpha: 0.8)),
-                ),
-                const SizedBox(height: 6),
-                Text.rich(
-                  TextSpan(
-                    text: '官网：',
-                    style: TextStyle(
-                      color: cs.onSurface.withValues(alpha: 0.8),
-                    ),
-                    children: [
-                      TextSpan(
-                        text: 'https://siliconflow.cn',
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        recognizer: TapGestureRecognizer()
-                          ..onTap = () async {
-                            final uri = Uri.parse('https://siliconflow.cn');
-                            try {
-                              final ok = await launchUrl(
-                                uri,
-                                mode: LaunchMode.externalApplication,
-                              );
-                              if (!ok) {
-                                await launchUrl(uri);
-                              }
-                            } catch (_) {
-                              await launchUrl(uri);
-                            }
-                          },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
         // 顶部管理分组标题（左侧缩进以对齐卡片内容）
         Padding(
           padding: const EdgeInsets.only(left: 12),
@@ -845,6 +801,35 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 );
               },
             ),
+            if (isLocalProviderConfig(_cfg))
+              _iosRow(
+                context,
+                label: l10n.localModelManagementEntryTitle,
+                trailing: Icon(
+                  Lucide.ChevronRight,
+                  size: 16,
+                  color: cs.onSurface,
+                ),
+                onTap: () async {
+                  final navigator = Navigator.of(context);
+                  final settings = context.read<SettingsProvider>();
+                  await navigator.push(
+                    MaterialPageRoute(
+                      builder: (_) => LocalModelManagementPage(
+                        providerKey: widget.keyName,
+                        providerDisplayName: widget.displayName,
+                      ),
+                    ),
+                  );
+                  if (mounted) {
+                    final latest = settings.getProviderConfig(
+                      widget.keyName,
+                      defaultName: widget.displayName,
+                    );
+                    setState(() => _cfg = latest);
+                  }
+                },
+              ),
           ],
         ),
         const SizedBox(height: 12),
@@ -1166,10 +1151,18 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                             );
                             try {
                               for (final a in assistantProvider.assistants) {
-                                if (a.chatModelProvider == widget.keyName &&
-                                    a.chatModelId == id) {
+                                final clearChat =
+                                    a.chatModelProvider == widget.keyName &&
+                                    a.chatModelId == id;
+                                final clearImage =
+                                    a.imageModelProvider == widget.keyName &&
+                                    a.imageModelId == id;
+                                if (clearChat || clearImage) {
                                   await assistantProvider.updateAssistant(
-                                    a.copyWith(clearChatModel: true),
+                                    a.copyWith(
+                                      clearChatModel: clearChat,
+                                      clearImageModel: clearImage,
+                                    ),
                                   );
                                 }
                               }
@@ -1998,9 +1991,14 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       // Also clear assistant-level model selections referencing this provider
       try {
         for (final a in assistantProvider.assistants) {
-          if (a.chatModelProvider == widget.keyName) {
+          final clearChat = a.chatModelProvider == widget.keyName;
+          final clearImage = a.imageModelProvider == widget.keyName;
+          if (clearChat || clearImage) {
             await assistantProvider.updateAssistant(
-              a.copyWith(clearChatModel: true),
+              a.copyWith(
+                clearChatModel: clearChat,
+                clearImageModel: clearImage,
+              ),
             );
           }
         }
@@ -2245,7 +2243,11 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       ),
     );
     if (ok != true) return;
-    final cleared = cfg.copyWith(models: const [], modelOverrides: const {});
+    final cleared = cfg.copyWith(
+      models: const [],
+      cachedModels: const [],
+      modelOverrides: const {},
+    );
     await settings.setProviderConfig(widget.keyName, cleared);
     if (!mounted) return;
     setState(() {
@@ -2278,15 +2280,14 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       widget.keyName,
       defaultName: widget.displayName,
     );
-    final bool isDefaultSilicon = widget.keyName.toLowerCase() == 'siliconflow';
-    final bool hasUserKey =
-        (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) ||
-        cfg.apiKey.trim().isNotEmpty;
-    final bool restrictToFree = isDefaultSilicon && !hasUserKey;
     final controller = TextEditingController();
-    List<dynamic> items = const [];
-    bool loading = true;
+    List<dynamic> items = [
+      for (final id in cfg.cachedModels)
+        ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
+    ];
+    bool loading = items.isEmpty;
     String error = '';
+    bool loadStarted = false;
     // Collapsed state per group in the selector dialog
     final Map<String, bool> collapsed = <String, bool>{};
 
@@ -2303,43 +2304,33 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             final l10n = AppLocalizations.of(ctx)!;
             Future<void> loadModels() async {
               try {
-                if (restrictToFree) {
-                  final list = <ModelInfo>[
-                    ModelRegistry.infer(
-                      ModelInfo(
-                        id: 'THUDM/GLM-4-9B-0414',
-                        displayName: 'THUDM/GLM-4-9B-0414',
-                      ),
-                    ),
-                    ModelRegistry.infer(
-                      ModelInfo(
-                        id: 'Qwen/Qwen3-8B',
-                        displayName: 'Qwen/Qwen3-8B',
-                      ),
-                    ),
-                  ];
-                  setLocal(() {
-                    items = list;
-                    loading = false;
-                  });
-                } else {
-                  final list = await ProviderManager.listModels(cfg);
-                  setLocal(() {
-                    items = list;
-                    loading = false;
-                  });
-                }
+                final list = await ProviderManager.listModels(cfg);
+                final latest = settings.getProviderConfig(
+                  widget.keyName,
+                  defaultName: widget.displayName,
+                );
+                await settings.setProviderConfig(
+                  widget.keyName,
+                  cacheFetchedProviderModels(latest, list.map((m) => m.id)),
+                );
+                setLocal(() {
+                  items = list;
+                  loading = false;
+                  error = '';
+                });
               } catch (e) {
                 setLocal(() {
-                  items = const [];
+                  if (items.isEmpty) {
+                    items = const [];
+                    error = '$e';
+                  }
                   loading = false;
-                  error = '$e';
                 });
               }
             }
 
-            if (loading) {
-              // kick off loading once
+            if (!loadStarted) {
+              loadStarted = true;
               Future.microtask(loadModels);
             }
 

@@ -7,8 +7,10 @@ import 'settings_provider.dart';
 import '../services/network/dio_http_client.dart';
 import '../services/api_key_manager.dart';
 import '../services/api/provider_request_headers.dart';
+import '../services/local_gguf_service.dart';
+import '../services/local_litert_service.dart';
+import '../services/local_provider_config.dart';
 import '../services/model_override_payload_parser.dart';
-import 'package:Kelivo/secrets/fallback.dart';
 import '../services/api/google_service_account_auth.dart';
 import '../models/model_types.dart';
 
@@ -129,15 +131,17 @@ class OpenAIProvider extends BaseProvider {
   @override
   Future<List<ModelInfo>> listModels(ProviderConfig cfg) async {
     final key = ProviderManager._effectiveApiKey(cfg);
+    final base = _trimTrailingSlash(cfg.baseUrl);
+    final uri = Uri.parse('$base/models');
+    final headers = <String, String>{};
+    if (key.isNotEmpty) headers['Authorization'] = 'Bearer $key';
+
     final client = _Http.clientFor(cfg);
     try {
-      final uri = Uri.parse('${cfg.baseUrl}/models');
-      final headers = <String, String>{};
-      if (key.isNotEmpty) headers['Authorization'] = 'Bearer $key';
       final res = await client.get(uri, headers: headers);
       if (res.statusCode >= 200 && res.statusCode < 300) {
         final data = (jsonDecode(res.body)['data'] as List?) ?? [];
-        return [
+        final models = [
           for (final e in data)
             if (e is Map && e['id'] is String)
               ModelRegistry.infer(
@@ -147,11 +151,55 @@ class OpenAIProvider extends BaseProvider {
                 ),
               ),
         ];
+        if (models.isNotEmpty) return models;
       }
-      return [];
     } finally {
       client.close();
     }
+
+    if (isLocalOpenAICompatibleProvider(cfg)) {
+      return _listOllamaModels(cfg);
+    }
+    return [];
+  }
+
+  Future<List<ModelInfo>> _listOllamaModels(ProviderConfig cfg) async {
+    final client = _Http.clientFor(cfg);
+    try {
+      final uri = Uri.parse('${_ollamaBaseUrl(cfg.baseUrl)}/api/tags');
+      final res = await client.get(uri);
+      if (res.statusCode < 200 || res.statusCode >= 300) return [];
+      final obj = jsonDecode(res.body) as Map<String, dynamic>;
+      final data = (obj['models'] as List?) ?? [];
+      return [
+        for (final e in data)
+          if (e is Map)
+            if (((e['name'] ?? e['model'])?.toString().trim() ?? '').isNotEmpty)
+              ModelRegistry.infer(
+                ModelInfo(
+                  id: (e['name'] ?? e['model']).toString().trim(),
+                  displayName: (e['name'] ?? e['model']).toString().trim(),
+                ),
+              ),
+      ];
+    } finally {
+      client.close();
+    }
+  }
+
+  static String _trimTrailingSlash(String value) {
+    var out = value.trim();
+    while (out.endsWith('/')) {
+      out = out.substring(0, out.length - 1);
+    }
+    return out;
+  }
+
+  static String _ollamaBaseUrl(String value) {
+    final base = _trimTrailingSlash(value);
+    return base.toLowerCase().endsWith('/v1')
+        ? base.substring(0, base.length - 3)
+        : base;
   }
 }
 
@@ -305,6 +353,16 @@ class GoogleProvider extends BaseProvider {
   }
 }
 
+class LocalLiteRtProvider extends BaseProvider {
+  @override
+  Future<List<ModelInfo>> listModels(ProviderConfig cfg) async {
+    return [
+      for (final id in cfg.models)
+        ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
+    ];
+  }
+}
+
 class ProviderManager {
   static String _effectiveApiKey(ProviderConfig cfg) {
     try {
@@ -344,6 +402,7 @@ class ProviderManager {
   }
 
   static BaseProvider forConfig(ProviderConfig cfg) {
+    if (isLocalLiteRtProvider(cfg)) return LocalLiteRtProvider();
     final kind = ProviderConfig.classify(
       cfg.id,
       explicitType: cfg.providerType,
@@ -371,6 +430,18 @@ class ProviderManager {
       cfg.id,
       explicitType: cfg.providerType,
     );
+    if (isLocalLiteRtProvider(cfg)) {
+      await LocalLiteRtService.testConnection(
+        modelPath: localLiteRtModelPath(cfg, modelId),
+      );
+      return;
+    }
+    if (isLocalGgufProvider(cfg)) {
+      await LocalGgufService.testConnection(
+        modelPath: localGgufModelPath(cfg, modelId),
+      );
+      return;
+    }
     final client = _Http.clientFor(cfg);
     try {
       if (kind == ProviderKind.openai) {
@@ -408,20 +479,7 @@ class ProviderManager {
         final extra = _customBody(cfg, modelId);
         if (extra.isNotEmpty) (body as Map<String, dynamic>).addAll(extra);
         // Merge custom headers overrides
-        // SiliconFlow fallback key for built-in free models when no API key provided
         String apiKey = _effectiveApiKey(cfg);
-        try {
-          if ((cfg.id) == 'SiliconFlow') {
-            final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
-            if (host.contains('siliconflow') && apiKey.trim().isEmpty) {
-              final m = upstreamId.toLowerCase();
-              final allowed =
-                  m == 'thudm/glm-4-9b-0414' || m == 'qwen/qwen3-8b';
-              final fb = siliconflowFallbackKey.trim();
-              if (allowed && fb.isNotEmpty) apiKey = fb;
-            }
-          }
-        } catch (_) {}
         final headers = <String, String>{
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',

@@ -678,9 +678,14 @@ class _ProvidersPageState extends State<ProvidersPage> {
 
     // 尽可能复用 ProviderDetailPage 删除前的清理逻辑：清理引用该 provider 的助手模型选择
     for (final assistant in assistantProvider.assistants) {
-      if (keysToDelete.contains(assistant.chatModelProvider)) {
+      final clearChat = keysToDelete.contains(assistant.chatModelProvider);
+      final clearImage = keysToDelete.contains(assistant.imageModelProvider);
+      if (clearChat || clearImage) {
         await assistantProvider.updateAssistant(
-          assistant.copyWith(clearChatModel: true),
+          assistant.copyWith(
+            clearChatModel: clearChat,
+            clearImageModel: clearImage,
+          ),
         );
       }
     }

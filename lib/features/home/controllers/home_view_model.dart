@@ -13,6 +13,7 @@ import '../../../core/services/logging/flutter_logger.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
+import '../utils/title_generation_sanitizer.dart';
 import 'chat_actions.dart';
 import 'chat_controller.dart';
 import 'generation_controller.dart';
@@ -303,6 +304,7 @@ class HomeViewModel extends ChangeNotifier {
       text: input.text,
       imagePaths: List<String>.of(input.imagePaths),
       documents: List<DocumentAttachment>.of(input.documents),
+      generateImage: input.generateImage,
     );
   }
 
@@ -881,10 +883,12 @@ class HomeViewModel extends ChangeNotifier {
     final List<ChatMessage> source = collapseVersions(sourceAll);
     final joined = source
         .where((m) => m.content.isNotEmpty)
-        .map(
-          (m) =>
-              '${m.role == 'assistant' ? 'Assistant' : 'User'}: ${m.content}',
-        )
+        .map((m) {
+          final content = sanitizeTitleGenerationMessageContent(m.content);
+          if (content.isEmpty) return '';
+          return '${m.role == 'assistant' ? 'Assistant' : 'User'}: $content';
+        })
+        .where((line) => line.isNotEmpty)
         .join('\n\n');
     final content = joined.length > 3000 ? joined.substring(0, 3000) : joined;
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
@@ -894,12 +898,14 @@ class HomeViewModel extends ChangeNotifier {
         .replaceAll('{content}', content);
 
     try {
-      final title = (await ChatApiService.generateText(
-        config: cfg,
-        modelId: mdlId,
-        prompt: prompt,
-        thinkingBudget: budget,
-      )).trim();
+      final title = sanitizeGeneratedConversationTitle(
+        await ChatApiService.generateText(
+          config: cfg,
+          modelId: mdlId,
+          prompt: prompt,
+          thinkingBudget: budget,
+        ),
+      );
       if (title.isNotEmpty) {
         await _chatService.renameConversation(convo.id, title);
         if (currentConversation?.id == convo.id) {

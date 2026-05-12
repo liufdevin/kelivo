@@ -1097,6 +1097,7 @@ class _DesktopAssistantBasicPaneState
   late final TextEditingController _nameCtrl;
   late final TextEditingController _maxTokensCtrl;
   bool _hoverChatModel = false;
+  bool _hoverImageModel = false;
   bool _hoverBgChooser = false;
   final GlobalKey _avatarKey = GlobalKey();
 
@@ -1729,6 +1730,140 @@ class _DesktopAssistantBasicPaneState
                             display = mdl;
                           } catch (_) {
                             display = a.chatModelId ?? '';
+                          }
+                        }
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          curve: Curves.easeOutCubic,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              _BrandAvatarLike(name: display, size: 24),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  display,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            sectionDivider(),
+            // Image model
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.assistantEditImageModelTitle,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (a.imageModelProvider != null &&
+                          a.imageModelId != null)
+                        Tooltip(
+                          message: l10n.defaultModelPageResetDefault,
+                          child: _TactileIconButton(
+                            icon: Lucide.RotateCcw,
+                            color: cs.onSurface,
+                            size: 20,
+                            onTap: () async {
+                              await context
+                                  .read<AssistantProvider>()
+                                  .updateAssistant(
+                                    a.copyWith(clearImageModel: true),
+                                  );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.assistantEditImageModelSubtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: cs.onSurface.withValues(alpha: 0.68),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  MouseRegion(
+                    onEnter: (_) => setState(() => _hoverImageModel = true),
+                    onExit: (_) => setState(() => _hoverImageModel = false),
+                    child: _TactileRow(
+                      onTap: () async {
+                        final assistantProvider = context
+                            .read<AssistantProvider>();
+                        final sel = await showModelSelector(context);
+                        if (sel != null) {
+                          await assistantProvider.updateAssistant(
+                            a.copyWith(
+                              imageModelProvider: sel.providerKey,
+                              imageModelId: sel.modelId,
+                            ),
+                          );
+                        }
+                      },
+                      pressedScale: 0.98,
+                      builder: (pressed) {
+                        final base = isDark
+                            ? Colors.white10
+                            : const Color(0xFFF2F3F5);
+                        final pressOv = isDark
+                            ? Colors.white.withValues(alpha: 0.06)
+                            : Colors.black.withValues(alpha: 0.05);
+                        final hoverOv = isDark
+                            ? Colors.white.withValues(alpha: 0.04)
+                            : Colors.black.withValues(alpha: 0.04);
+                        final bgColor = pressed
+                            ? Color.alphaBlend(pressOv, base)
+                            : (_hoverImageModel
+                                  ? Color.alphaBlend(hoverOv, base)
+                                  : base);
+                        final settings = context.read<SettingsProvider>();
+                        String display = l10n.assistantEditImageModelUnset;
+                        if (a.imageModelProvider != null &&
+                            a.imageModelId != null) {
+                          try {
+                            final cfg = settings.getProviderConfig(
+                              a.imageModelProvider!,
+                            );
+                            final ov =
+                                cfg.modelOverrides[a.imageModelId] as Map?;
+                            final mdl =
+                                (ov != null &&
+                                    (ov['name'] as String?)?.isNotEmpty == true)
+                                ? (ov['name'] as String)
+                                : a.imageModelId!;
+                            display = mdl;
+                          } catch (_) {
+                            display = a.imageModelId ?? '';
                           }
                         }
                         return AnimatedContainer(

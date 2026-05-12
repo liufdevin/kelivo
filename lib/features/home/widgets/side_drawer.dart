@@ -38,6 +38,7 @@ import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
 import '../../../core/providers/tag_provider.dart';
 import '../../assistant/widgets/assistant_select_sheet.dart';
+import '../utils/title_generation_sanitizer.dart';
 import '../../../desktop/hotkeys/sidebar_tab_bus.dart';
 import 'dart:async';
 import '../../../features/search/services/global_session_search_service.dart';
@@ -660,10 +661,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
     final msgs = chatService.getMessages(conversationId);
     final joined = msgs
         .where((m) => m.content.isNotEmpty)
-        .map(
-          (m) =>
-              '${m.role == 'assistant' ? 'Assistant' : 'User'}: ${m.content}',
-        )
+        .map((m) {
+          final content = sanitizeTitleGenerationMessageContent(m.content);
+          if (content.isEmpty) return '';
+          return '${m.role == 'assistant' ? 'Assistant' : 'User'}: $content';
+        })
+        .where((line) => line.isNotEmpty)
         .join('\n\n');
     final content = joined.length > 3000 ? joined.substring(0, 3000) : joined;
     final locale = Localizations.localeOf(context).toLanguageTag();
@@ -671,12 +674,14 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
         .replaceAll('{locale}', locale)
         .replaceAll('{content}', content);
     try {
-      final title = (await ChatApiService.generateText(
-        config: cfg,
-        modelId: mdlId,
-        prompt: prompt,
-        thinkingBudget: budget,
-      )).trim();
+      final title = sanitizeGeneratedConversationTitle(
+        await ChatApiService.generateText(
+          config: cfg,
+          modelId: mdlId,
+          prompt: prompt,
+          thinkingBudget: budget,
+        ),
+      );
       if (title.isNotEmpty) {
         await chatService.renameConversation(conversationId, title);
       }

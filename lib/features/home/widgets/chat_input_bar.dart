@@ -147,6 +147,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   final List<DocumentAttachment> _docs =
       <DocumentAttachment>[]; // files to upload
   final Map<LogicalKeyboardKey, Timer?> _repeatTimers = {};
+  bool _imageGenerationMode = false;
   static const Duration _repeatInitialDelay = Duration(milliseconds: 300);
   static const Duration _repeatPeriod = Duration(milliseconds: 35);
   // Anchor for the responsive overflow menu on the left action bar
@@ -191,6 +192,7 @@ class _ChatInputBarState extends State<ChatInputBar>
       _docs
         ..clear()
         ..addAll(input.documents);
+      _imageGenerationMode = input.generateImage;
     });
   }
 
@@ -284,6 +286,7 @@ class _ChatInputBarState extends State<ChatInputBar>
               text: text,
               imagePaths: List.of(_images),
               documents: List.of(_docs),
+              generateImage: _imageGenerationMode,
             ),
           ) ??
           ChatInputSubmissionResult.rejected;
@@ -854,6 +857,31 @@ class _ChatInputBarState extends State<ChatInputBar>
               icon: Lucide.Boxes,
               label: l10n.chatInputBarSelectModelTooltip,
               onTap: lockTap(widget.onSelectModel),
+            ),
+          ),
+        );
+
+        actions.add(
+          _OverflowAction(
+            width: normalButtonW,
+            builder: () => _CompactIconButton(
+              tooltip: l10n.chatInputBarImageGenerationTooltip,
+              icon: Lucide.Image,
+              active: _imageGenerationMode,
+              onTap: _composerLocked
+                  ? null
+                  : () => setState(
+                      () => _imageGenerationMode = !_imageGenerationMode,
+                    ),
+            ),
+            menu: DesktopContextMenuItem(
+              icon: Lucide.Image,
+              label: l10n.chatInputBarImageGenerationTooltip,
+              onTap: _composerLocked
+                  ? null
+                  : () => setState(
+                      () => _imageGenerationMode = !_imageGenerationMode,
+                    ),
             ),
           ),
         );

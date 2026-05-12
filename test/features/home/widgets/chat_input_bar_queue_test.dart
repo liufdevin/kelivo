@@ -98,6 +98,33 @@ void main() {
     focusNode.dispose();
   });
 
+  testWidgets('点击图片生成按钮后提交生图模式', (tester) async {
+    final controller = TextEditingController(text: '一只白猫');
+    final focusNode = FocusNode();
+    ChatInputData? submitted;
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        onSend: (input) async {
+          submitted = input;
+          return ChatInputSubmissionResult.sent;
+        },
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Image Generation'));
+    await tester.pumpAndSettle();
+    await tapSendButton(tester);
+
+    expect(submitted?.text, '一只白猫');
+    expect(submitted?.generateImage, isTrue);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
   testWidgets('有排队项时显示状态并允许取消', (tester) async {
     final controller = TextEditingController();
     final focusNode = FocusNode();

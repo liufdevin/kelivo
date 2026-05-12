@@ -225,6 +225,78 @@ void main() {
       );
     });
 
+    test('助手生图结果不会作为图片历史发送给普通聊天模型', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          _message(
+            id: 'u1',
+            role: 'user',
+            content: '生成一张城市夜景\n[image:D:\\input\\reference.png]',
+          ),
+          _message(
+            id: 'a1',
+            role: 'assistant',
+            content:
+                '\n![](D:\\app\\images\\openai_img_1.png)\n'
+                '\n[image:D:\\app\\images\\openai_img_2.png]\n',
+          ),
+          _message(id: 'u2', role: 'user', content: '继续聊一下构图'),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      final userMessage = apiMessages.firstWhere(
+        (message) => message['role'] == 'user',
+      );
+      final assistantMessage = apiMessages.firstWhere(
+        (message) => message['role'] == 'assistant',
+      );
+
+      expect(
+        userMessage['content'],
+        contains('[image:D:\\input\\reference.png]'),
+      );
+      expect(assistantMessage['content'], 'Assistant generated an image.');
+      expect(assistantMessage['content'], isNot(contains('openai_img')));
+      expect(assistantMessage['content'], isNot(contains('[image:')));
+      expect(assistantMessage['content'], isNot(contains('![](')));
+    });
+
+    test('助手图片 Markdown 只清理图片部分并保留说明文字', () {
+      final service = MessageBuilderService(
+        chatService: _FakeChatService(const {}),
+        contextProvider: _FakeBuildContext(),
+      );
+
+      final apiMessages = service.buildApiMessages(
+        messages: [
+          _message(id: 'u1', role: 'user', content: '画一张海报'),
+          _message(
+            id: 'a1',
+            role: 'assistant',
+            content:
+                '已生成海报草图：\n'
+                '![preview](D:\\app\\images\\poster.png)\n'
+                '可以继续调整文字层级。',
+          ),
+        ],
+        versionSelections: const {},
+        currentConversation: Conversation(title: 'test'),
+      );
+
+      final assistantMessage = apiMessages.last;
+
+      expect(assistantMessage['content'], '已生成海报草图： 可以继续调整文字层级。');
+      expect(assistantMessage['content'], isNot(contains('poster.png')));
+      expect(assistantMessage['content'], isNot(contains('![')));
+    });
+
     test('工具历史会保留 provider 元数据供 Claude 和 Gemini 重放', () {
       final service = MessageBuilderService(
         chatService: _FakeChatService({

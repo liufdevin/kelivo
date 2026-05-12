@@ -676,13 +676,6 @@ class _AboutPageState extends State<AboutPage> {
               _iosDivider(context),
               _iosNavRowSvgLeading(
                 context,
-                svgAsset: 'assets/icons/tencent-qq.svg',
-                label: l10n.aboutPageJoinQQGroup,
-                onTap: () => _openUrl('https://qm.qq.com/q/OQaXetKssC'),
-              ),
-              _iosDivider(context),
-              _iosNavRowSvgLeading(
-                context,
                 svgAsset: 'assets/icons/discord.svg',
                 label: l10n.aboutPageJoinDiscord,
                 onTap: () => _openUrl('https://discord.gg/Tb8DyvvV5T'),

@@ -17,8 +17,10 @@ class MainActivity : FlutterActivity() {
 
     private val processTextChannelName = "app.process_text"
     private val fileSaveChannelName = "app.file_save"
+    private val localLiteRtChannelName = "app.local_litert"
     private var processTextChannel: MethodChannel? = null
     private var fileSaveChannel: MethodChannel? = null
+    private var localLiteRtChannel: MethodChannel? = null
     private var pendingProcessText: String? = null
     private var pendingSaveResult: MethodChannel.Result? = null
     private var pendingSaveSourcePath: String? = null
@@ -40,6 +42,13 @@ class MainActivity : FlutterActivity() {
         fileSaveChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "saveFileFromPath" -> handleSaveFileFromPath(call.arguments, result)
+                else -> result.notImplemented()
+            }
+        }
+        localLiteRtChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localLiteRtChannelName)
+        localLiteRtChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "sendMessage" -> handleLocalLiteRtMessage(call.arguments, result)
                 else -> result.notImplemented()
             }
         }
@@ -111,6 +120,45 @@ class MainActivity : FlutterActivity() {
             pendingSaveSourcePath = null
             result.error("launch_failed", e.message, null)
         }
+    }
+
+    private fun handleLocalLiteRtMessage(arguments: Any?, result: MethodChannel.Result) {
+        val args = arguments as? Map<*, *>
+        val modelPath = args?.get("modelPath")?.toString()?.trim().orEmpty()
+        val systemPrompt = args?.get("systemPrompt")?.toString().orEmpty()
+        val prompt = args?.get("prompt")?.toString().orEmpty()
+        val temperature = when (val raw = args?.get("temperature")) {
+            is Number -> raw.toDouble()
+            is String -> raw.toDoubleOrNull()
+            else -> null
+        } ?: 0.7
+        val preferCpu = when (val raw = args?.get("preferCpu")) {
+            is Boolean -> raw
+            is String -> raw.equals("true", ignoreCase = true)
+            else -> true
+        }
+
+        Thread {
+            try {
+                val response = LocalLiteRtRuntime.sendMessage(
+                    applicationContext,
+                    modelPath,
+                    systemPrompt,
+                    prompt,
+                    temperature,
+                    preferCpu,
+                )
+                runOnUiThread { result.success(response) }
+            } catch (e: LocalLiteRtRuntime.RuntimeExceptionWithCode) {
+                runOnUiThread {
+                    result.error(e.code, e.message, null)
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    result.error("local_litert_failed", e.message, null)
+                }
+            }
+        }.start()
     }
 
     private fun handleSaveDestination(destUri: Uri?) {
