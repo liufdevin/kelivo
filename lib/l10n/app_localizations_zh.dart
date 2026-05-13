@@ -588,6 +588,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get homePagePleaseSelectModel => '请先选择模型';
 
   @override
+  String get homePageImageAttachmentUnsupported =>
+      '当前模型不支持图片附件，请切换到支持图片输入的模型或移除图片后重试。';
+
+  @override
   String get homePageAudioAttachmentUnsupported =>
       '当前模型不支持音频附件，请切换到支持音频输入的模型或移除音频文件后重试。';
 
@@ -5253,6 +5257,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get homePagePleaseSelectModel => '请先选择模型';
 
   @override
+  String get homePageImageAttachmentUnsupported =>
+      '当前模型不支持图片附件，请切换到支持图片输入的模型或移除图片后重试。';
+
+  @override
   String get homePageAudioAttachmentUnsupported =>
       '当前模型不支持音频附件，请切换到支持音频输入的模型或移除音频文件后重试。';
 
@@ -9916,6 +9924,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get homePagePleaseSelectModel => '請先選擇模型';
+
+  @override
+  String get homePageImageAttachmentUnsupported =>
+      '目前模型不支援圖片附件，請切換到支援圖片輸入的模型或移除圖片後再試。';
 
   @override
   String get homePageAudioAttachmentUnsupported =>

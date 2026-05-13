@@ -599,6 +599,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePagePleaseSelectModel => 'Please select a model first';
 
   @override
+  String get homePageImageAttachmentUnsupported =>
+      'The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.';
+
+  @override
   String get homePageAudioAttachmentUnsupported =>
       'The current model does not support audio attachments. Switch to a model that supports audio input or remove the audio file and try again.';
 

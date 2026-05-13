@@ -1187,6 +1187,12 @@ abstract class AppLocalizations {
   /// **'Please select a model first'**
   String get homePagePleaseSelectModel;
 
+  /// No description provided for @homePageImageAttachmentUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.'**
+  String get homePageImageAttachmentUnsupported;
+
   /// No description provided for @homePageAudioAttachmentUnsupported.
   ///
   /// In en, this message translates to:

@@ -35,11 +35,13 @@ Future<_ParsedTextAndImages> _parseTextAndImages(
   String raw, {
   required bool allowRemoteImages,
   required bool allowLocalImages,
+  bool allowDataImages = true,
   bool keepRemoteMarkdownText = true,
 }) => ChatApiService._parseTextAndImages(
   raw,
   allowRemoteImages: allowRemoteImages,
   allowLocalImages: allowLocalImages,
+  allowDataImages: allowDataImages,
   keepRemoteMarkdownText: keepRemoteMarkdownText,
 );
 

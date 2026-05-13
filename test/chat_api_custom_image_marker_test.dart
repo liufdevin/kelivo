@@ -105,6 +105,66 @@ void main() {
         expect(parts.single['text'], 'before [image:$missingPath] after');
       },
     );
+
+    test('does not encode custom image markers for text-only models', () async {
+      final body = await _sendAndCaptureRequestBody((baseUrl) async {
+        final dir = await Directory.systemTemp.createTemp('kelivo_text_img_');
+        addTearDown(() async {
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        });
+
+        final file = File('${dir.path}/sample.png');
+        await file.writeAsBytes(const [1, 2, 3, 4]);
+
+        return ChatApiService.sendMessageStream(
+          config: _openAiConfig(baseUrl),
+          modelId: 'gpt-3.5-turbo',
+          messages: [
+            {'role': 'user', 'content': 'before [image:${file.path}] after'},
+          ],
+          stream: false,
+        ).toList();
+      });
+
+      final parts = _extractSingleMessageParts(body);
+      expect(parts, hasLength(1));
+      expect(parts.single['type'], 'text');
+      expect(parts.single['text'], startsWith('before [image:'));
+      expect(parts.single['text'], endsWith('] after'));
+    });
+
+    test('does not attach pending images for text-only models', () async {
+      final body = await _sendAndCaptureRequestBody((baseUrl) async {
+        final dir = await Directory.systemTemp.createTemp(
+          'kelivo_pending_img_',
+        );
+        addTearDown(() async {
+          if (await dir.exists()) {
+            await dir.delete(recursive: true);
+          }
+        });
+
+        final file = File('${dir.path}/sample.png');
+        await file.writeAsBytes(const [1, 2, 3, 4]);
+
+        return ChatApiService.sendMessageStream(
+          config: _openAiConfig(baseUrl),
+          modelId: 'gpt-3.5-turbo',
+          messages: const [
+            {'role': 'user', 'content': 'hello'},
+          ],
+          userImagePaths: [file.path],
+          stream: false,
+        ).toList();
+      });
+
+      final parts = _extractSingleMessageParts(body);
+      expect(parts, hasLength(1));
+      expect(parts.single['type'], 'text');
+      expect(parts.single['text'], 'hello');
+    });
   });
 }
 

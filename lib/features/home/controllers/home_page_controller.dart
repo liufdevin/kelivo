@@ -388,6 +388,8 @@ class HomePageController extends ChangeNotifier {
 
   String _localizeGenerationError(AppLocalizations l10n, String error) {
     switch (error) {
+      case 'image_attachment_unsupported':
+        return l10n.homePageImageAttachmentUnsupported;
       case 'audio_attachment_unsupported':
         return l10n.homePageAudioAttachmentUnsupported;
       case 'image_generation_prompt_required':

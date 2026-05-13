@@ -724,7 +724,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
         final parsed = await _parseTextAndImages(
           raw,
           allowRemoteImages: canImageInput,
-          allowLocalImages: true,
+          allowLocalImages: canImageInput,
+          allowDataImages: canImageInput,
           keepRemoteMarkdownText: true,
         );
         final parts = <Map<String, dynamic>>[];
@@ -773,7 +774,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           }
         }
         // Additional images explicitly attached to the last user message
-        if (hasAttachedImages) {
+        if (hasAttachedImages && canImageInput) {
           for (final p in userImagePaths!) {
             final normalized = normalizeSrc(p);
             if (!seenImageSources.add(normalized)) continue;
@@ -935,7 +936,8 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
           final parsed = await _parseTextAndImages(
             raw,
             allowRemoteImages: canImageInput,
-            allowLocalImages: true,
+            allowLocalImages: canImageInput,
+            allowDataImages: canImageInput,
             keepRemoteMarkdownText: true,
           );
           final parts = <Map<String, dynamic>>[];
@@ -987,7 +989,7 @@ Stream<ChatStreamChunk> _sendOpenAIStream(
             }
             addImageUrl(url);
           }
-          if (hasAttachedImages) {
+          if (hasAttachedImages && canImageInput) {
             for (final p in userImagePaths!) {
               final normalized = normalizeSrc(p);
               if (!seenSources.add(normalized)) continue;

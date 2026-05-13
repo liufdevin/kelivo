@@ -191,6 +191,7 @@ class ChatApiService {
     String raw, {
     required bool allowRemoteImages,
     required bool allowLocalImages,
+    bool allowDataImages = true,
     bool keepRemoteMarkdownText = true,
   }) async {
     if (raw.isEmpty) return const _ParsedTextAndImages('', <_ImageRef>[]);
@@ -213,8 +214,13 @@ class ChatApiService {
           i = m1.end;
           continue;
         }
-        // Inline base64 / data URLs: always treat as image but keep them out of text.
+        // Inline base64 / data URLs: treat as images only for image-capable requests.
         if (url.startsWith('data:')) {
+          if (!allowDataImages) {
+            buf.write(full);
+            i = m1.end;
+            continue;
+          }
           images.add(_ImageRef('data', url));
           i = m1.end;
           continue;
@@ -278,6 +284,11 @@ class ChatApiService {
           continue;
         }
         if (p.startsWith('data:')) {
+          if (!allowDataImages) {
+            buf.write(full);
+            i = m2.end;
+            continue;
+          }
           images.add(_ImageRef('data', p));
           i = m2.end;
           continue;

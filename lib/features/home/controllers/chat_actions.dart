@@ -148,6 +148,24 @@ class ChatActions {
         ProviderKind.openai) {
       return false;
     }
+    final info = effectiveModelInfoForChat(
+      settings,
+      providerKey: providerKey,
+      modelId: modelId,
+    );
+    final idLooksLikeImage =
+        info.id.toLowerCase().contains('image') ||
+        modelId.toLowerCase().contains('image');
+    return idLooksLikeImage && info.output.contains(Modality.image);
+  }
+
+  @visibleForTesting
+  static ModelInfo effectiveModelInfoForChat(
+    SettingsProvider settings, {
+    required String providerKey,
+    required String modelId,
+  }) {
+    final cfg = settings.getProviderConfig(providerKey);
     final ov = ModelOverridePayloadParser.modelOverride(
       cfg.modelOverrides,
       modelId,
@@ -164,10 +182,41 @@ class ChatActions {
     if (ov.isNotEmpty) {
       info = ModelOverrideResolver.applyModelOverride(info, ov);
     }
-    final idLooksLikeImage =
-        effectiveUpstreamId.toLowerCase().contains('image') ||
-        modelId.toLowerCase().contains('image');
-    return idLooksLikeImage && info.output.contains(Modality.image);
+    return info;
+  }
+
+  @visibleForTesting
+  static bool supportsImageInputForChat(
+    SettingsProvider settings, {
+    required String providerKey,
+    required String modelId,
+  }) {
+    return effectiveModelInfoForChat(
+      settings,
+      providerKey: providerKey,
+      modelId: modelId,
+    ).input.contains(Modality.image);
+  }
+
+  @visibleForTesting
+  static bool shouldRejectImageInputForModel({
+    required ChatInputData input,
+    required SettingsProvider settings,
+    required String providerKey,
+    required String modelId,
+    required bool useDirectImageApi,
+  }) {
+    if (input.imagePaths.isEmpty || useDirectImageApi) return false;
+    final ocrActive =
+        settings.ocrEnabled &&
+        settings.ocrModelProvider != null &&
+        settings.ocrModelId != null;
+    if (ocrActive) return false;
+    return !supportsImageInputForChat(
+      settings,
+      providerKey: providerKey,
+      modelId: modelId,
+    );
   }
 
   @visibleForTesting
@@ -388,6 +437,16 @@ class ChatActions {
 
     if (useDirectImageApi && content.isEmpty) {
       return ChatActionResult.error('image_generation_prompt_required');
+    }
+
+    if (shouldRejectImageInputForModel(
+      input: input,
+      settings: settings,
+      providerKey: providerKey,
+      modelId: modelId,
+      useDirectImageApi: useDirectImageApi,
+    )) {
+      return ChatActionResult.error('image_attachment_unsupported');
     }
 
     if (_hasUnsupportedAudioAttachments(
