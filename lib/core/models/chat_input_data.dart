@@ -15,12 +15,14 @@ class ChatInputData {
   final List<String> imagePaths; // absolute file paths or data URLs
   final List<DocumentAttachment> documents; // selected files
   final bool generateImage; // route this submission to the image model
+  final bool allowImagesApiRouting;
 
   const ChatInputData({
     required this.text,
     this.imagePaths = const [],
     this.documents = const [],
     this.generateImage = false,
+    this.allowImagesApiRouting = true,
   });
 }
 

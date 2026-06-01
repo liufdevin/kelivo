@@ -371,6 +371,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageAbout => 'About';
 
   @override
+  String get settingsPageStatistics => 'Statistics';
+
+  @override
   String get settingsPageDocs => 'Docs';
 
   @override
@@ -381,6 +384,117 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsPageShare => 'Share';
+
+  @override
+  String get statsPageTitle => 'Statistics';
+
+  @override
+  String get statsPageRangeAllTime => 'All Time';
+
+  @override
+  String get statsPageRangeLast30Days => 'Last 30 Days';
+
+  @override
+  String get statsPageRangePreviousMonth => 'Last Month';
+
+  @override
+  String get statsPageRangePreviousQuarter => 'Last Quarter';
+
+  @override
+  String get statsPageRangeCustom => 'Custom';
+
+  @override
+  String get statsPageHeatmapTitle => 'Chat Heatmap';
+
+  @override
+  String get statsPageHeatmapLess => 'Less';
+
+  @override
+  String get statsPageHeatmapMore => 'More';
+
+  @override
+  String get statsPageSummaryTitle => 'Overview';
+
+  @override
+  String get statsPageTotalConversations => 'Total Conversations';
+
+  @override
+  String get statsPageTotalMessages => 'Total Messages';
+
+  @override
+  String get statsPageInputTokens => 'Input Tokens';
+
+  @override
+  String get statsPageOutputTokens => 'Output Tokens';
+
+  @override
+  String get statsPageCachedTokens => 'Cached Tokens';
+
+  @override
+  String get statsPageLaunchCount => 'App Launches';
+
+  @override
+  String get statsPageUsageTrendTitle => 'Usage Trend';
+
+  @override
+  String get statsPageModelUsageTitle => 'Model Usage';
+
+  @override
+  String get statsPageAssistantUsageTitle => 'Assistant Usage';
+
+  @override
+  String get statsPageTopicVolumeTitle => 'Topic Volume';
+
+  @override
+  String get statsPageModelColumn => 'Model';
+
+  @override
+  String get statsPageAssistantColumn => 'Assistant';
+
+  @override
+  String get statsPageTopicColumn => 'Topic';
+
+  @override
+  String get statsPageMessagesColumn => 'Messages';
+
+  @override
+  String get statsPageTopicsColumn => 'Topics';
+
+  @override
+  String get statsPageEmptyTitle => 'No statistics yet';
+
+  @override
+  String get statsPageShowAllTooltip => 'Show all';
+
+  @override
+  String get statsPageClose => 'Close';
+
+  @override
+  String get statsPageUnknownProvider => 'Unknown Provider';
+
+  @override
+  String get statsPageUnknownAssistant => 'Default Assistant';
+
+  @override
+  String get statsPageUnknownModel => 'Unknown Model';
+
+  @override
+  String get statsPageUnknownTopic => 'Untitled Topic';
+
+  @override
+  String get statsPageCustomRangeTitle => 'Custom Range';
+
+  @override
+  String get statsPageCustomRangeStart => 'Start';
+
+  @override
+  String get statsPageCustomRangeEnd => 'End';
+
+  @override
+  String get statsPageCustomRangeCancel => 'Cancel';
+
+  @override
+  String get statsPageCustomRangeApply => 'Apply';
 
   @override
   String get sponsorPageMethodsSectionTitle => 'Sponsorship Methods';
@@ -455,6 +569,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mermaidExportFailed => 'Export failed';
+
+  @override
+  String get mermaidImageTab => 'Image';
+
+  @override
+  String get mermaidCodeTab => 'Code';
+
+  @override
+  String get mermaidFullScreen => 'Full screen';
+
+  @override
+  String get mermaidGeneratingImage => 'Generating image';
+
+  @override
+  String get mermaidGenerationFailedHint =>
+      'Generation failed. Try asking another way.';
 
   @override
   String get mermaidPreviewOpen => 'Open Preview';
@@ -676,6 +806,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditPageRegexTab => 'Regex Replace';
+
+  @override
+  String get assistantEditPageLocalToolsTab => 'Local Tools';
+
+  @override
+  String get assistantEditTabLayoutTooltip => 'Customize tabs';
+
+  @override
+  String get assistantEditTabLayoutTitle => 'Customize tabs';
+
+  @override
+  String get assistantEditTabLayoutSubtitle =>
+      'Drag tabs to reorder. Turn off tabs you do not need.';
+
+  @override
+  String get assistantEditOutlineModeTitle => 'Section list style';
+
+  @override
+  String get assistantEditOutlineModeSubtitle =>
+      'Show an assistant overview first, then open each setting section from a list.';
+
+  @override
+  String get assistantEditTabLayoutResetTooltip => 'Reset tab layout';
+
+  @override
+  String get assistantEditTabLayoutAtLeastOneVisible =>
+      'Keep at least one tab visible';
+
+  @override
+  String assistantEditTabLayoutDragHandle(String tab) {
+    return 'Drag to reorder $tab';
+  }
 
   @override
   String get assistantEditRegexDescription =>
@@ -921,6 +1083,113 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get displaySettingsPageAndroidBackgroundChatTitle =>
       'Background Generation (Android)';
+
+  @override
+  String get displaySettingsPageIosBackgroundChatTitle =>
+      'Background Generation (iOS)';
+
+  @override
+  String get iosBackgroundSettingsPageTitle => 'iOS Background Generation';
+
+  @override
+  String get iosBackgroundStatusOn => 'On';
+
+  @override
+  String get iosBackgroundStatusOff => 'Off';
+
+  @override
+  String get iosBackgroundGenerationEnableTitle => 'Background Generation';
+
+  @override
+  String get iosBackgroundGenerationEnableSubtitle =>
+      'Use iOS background time to keep the current reply running after the app leaves the foreground.';
+
+  @override
+  String get iosBackgroundTaskRefreshTitle => 'Background Task Recovery';
+
+  @override
+  String get iosBackgroundTaskRefreshSubtitle =>
+      'Ask iOS for refresh and processing opportunities when system conditions allow.';
+
+  @override
+  String get iosLiveActivityTitle => 'Live Activity';
+
+  @override
+  String get iosLiveActivitySubtitle =>
+      'Show background replies on the Lock Screen and Dynamic Island when supported.';
+
+  @override
+  String get iosBackgroundNotificationsTitle => 'Task Notifications';
+
+  @override
+  String get iosBackgroundNotificationsSubtitle =>
+      'Send a local notification when a background reply completes or is interrupted.';
+
+  @override
+  String get iosBackgroundLimitNoticeTitle => 'iOS may still suspend work';
+
+  @override
+  String get iosBackgroundLimitNoticeBody =>
+      'These options use Apple-supported background time, BackgroundTasks, notifications, and Live Activities. They improve continuity but cannot force iOS to keep Kelivo running forever.';
+
+  @override
+  String get iosBackgroundUnsupportedLiveActivity =>
+      'Requires iOS 16.1 or later and Live Activities enabled in Settings.';
+
+  @override
+  String get iosBackgroundNativeStatusTitle => 'System status';
+
+  @override
+  String get iosBackgroundNativeStatusUnavailable =>
+      'Unavailable until running on iOS';
+
+  @override
+  String get iosBackgroundLiveActivityAvailable => 'Live Activities available';
+
+  @override
+  String get iosBackgroundLiveActivityUnavailable =>
+      'Live Activities unavailable';
+
+  @override
+  String get iosBackgroundNotificationsAuthorized => 'Notifications allowed';
+
+  @override
+  String get iosBackgroundNotificationsNotAuthorized =>
+      'Notifications not allowed';
+
+  @override
+  String get iosBackgroundGenerationActiveTitle => 'Kelivo is generating';
+
+  @override
+  String get iosBackgroundGenerationActiveDetail =>
+      'The assistant is replying in the background';
+
+  @override
+  String get iosBackgroundGenerationStreamingDetail =>
+      'Receiving assistant response';
+
+  @override
+  String iosBackgroundGenerationTokenCount(int count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get iosBackgroundGenerationCompleteTitle => 'Generation complete';
+
+  @override
+  String get iosBackgroundGenerationCompleteDetail =>
+      'Assistant reply is ready';
+
+  @override
+  String get iosBackgroundGenerationInterruptedTitle =>
+      'Generation interrupted';
+
+  @override
+  String get iosBackgroundGenerationInterruptedDetail =>
+      'The background reply stopped before completion';
+
+  @override
+  String get iosBackgroundGenerationCancelledDetail => 'Generation stopped';
 
   @override
   String get androidBackgroundStatusOn => 'On';
@@ -1176,6 +1445,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get codeBlockPreviewButton => 'Preview';
 
   @override
+  String get codeBlockSaveAsButton => 'Save as file';
+
+  @override
+  String get codeBlockCollapseButton => 'Collapse';
+
+  @override
+  String get codeBlockExpandButton => 'Expand';
+
+  @override
+  String get codeBlockDefaultFileNameStem => 'code';
+
+  @override
+  String get markdownTableLabel => 'Table';
+
+  @override
+  String get markdownTableExportCsvTooltip => 'Export CSV';
+
+  @override
+  String get markdownTableSaveImageTooltip => 'Save to Gallery';
+
+  @override
+  String get markdownTableDefaultFileNameStem => 'table';
+
+  @override
+  String get markdownTableCopiedCsvSnackbar =>
+      'CSV copied. Long press Copy to copy as image.';
+
+  @override
+  String get markdownTableCopiedMarkdownSnackbar => 'Table copied.';
+
+  @override
   String codeBlockCollapsedLines(int n) {
     return '… $n lines folded';
   }
@@ -1209,9 +1509,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantSettingsPageTitle => 'Assistant Settings';
-
-  @override
-  String get assistantSettingsDefaultTag => 'Default';
 
   @override
   String get assistantSettingsCopyButton => 'Copy';
@@ -1498,6 +1795,88 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageImportFromChatbox => 'Import from Chatbox';
 
   @override
+  String get backupReminderSectionTitle => 'Backup Reminder';
+
+  @override
+  String get backupReminderEnableTitle => 'Remind me to back up';
+
+  @override
+  String get backupReminderFrequencyTitle => 'Frequency';
+
+  @override
+  String get backupReminderTimeTitle => 'Reminder Time';
+
+  @override
+  String get backupReminderTimeInputHint => 'HH:mm';
+
+  @override
+  String get backupReminderTimeInvalid => 'Enter a time from 00:00 to 23:59.';
+
+  @override
+  String get backupReminderLastBackupTitle => 'Last Backup';
+
+  @override
+  String get backupReminderNextReminderTitle => 'Next Reminder';
+
+  @override
+  String get backupReminderNever => 'Never';
+
+  @override
+  String get backupReminderDisabled => 'Off';
+
+  @override
+  String get backupReminderDueNow => 'Due now';
+
+  @override
+  String get backupReminderEveryDay => 'Every day';
+
+  @override
+  String get backupReminderEveryThreeDays => 'Every 3 days';
+
+  @override
+  String get backupReminderEveryWeek => 'Every week';
+
+  @override
+  String get backupReminderEveryFourteenDays => 'Every 14 days';
+
+  @override
+  String get backupReminderEveryMonth => 'Every month';
+
+  @override
+  String backupReminderCustomDays(int days) {
+    return 'Every $days days';
+  }
+
+  @override
+  String get backupReminderCustomOption => 'Custom...';
+
+  @override
+  String get backupReminderCustomDialogTitle => 'Custom Frequency';
+
+  @override
+  String get backupReminderCustomDialogDescription =>
+      'Enter how many days to wait between backup reminders.';
+
+  @override
+  String get backupReminderCustomDaysLabel => 'Days';
+
+  @override
+  String get backupReminderCustomDaysInvalid => 'Enter a number from 1 to 365.';
+
+  @override
+  String get backupReminderSidebarTitle => 'Backup reminder';
+
+  @override
+  String get backupReminderSidebarSubtitle =>
+      'Your backup interval has arrived.';
+
+  @override
+  String get backupReminderSidebarAction => 'Go to backup';
+
+  @override
+  String get backupReminderSnoozeTooltip => 'Remind me later';
+
+  @override
   String get chatHistoryPageTitle => 'Chat History';
 
   @override
@@ -1592,6 +1971,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get compressContextNoMessages => 'No messages to compress';
+
+  @override
+  String get compressContextNoConversation => 'No conversation to compress';
+
+  @override
+  String get compressContextNoModel => 'No compression model configured';
+
+  @override
+  String get compressContextEmptySummary =>
+      'Compression returned an empty summary';
+
+  @override
+  String get compressContextOptionsTitle => 'Compress Context';
+
+  @override
+  String get compressContextOptionsDesc =>
+      'Choose which part of the current chat is sent to the compression model.';
+
+  @override
+  String get compressContextKeepStart => 'Start';
+
+  @override
+  String get compressContextKeepRecent => 'Recent';
+
+  @override
+  String get compressContextUnlimited => 'Unlimited';
+
+  @override
+  String get compressContextMaxCharsLabel => 'Characters';
+
+  @override
+  String get compressContextInvalidLimit => 'Enter a positive character count';
+
+  @override
+  String get compressContextStartButton => 'Compress';
 
   @override
   String get bottomToolsSheetLearningMode => 'Learning Mode';
@@ -1751,6 +2165,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chatMessageWidgetSearchResultsTitle => 'Search results';
+
+  @override
+  String get chatMessageWidgetCitationSourcesTitle => 'Citation sources';
+
+  @override
   String get chatMessageWidgetRegenerateTooltip => 'Regenerate';
 
   @override
@@ -1804,6 +2224,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetBuiltinSearch => 'Built-in Search';
 
   @override
+  String get chatMessageWidgetReadClipboard => 'Read Clipboard';
+
+  @override
+  String get chatMessageWidgetWriteClipboard => 'Write Clipboard';
+
+  @override
+  String chatMessageWidgetSpeakText(String text) {
+    return 'Speaking: $text';
+  }
+
+  @override
   String chatMessageWidgetToolCall(String name) {
     return 'Tool Call: $name';
   }
@@ -1830,7 +2261,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String chatMessageWidgetCitationsCount(int count) {
-    return 'Citations ($count)';
+    return '$count citations';
   }
 
   @override
@@ -2181,6 +2612,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputBarMoreTooltip => 'Add';
 
   @override
+  String get chatInputBarImageMode => 'Image mode';
+
+  @override
+  String get chatInputBarDisableImageModeTooltip => 'Turn off image mode';
+
+  @override
   String get chatInputBarQueuedPending => 'Queued to send';
 
   @override
@@ -2372,6 +2809,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Used for generating conversation summaries; prefer fast and cheap models';
 
   @override
+  String get defaultModelPageSuggestionModelTitle => 'Chat Suggestions Model';
+
+  @override
+  String get defaultModelPageSuggestionModelSubtitle =>
+      'Used for follow-up suggestion bubbles after assistant replies. Disabled until a model is selected.';
+
+  @override
   String get assistantEditRecentChatsSummaryFrequencyTitle =>
       'Summary Refresh Frequency';
 
@@ -2433,6 +2877,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter prompt template for summary generation';
 
   @override
+  String get defaultModelPageSuggestionPromptHint =>
+      'Enter prompt template for chat suggestions';
+
+  @override
   String get defaultModelPageTranslatePromptHint =>
       'Enter prompt template for translation';
 
@@ -2460,6 +2908,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String defaultModelPageSuggestionVars(String contentVar, String localeVar) {
+    return 'Variables: conversation: $contentVar, language: $localeVar';
+  }
+
+  @override
   String get defaultModelPageCompressModelTitle => 'Compress Model';
 
   @override
@@ -2482,6 +2935,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultModelPageUseCurrentModel => 'Use current chat model';
+
+  @override
+  String get defaultModelPageNotEnabled => 'Not enabled';
 
   @override
   String get translatePagePasteButton => 'Paste';
@@ -2829,6 +3285,62 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get providerDetailPageAihubmixAppCodeHelp =>
       'Adds header APP-Code requests to get a 10% discount. Only affects AIhubmix.';
+
+  @override
+  String get providerDetailPageClaudePromptCachingTitle =>
+      'Claude Prompt Caching';
+
+  @override
+  String get providerDetailPageClaudePromptCachingHelp =>
+      'Adds cache_control to Claude requests through Anthropic or OpenRouter.';
+
+  @override
+  String get providerDetailPageClaudePromptCachingTtlTitle => 'Cache TTL';
+
+  @override
+  String get providerDetailPageClaudePromptCachingTtlHelp =>
+      '5 minutes is the default. 1 hour costs more to write but can reduce rebuilds in long conversations.';
+
+  @override
+  String get providerDetailPageClaudePromptCachingTtl5m => '5 min';
+
+  @override
+  String get providerDetailPageClaudePromptCachingTtl1h => '1 hour';
+
+  @override
+  String get providerDetailPageBalanceTitle => 'Account Balance';
+
+  @override
+  String get providerDetailPageBalanceInfo => 'Get account balance';
+
+  @override
+  String get providerDetailPageBalanceApiPathLabel => 'Balance API Path';
+
+  @override
+  String get providerDetailPageBalanceResultPathLabel => 'Result JSON Path';
+
+  @override
+  String get providerDetailPageBalanceQueryButton => 'Check Balance';
+
+  @override
+  String get providerDetailPageBalanceQuerying => 'Checking...';
+
+  @override
+  String get providerDetailPageBalanceResetDefaultsButton => 'Reset';
+
+  @override
+  String get providerDetailPageBalanceResetDefaultsTooltip =>
+      'Reset balance settings';
+
+  @override
+  String providerDetailPageBalanceResult(String value) {
+    return 'Balance: $value';
+  }
+
+  @override
+  String providerDetailPageBalanceError(String message) {
+    return 'Balance query failed: $message';
+  }
 
   @override
   String get providerDetailPageVertexAiTitle => 'Vertex AI';
@@ -3366,6 +3878,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'Search engine ID is required';
 
   @override
+  String get searchServicesDialogApiKey => 'API Key';
+
+  @override
+  String get searchServicesDialogModel => 'Model';
+
+  @override
+  String get searchServicesDialogSystemPrompt => 'System Prompt';
+
+  @override
   String get searchServicesAddDialogInstanceUrl => 'Instance URL';
 
   @override
@@ -3618,6 +4139,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show Tool Result Summary';
 
   @override
+  String get displaySettingsPageInsertSuggestionOnlyTitle =>
+      'Insert suggestions without sending';
+
+  @override
   String get displaySettingsPageShowToolResultSummarySubtitle =>
       'Display the summary text below tool steps';
 
@@ -3677,7 +4202,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageMessageNavButtonsSubtitle =>
-      'Show quick jump buttons when scrolling';
+      'Choose when quick jump buttons appear';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsModeAlways => 'Always show';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsModeScroll =>
+      'Show while scrolling';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsModeHover =>
+      'Show on mouse hover';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsModeScrollAndHover =>
+      'Show while scrolling or hovering';
+
+  @override
+  String get displaySettingsPageMessageNavButtonsModeNever => 'Never show';
 
   @override
   String get displaySettingsPageUseNewAssistantAvatarUxTitle =>
@@ -3863,6 +4406,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsServicesPageTitle => 'Text-to-Speech';
 
   @override
+  String get ttsServicesPageSettingsTooltip => 'TTS settings';
+
+  @override
   String get ttsServicesPageAddTooltip => 'Add';
 
   @override
@@ -3973,6 +4519,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsServicesFieldSpeedLabel => 'Speed';
 
   @override
+  String get ttsServicesFieldLanguageTypeLabel => 'Language type';
+
+  @override
+  String get ttsServicesFieldLanguageLabel => 'Language';
+
+  @override
+  String get ttsServicesValidationApiKeyRequired => 'API Key is required';
+
+  @override
   String get ttsServicesViewDetailsButton => 'View details';
 
   @override
@@ -3980,6 +4535,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsServicesCloseButton => 'Close';
+
+  @override
+  String get ttsSettingsPageTitle => 'TTS Settings';
+
+  @override
+  String get ttsSettingsPlaybackSection => 'Playback';
+
+  @override
+  String get ttsSettingsAutoPlayTitle => 'Auto-play Assistant Replies';
+
+  @override
+  String get ttsSettingsAutoPlayDescription =>
+      'Start TTS automatically after an assistant reply finishes.';
+
+  @override
+  String get ttsSettingsTextSelectionSection => 'Text Selection';
+
+  @override
+  String get ttsSettingsTextSelectionFallbackDescription =>
+      'If no matching text is found, the full reply is played.';
+
+  @override
+  String get ttsSettingsTextSelectionFullTextTitle => 'Full text';
+
+  @override
+  String get ttsSettingsTextSelectionFullTextDescription =>
+      'Play the complete assistant reply.';
+
+  @override
+  String get ttsSettingsTextSelectionQuotedOnlyTitle => 'Quoted text only';
+
+  @override
+  String get ttsSettingsTextSelectionQuotedOnlyDescription =>
+      'Play text inside “”, ‘’, \"\", \'\', 「」, or 『』.';
+
+  @override
+  String get ttsSettingsTextSelectionOutsideParenthesesTitle =>
+      'Outside parentheses';
+
+  @override
+  String get ttsSettingsTextSelectionOutsideParenthesesDescription =>
+      'Skip text inside () and （）.';
+
+  @override
+  String get ttsSettingsTextSelectionItalicOnlyTitle => 'Italic text only';
+
+  @override
+  String get ttsSettingsTextSelectionItalicOnlyDescription =>
+      'Play Markdown or HTML italic text.';
+
+  @override
+  String get ttsSettingsTextSelectionNonItalicTitle => 'Non-italic text only';
+
+  @override
+  String get ttsSettingsTextSelectionNonItalicDescription =>
+      'Skip Markdown or HTML italic text.';
+
+  @override
+  String get ttsFloatingPlayerLabel => 'TTS player';
+
+  @override
+  String get ttsFloatingPauseTooltip => 'Pause';
+
+  @override
+  String get ttsFloatingResumeTooltip => 'Resume';
+
+  @override
+  String get ttsFloatingReplayTooltip => 'Replay';
+
+  @override
+  String get ttsFloatingRewind15Tooltip => 'Back 15 seconds';
+
+  @override
+  String get ttsFloatingForward15Tooltip => 'Forward 15 seconds';
+
+  @override
+  String get ttsFloatingSpeedTooltip => 'Playback speed';
+
+  @override
+  String get ttsFloatingCloseTooltip => 'Close player';
+
+  @override
+  String get ttsFloatingExpandTooltip => 'Expand playback controls';
+
+  @override
+  String get ttsFloatingCollapseTooltip => 'Collapse playback controls';
 
   @override
   String imageViewerPageShareFailedOpenFile(String message) {
@@ -3995,7 +4636,53 @@ class AppLocalizationsEn extends AppLocalizations {
   String get imageViewerPageShareButton => 'Share Image';
 
   @override
+  String get imageViewerPageCloseButton => 'Close preview';
+
+  @override
   String get imageViewerPageSaveButton => 'Save Image';
+
+  @override
+  String get imageViewerPageCopyButton => 'Copy Image';
+
+  @override
+  String get imageViewerPagePreviousButton => 'Previous Image';
+
+  @override
+  String get imageViewerPageNextButton => 'Next Image';
+
+  @override
+  String get imageViewerPageZoomInButton => 'Zoom In';
+
+  @override
+  String get imageViewerPageZoomOutButton => 'Zoom Out';
+
+  @override
+  String get imageViewerPageResetZoomButton => 'Reset Zoom';
+
+  @override
+  String get imageViewerPageFlipHorizontalButton => 'Flip Horizontal';
+
+  @override
+  String get imageViewerPageFlipVerticalButton => 'Flip Vertical';
+
+  @override
+  String get imageViewerPageRotateLeftButton => 'Rotate Left';
+
+  @override
+  String get imageViewerPageRotateRightButton => 'Rotate Right';
+
+  @override
+  String imageViewerPageCounter(int index, int total) {
+    return '$index/$total';
+  }
+
+  @override
+  String imageViewerPageImageLabel(int index, int total) {
+    return 'Image $index of $total';
+  }
+
+  @override
+  String get imageViewerPageImageLoadFailed => 'Unable to load image';
 
   @override
   String get imageViewerPageSaveSuccess => 'Saved to gallery';
@@ -4026,7 +4713,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchProviderGrokDescription =>
-      'xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.';
+      'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.';
 
   @override
   String get searchProviderExaDescription =>
@@ -4114,6 +4801,29 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bocha web search API. Accurate web results with optional summaries.';
 
   @override
+  String get searchServiceNameSerper => 'Serper';
+
+  @override
+  String get searchProviderSerperDescription =>
+      'Serper Google Search API. Fast web results with optional country, language, time, and page filters.';
+
+  @override
+  String get searchServicesDialogCountryOptional => 'Country/region (optional)';
+
+  @override
+  String get searchServicesDialogLanguageOptional => 'Language (optional)';
+
+  @override
+  String get searchServicesDialogTimeFilterOptional => 'Time filter (optional)';
+
+  @override
+  String get searchServicesDialogPageOptional => 'Page (optional)';
+
+  @override
+  String get searchServicesDialogPageInvalid =>
+      'Page must be a positive integer.';
+
+  @override
   String get generationInterrupted => 'Generation interrupted';
 
   @override
@@ -4122,6 +4832,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get titleForLocale => 'New Chat';
+
+  @override
+  String get temporaryChatTitle => 'Temporary Chat';
+
+  @override
+  String get temporaryChatEmptyMessage =>
+      'Temporary chats do not appear in history and will be deleted completely after you leave.';
+
+  @override
+  String get temporaryChatToggleTooltip => 'Toggle temporary chat';
 
   @override
   String get quickPhraseBackTooltip => 'Back';
@@ -4250,6 +4970,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get assistantEditPageMemoryTab => 'Memory';
+
+  @override
+  String get assistantEditLocalToolTimeInfoTitle => 'Time Info';
+
+  @override
+  String get assistantEditLocalToolTimeInfoSubtitle =>
+      'Read the device date, weekday, time, timezone, UTC offset, and timestamp.';
+
+  @override
+  String get assistantEditLocalToolClipboardTitle => 'Clipboard';
+
+  @override
+  String get assistantEditLocalToolClipboardSubtitle =>
+      'Read or write plain text from the device clipboard when explicitly needed.';
+
+  @override
+  String get assistantEditLocalToolTextToSpeechTitle => 'Text to Speech';
+
+  @override
+  String get assistantEditLocalToolTextToSpeechSubtitle =>
+      'Let the assistant read text aloud with the configured TTS playback.';
+
+  @override
+  String get assistantEditLocalToolAskUserTitle => 'Ask User';
+
+  @override
+  String get assistantEditLocalToolAskUserSubtitle =>
+      'Let the assistant ask short questions and continue after you answer.';
 
   @override
   String get assistantEditMemorySwitchTitle => 'Memory';
@@ -4823,6 +5571,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get askUserCardSubmit => 'Submit answer';
+
+  @override
+  String get askUserCardCustomHint => 'Type your answer';
+
+  @override
+  String get askUserCardSomethingElse => 'Something else';
+
+  @override
+  String get askUserCardSkip => 'Skip';
+
+  @override
+  String get askUserCardSkipped => 'Skipped';
+
+  @override
+  String get askUserCardAnswered => 'Answered';
+
+  @override
+  String get askUserCardInactive =>
+      'This question is no longer active. Regenerate or continue the conversation.';
+
+  @override
+  String get askUserCardCancelled => 'Question cancelled';
+
+  @override
+  String askUserCardQuestionCount(int count) {
+    return 'Ask $count questions';
+  }
+
+  @override
   String tokenDetailPromptTokens(int count) {
     return '$count tokens';
   }
@@ -4850,5 +5628,89 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String tokenDetailTotalTokens(int count) {
     return '$count tokens';
+  }
+
+  @override
+  String get debugPageTitle => 'Debug';
+
+  @override
+  String get debugPageConversationToolsTitle => 'Conversation tools';
+
+  @override
+  String get debugPageCreateOversizedConversationButton =>
+      'Create oversized conversation (30 MB)';
+
+  @override
+  String get debugPageCreateManyMessagesConversationButton =>
+      'Create 1024-message conversation';
+
+  @override
+  String get debugPageCreateDailyMixedMarkdownConversationButton =>
+      'Create 3000 daily mixed Markdown messages';
+
+  @override
+  String get debugPageCreateLongReasoningConversationButton =>
+      'Create long reasoning conversation (128 messages)';
+
+  @override
+  String get debugPageCreatingButton => 'Creating...';
+
+  @override
+  String get debugPageCreatingOversizedConversation =>
+      'Creating a 30 MB oversized conversation...';
+
+  @override
+  String get debugPageCreatingManyMessagesConversation =>
+      'Creating a 1024-message conversation...';
+
+  @override
+  String get debugPageCreatingDailyMixedMarkdownConversation =>
+      'Creating a 3000-message daily mixed Markdown conversation...';
+
+  @override
+  String get debugPageCreatingLongReasoningConversation =>
+      'Creating a long reasoning debug conversation...';
+
+  @override
+  String get debugPageNoCurrentAssistant =>
+      'No current assistant. Create or select an assistant first.';
+
+  @override
+  String debugPageConversationCreated(int count) {
+    return 'Created debug conversation with $count messages.';
+  }
+
+  @override
+  String debugPageCreateConversationFailed(String error) {
+    return 'Failed to create debug conversation: $error';
+  }
+
+  @override
+  String debugPageOversizedConversationTitle(int sizeMB) {
+    return 'Oversized conversation test ($sizeMB MB)';
+  }
+
+  @override
+  String debugPageManyMessagesConversationTitle(int count) {
+    return '$count-message conversation test';
+  }
+
+  @override
+  String debugPageDailyMixedMarkdownConversationTitle(int count) {
+    return '$count-message daily mixed Markdown test';
+  }
+
+  @override
+  String debugPageLongReasoningConversationTitle(int count) {
+    return '$count-message long reasoning test';
+  }
+
+  @override
+  String get debugPageOversizedConversationSeedText =>
+      'This is long debug text for reproducing slow rendering in oversized conversations. It includes repeated Markdown-like text, punctuation, CJK content, and plain words so chat rendering, storage, and scrolling can be profiled.';
+
+  @override
+  String debugPageManyMessagesSeedText(String role, int index) {
+    return '$role message #$index: quick random debug sample for testing list rendering, scrolling stability, message grouping, and conversation history performance.';
   }
 }

@@ -36,8 +36,8 @@ class Assistant {
   final String systemPrompt;
   final String messageTemplate; // e.g. "{{ message }}"
   final List<String> mcpServerIds; // bound MCP server IDs
+  final List<String> localToolIds; // enabled local tool IDs
   final String? background; // chat background (color/image ref)
-  final bool deletable; // can be deleted by user
   // Custom request overrides (per assistant)
   final List<Map<String, String>>
   customHeaders; // [{name:'X-Header', value:'v'}]
@@ -72,8 +72,8 @@ class Assistant {
     this.systemPrompt = '',
     this.messageTemplate = '{{ message }}',
     this.mcpServerIds = const <String>[],
+    this.localToolIds = const <String>[],
     this.background,
-    this.deletable = true,
     this.customHeaders = const <Map<String, String>>[],
     this.customBody = const <Map<String, String>>[],
     this.enableMemory = false,
@@ -103,8 +103,8 @@ class Assistant {
     String? systemPrompt,
     String? messageTemplate,
     List<String>? mcpServerIds,
+    List<String>? localToolIds,
     String? background,
-    bool? deletable,
     List<Map<String, String>>? customHeaders,
     List<Map<String, String>>? customBody,
     bool? enableMemory,
@@ -149,8 +149,8 @@ class Assistant {
       systemPrompt: systemPrompt ?? this.systemPrompt,
       messageTemplate: messageTemplate ?? this.messageTemplate,
       mcpServerIds: mcpServerIds ?? this.mcpServerIds,
+      localToolIds: localToolIds ?? this.localToolIds,
       background: clearBackground ? null : (background ?? this.background),
-      deletable: deletable ?? this.deletable,
       customHeaders: customHeaders ?? this.customHeaders,
       customBody: customBody ?? this.customBody,
       enableMemory: enableMemory ?? this.enableMemory,
@@ -183,8 +183,8 @@ class Assistant {
     'systemPrompt': systemPrompt,
     'messageTemplate': messageTemplate,
     'mcpServerIds': mcpServerIds,
+    'localToolIds': localToolIds,
     'background': background,
-    'deletable': deletable,
     'customHeaders': customHeaders,
     'customBody': customBody,
     'enableMemory': enableMemory,
@@ -215,8 +215,9 @@ class Assistant {
     messageTemplate: (json['messageTemplate'] as String?) ?? '{{ message }}',
     mcpServerIds:
         (json['mcpServerIds'] as List?)?.cast<String>() ?? const <String>[],
+    localToolIds:
+        (json['localToolIds'] as List?)?.cast<String>() ?? const <String>[],
     background: json['background'] as String?,
-    deletable: json['deletable'] as bool? ?? true,
     customHeaders: (() {
       final raw = json['customHeaders'];
       if (raw is List) {

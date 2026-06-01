@@ -31,37 +31,37 @@ void main() {
       expect((decoded as GoogleSearchOptions).searchEngineId, 'legacy-cx');
     });
 
-    test('GrokSearchOptions preserves custom model and URL', () {
-      final options = GrokSearchOptions(
+    test('GrokOptions preserves custom model and URL', () {
+      final options = GrokOptions(
         id: 'grok-1',
         apiKey: 'grok-key',
         model: 'grok-4-latest',
-        url: 'https://api.example.com/v1/chat/completions',
+        customUrl: 'https://api.example.com/v1/responses',
       );
 
       final decoded = SearchServiceOptions.fromJson(options.toJson());
 
-      expect(decoded, isA<GrokSearchOptions>());
-      final grok = decoded as GrokSearchOptions;
+      expect(decoded, isA<GrokOptions>());
+      final grok = decoded as GrokOptions;
       expect(grok.id, 'grok-1');
       expect(grok.apiKey, 'grok-key');
       expect(grok.model, 'grok-4-latest');
       expect(grok.resolvedModel, 'grok-4-latest');
-      expect(grok.url, 'https://api.example.com/v1/chat/completions');
-      expect(grok.resolvedUrl, 'https://api.example.com/v1/chat/completions');
+      expect(grok.customUrl, 'https://api.example.com/v1/responses');
+      expect(grok.resolvedUrl, 'https://api.example.com/v1/responses');
     });
 
-    test('GrokSearchOptions uses defaults for blank optional fields', () {
+    test('GrokOptions uses defaults for blank optional fields', () {
       final decoded = SearchServiceOptions.fromJson({
         'type': 'grok',
         'id': 'grok-default',
         'apiKey': 'grok-key',
       });
 
-      expect(decoded, isA<GrokSearchOptions>());
-      final grok = decoded as GrokSearchOptions;
-      expect(grok.resolvedModel, GrokSearchOptions.defaultModel);
-      expect(grok.resolvedUrl, GrokSearchOptions.defaultUrl);
+      expect(decoded, isA<GrokOptions>());
+      final grok = decoded as GrokOptions;
+      expect(grok.resolvedModel, GrokOptions.defaultModel);
+      expect(grok.resolvedUrl, GrokOptions.defaultUrl);
     });
   });
 }

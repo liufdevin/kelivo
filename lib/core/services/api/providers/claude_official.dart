@@ -1,5 +1,25 @@
 part of '../chat_api_service.dart';
 
+int _readClaudeUsageInt(dynamic value) {
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+TokenUsage _claudeUsageFromMap(Map<String, dynamic> usage) {
+  final inTok = _readClaudeUsageInt(usage['input_tokens']);
+  final outTok = _readClaudeUsageInt(usage['output_tokens']);
+  final cached =
+      _readClaudeUsageInt(usage['cache_read_input_tokens']) +
+      _readClaudeUsageInt(usage['cache_creation_input_tokens']);
+  return TokenUsage(
+    promptTokens: inTok,
+    completionTokens: outTok,
+    cachedTokens: cached,
+    totalTokens: inTok + outTok,
+  );
+}
+
 Stream<ChatStreamChunk> _sendClaudeStream(
   http.Client client,
   ProviderConfig config,
@@ -11,7 +31,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
   double? topP,
   int? maxTokens,
   List<Map<String, dynamic>>? tools,
-  Future<String> Function(String, Map<String, dynamic>)? onToolCall,
+  ToolCallHandler? onToolCall,
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
@@ -57,9 +77,42 @@ Stream<ChatStreamChunk> _sendClaudeStream(
     pendingToolResults.clear();
   }
 
+  Map<String, dynamic>? toolUseBlockFromToolCall(Map tc) {
+    final id = (tc['id'] ?? '').toString();
+    final fn = tc['function'];
+    if (id.isEmpty || fn is! Map) return null;
+    Map<String, dynamic> input = const <String, dynamic>{};
+    try {
+      input = (jsonDecode((fn['arguments'] ?? '{}').toString()) as Map)
+          .cast<String, dynamic>();
+    } catch (_) {}
+    return {
+      'type': 'tool_use',
+      'id': id,
+      'name': (fn['name'] ?? '').toString(),
+      'input': input,
+    };
+  }
+
+  Set<String> toolUseIdsInBlocks(List<Map<String, dynamic>> blocks) {
+    return blocks
+        .where((block) => block['type'] == 'tool_use')
+        .map((block) => (block['id'] ?? '').toString())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
   List<Map<String, dynamic>>? anthropicBlocksFromToolCallMetadata(
     List toolCalls,
   ) {
+    final expectedIds = toolCalls
+        .whereType<Map>()
+        .map((tc) => (tc['id'] ?? '').toString())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    List<Map<String, dynamic>>? bestBlocks;
+    var bestMatchCount = -1;
+
     for (final tc in toolCalls) {
       if (tc is! Map) continue;
       final meta = tc['metadata'];
@@ -68,12 +121,38 @@ Stream<ChatStreamChunk> _sendClaudeStream(
       if (anthropic is! Map) continue;
       final blocks = anthropic['assistant_blocks'];
       if (blocks is! List || blocks.isEmpty) continue;
-      return blocks
+      final candidate = blocks
           .whereType<Map>()
           .map((e) => e.cast<String, dynamic>())
           .toList();
+      final matchCount = toolUseIdsInBlocks(
+        candidate,
+      ).where(expectedIds.contains).length;
+      if (matchCount > bestMatchCount ||
+          (matchCount == bestMatchCount &&
+              candidate.length > (bestBlocks?.length ?? 0))) {
+        bestBlocks = candidate;
+        bestMatchCount = matchCount;
+      }
     }
-    return null;
+    if (bestBlocks == null) return null;
+    if (expectedIds.isEmpty) return bestBlocks;
+
+    final presentIds = toolUseIdsInBlocks(bestBlocks);
+    if (presentIds.containsAll(expectedIds)) return bestBlocks;
+
+    final completed = <Map<String, dynamic>>[
+      for (final block in bestBlocks) Map<String, dynamic>.from(block),
+    ];
+    for (final tc in toolCalls.whereType<Map>()) {
+      final block = toolUseBlockFromToolCall(tc);
+      if (block == null) continue;
+      final id = (block['id'] ?? '').toString();
+      if (presentIds.contains(id)) continue;
+      completed.add(block);
+      presentIds.add(id);
+    }
+    return completed;
   }
 
   for (int i = 0; i < nonSystemMessages.length; i++) {
@@ -105,20 +184,8 @@ Stream<ChatStreamChunk> _sendClaudeStream(
         }
         for (final tc in toolCalls) {
           if (tc is! Map) continue;
-          final id = (tc['id'] ?? '').toString();
-          final fn = tc['function'];
-          if (id.isEmpty || fn is! Map) continue;
-          Map<String, dynamic> input = const <String, dynamic>{};
-          try {
-            input = (jsonDecode((fn['arguments'] ?? '{}').toString()) as Map)
-                .cast<String, dynamic>();
-          } catch (_) {}
-          blocks.add({
-            'type': 'tool_use',
-            'id': id,
-            'name': (fn['name'] ?? '').toString(),
-            'input': input,
-          });
+          final block = toolUseBlockFromToolCall(tc);
+          if (block != null) blocks.add(block);
         }
       }
       if (blocks.isNotEmpty) {
@@ -273,6 +340,10 @@ Stream<ChatStreamChunk> _sendClaudeStream(
       'messages': convo,
       'stream': stream,
       if (systemPrompt.isNotEmpty) 'system': systemPrompt,
+      if (config.claudePromptCachingEnabled == true)
+        'cache_control': ProviderConfig.claudePromptCacheControl(
+          config.claudePromptCachingTtl,
+        ),
       if (!omitSamplingParams &&
           !_isClaudeReasoningEnabled(thinkingBudget) &&
           temperature != null)
@@ -311,15 +382,9 @@ Stream<ChatStreamChunk> _sendClaudeStream(
       try {
         final u = (obj['usage'] as Map?)?.cast<String, dynamic>();
         if (u != null) {
-          final inTok = (u['input_tokens'] ?? 0) as int? ?? 0;
-          final outTok = (u['output_tokens'] ?? 0) as int? ?? 0;
-          final round = TokenUsage(
-            promptTokens: inTok,
-            completionTokens: outTok,
-            cachedTokens: 0,
-            totalTokens: inTok + outTok,
+          totalUsage = (totalUsage ?? const TokenUsage()).merge(
+            _claudeUsageFromMap(u),
           );
-          totalUsage = (totalUsage ?? const TokenUsage()).merge(round);
         }
       } catch (_) {}
       final content = (obj['content'] as List?) ?? const <dynamic>[];
@@ -389,7 +454,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
         for (final e in toolUses.entries) {
           final name = (e.value['name'] ?? '').toString();
           final args = (e.value['args'] as Map<String, dynamic>);
-          final res = await onToolCall(name, args);
+          final res = await onToolCall(name, args, toolCallId: e.key);
           results.add({
             'type': 'tool_result',
             'tool_use_id': e.key,
@@ -764,7 +829,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
               }
               // Emit tool result to UI (placeholder was emitted at start)
               if (onToolCall != null) {
-                final res = await onToolCall(name, args);
+                final res = await onToolCall(name, args, toolCallId: id);
                 toolResultsContent[id] = res;
                 yield ChatStreamChunk(
                   content: '',
@@ -816,11 +881,9 @@ Stream<ChatStreamChunk> _sendClaudeStream(
             }
           } else if (type == 'message_delta') {
             final u = obj['usage'] ?? obj['message']?['usage'];
-            if (u != null) {
-              final inTok = (u['input_tokens'] ?? 0) as int;
-              final outTok = (u['output_tokens'] ?? 0) as int;
+            if (u is Map) {
               usage = (usage ?? const TokenUsage()).merge(
-                TokenUsage(promptTokens: inTok, completionTokens: outTok),
+                _claudeUsageFromMap(u.cast<String, dynamic>()),
               );
               roundTokens = usage.totalTokens;
             }
@@ -858,13 +921,8 @@ Stream<ChatStreamChunk> _sendClaudeStream(
 
     // If no client tool calls, decide whether to continue (pause_turn/server tool) or finalize
     if (anthToolUse.isEmpty) {
-      final hadServerTool =
-          assistantBlocks.any(
-            (b) => b['type'] == 'tool_use' || b['type'] == 'text',
-          ) &&
-          srvIndexToId.isNotEmpty;
       final sr = lastStopReason ?? '';
-      if (sr == 'pause_turn' || hadServerTool) {
+      if (sr == 'pause_turn') {
         // Continue this turn with assistant content only
         convo = [
           ...convo,
@@ -897,7 +955,7 @@ Stream<ChatStreamChunk> _sendClaudeStream(
       }
       String res = toolResultsContent[id] ?? '';
       if (res.isEmpty && onToolCall != null) {
-        res = await onToolCall(name, args);
+        res = await onToolCall(name, args, toolCallId: id);
       }
       toolResultsBlocks.add({
         'type': 'tool_result',

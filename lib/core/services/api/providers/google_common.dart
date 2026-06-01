@@ -41,6 +41,110 @@ List<Map<String, dynamic>> _buildGeminiToolsArray({
   return toolsArr;
 }
 
+bool _isGemma4Model(String modelId) {
+  return RegExp(
+    r'(^|[/:_-])gemma[-_]?4([._-]|$)',
+    caseSensitive: false,
+  ).hasMatch(modelId);
+}
+
+bool _isGemini35FlashModel(String modelId) {
+  return modelId.contains(
+    RegExp(r'gemini-3\.5-flash([._:@/-]|$)', caseSensitive: false),
+  );
+}
+
+bool _isGemini3TextModel(String modelId) {
+  return modelId.contains(
+    RegExp(r'gemini-3(?:\.\d+)?-(?!pro-image)', caseSensitive: false),
+  );
+}
+
+bool _shouldOmitGeminiSamplingParams(String modelId) {
+  return _isGemini3TextModel(modelId);
+}
+
+Map<String, dynamic> _googleThinkingConfig(
+  String upstreamModelId,
+  int? budget,
+) {
+  final off = _isOff(budget);
+  if (_isGemma4Model(upstreamModelId)) {
+    if (off) return const <String, dynamic>{};
+    return const <String, dynamic>{
+      'includeThoughts': true,
+      'thinkingLevel': 'high',
+    };
+  }
+
+  // Match gemini-3-pro or gemini-3-pro-preview (and similar variants)
+  final isGemini3ProImage = upstreamModelId.contains(
+    RegExp(r'gemini-3-pro-image(-preview)?', caseSensitive: false),
+  );
+  final isGemini31Pro = upstreamModelId.contains(
+    RegExp(r'gemini-3\.1-pro(-preview)?', caseSensitive: false),
+  );
+  final isGemini3Pro = upstreamModelId.contains(
+    RegExp(r'gemini-3-pro(-preview)?', caseSensitive: false),
+  );
+  final isGemini3Flash = upstreamModelId.contains(
+    RegExp(r'gemini-3-flash(-preview)?', caseSensitive: false),
+  );
+  final isGemini35Flash = _isGemini35FlashModel(upstreamModelId);
+  if (isGemini3ProImage) {
+    return {
+      'includeThoughts': true,
+      if (budget != null && budget >= 0) 'thinkingBudget': budget,
+    };
+  }
+  // Gemini 3.1 Pro: supports 'low', 'medium', 'high' (no minimal)
+  if (isGemini31Pro) {
+    String level = 'high';
+    if (off) {
+      level = 'low';
+    } else if (budget != null && budget > 0) {
+      if (budget < 8000) {
+        level = 'low';
+      } else if (budget < 24000) {
+        level = 'medium'; // gemini 3.1 pro support medium
+      }
+    }
+    return {'includeThoughts': true, 'thinkingLevel': level};
+  }
+  // Gemini 3 Pro: supports 'low' and 'high' only (no off)
+  if (isGemini3Pro) {
+    String level = 'high';
+    if (off || (budget != null && budget > 0 && budget < 8000)) {
+      // Off or Light (1024) -> low
+      level = 'low';
+    }
+    return {'includeThoughts': true, 'thinkingLevel': level};
+  }
+  // Gemini 3 Flash and 3.5 Flash: supports 'minimal', 'low', 'medium', 'high'
+  if (isGemini3Flash || isGemini35Flash) {
+    String level = isGemini35Flash ? 'medium' : 'high';
+    if (off) {
+      level = 'minimal';
+    } else if (budget != null && budget > 0) {
+      // Light (1024) -> low, Medium (16000) -> medium, Heavy (32000) -> high
+      if (budget < 8000) {
+        level = 'low';
+      } else if (budget < 24000) {
+        level = 'medium';
+      } else {
+        level = 'high';
+      }
+    }
+    return {'includeThoughts': true, 'thinkingLevel': level};
+  }
+  // Gemini 2.x and below: use thinkingBudget
+  if (off) return {'includeThoughts': false};
+  return {
+    'includeThoughts': true,
+    if (budget != null && budget >= 0) 'thinkingBudget': budget,
+  };
+}
+
 Map<String, dynamic>? _googleToolMetadata(Map<String, dynamic> message) {
   final metadata = message['metadata'];
   if (metadata is! Map) return null;
@@ -95,8 +199,37 @@ Map<String, dynamic> _googleFunctionResponsePartFromToolMessage(
   final google = _googleToolMetadata(message);
   final rawPart = google?['part'];
   final id = rawPart is Map ? rawPart['id']?.toString() : null;
-  if (id != null && id.isNotEmpty) part['id'] = id;
+  if (id != null && id.isNotEmpty) {
+    (part['functionResponse'] as Map<String, dynamic>)['id'] = id;
+  }
   return part;
+}
+
+List<Map<String, dynamic>> _googleApiContents(
+  List<Map<String, dynamic>> contents,
+) {
+  return [
+    for (final content in contents)
+      {
+        ...content,
+        if (content['parts'] is List)
+          'parts': [
+            for (final part in content['parts'] as List)
+              part is Map ? _googleApiPart(part) : part,
+          ],
+      },
+  ];
+}
+
+Map<String, dynamic> _googleApiPart(Map part) {
+  final out = Map<String, dynamic>.from(part);
+  out.remove('id');
+  return out;
+}
+
+int? _defaultGeminiMaxOutputTokens(String upstreamModelId) {
+  if (_isGemini35FlashModel(upstreamModelId)) return 65536;
+  return null;
 }
 
 Stream<ChatStreamChunk> _sendGoogleStream(
@@ -110,7 +243,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
   double? topP,
   int? maxTokens,
   List<Map<String, dynamic>>? tools,
-  Future<String> Function(String, Map<String, dynamic>)? onToolCall,
+  ToolCallHandler? onToolCall,
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
   bool stream = true,
@@ -143,6 +276,9 @@ Stream<ChatStreamChunk> _sendGoogleStream(
   final bool persistGeminiThoughtSigs = isGemini3;
   final builtIns = _builtInTools(config, modelId);
   final enableYoutube = builtIns.contains(BuiltInToolNames.youtube);
+  // Effective model features (includes user overrides)
+  final effective = _effectiveModelInfo(config, modelId);
+  final isReasoning = effective.abilities.contains(ModelAbility.reasoning);
   // Non-streaming path: use generateContent
   if (!stream) {
     final isVertex = config.vertexAI == true;
@@ -355,6 +491,19 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       isGemini3: isGemini3 && !isVertex,
     );
 
+    final thinkingConfig = isReasoning
+        ? _googleThinkingConfig(upstreamModelId, thinkingBudget)
+        : const <String, dynamic>{};
+    final defaultMaxOutputTokens = _defaultGeminiMaxOutputTokens(
+      upstreamModelId,
+    );
+    final omitSamplingParams = _shouldOmitGeminiSamplingParams(upstreamModelId);
+    final generationConfig = <String, dynamic>{
+      if (maxTokens ?? defaultMaxOutputTokens case final resolvedMaxTokens?)
+        'maxOutputTokens': resolvedMaxTokens,
+      if (thinkingConfig.isNotEmpty) 'thinkingConfig': thinkingConfig,
+    };
+
     Map<String, dynamic> baseBody = {
       'contents': contents,
       if (systemPrompt.isNotEmpty)
@@ -363,9 +512,10 @@ Stream<ChatStreamChunk> _sendGoogleStream(
             {'text': systemPrompt},
           ],
         },
-      if (temperature != null) 'temperature': temperature,
-      if (topP != null) 'topP': topP,
-      if (maxTokens != null) 'generationConfig': {'maxOutputTokens': maxTokens},
+      if (!omitSamplingParams && temperature != null)
+        'temperature': temperature,
+      if (!omitSamplingParams && topP != null) 'topP': topP,
+      if (generationConfig.isNotEmpty) 'generationConfig': generationConfig,
       if (toolsArr.isNotEmpty) 'tools': toolsArr,
       if (geminiToolConfig != null) 'toolConfig': geminiToolConfig,
     };
@@ -384,7 +534,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
       final req = http.Request('POST', Uri.parse(url));
       req.headers.addAll(headers);
       final body = Map<String, dynamic>.from(baseBody);
-      body['contents'] = currentContents;
+      body['contents'] = _googleApiContents(currentContents);
       req.body = jsonEncode(body);
       final resp = await client.send(req);
       if (resp.statusCode < 200 || resp.statusCode >= 300) {
@@ -431,8 +581,8 @@ Stream<ChatStreamChunk> _sendGoogleStream(
           final args =
               (call['args'] as Map?)?.cast<String, dynamic>() ??
               const <String, dynamic>{};
-          // Prefer API-provided id (part-level), fall back to synthetic
-          final partId = fc['id']?.toString() ?? 'fn_$idx';
+          // Prefer API-provided id (part-level), fall back to synthetic.
+          final partId = _effectiveToolCallId(fc['id'], 'fn', idx);
           yield ChatStreamChunk(
             content: '',
             isDone: false,
@@ -440,7 +590,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
             usage: totalUsage,
             toolCalls: [ToolCallInfo(id: partId, name: name, arguments: args)],
           );
-          final res = await onToolCall(name, args);
+          final res = await onToolCall(name, args, toolCallId: partId);
           yield ChatStreamChunk(
             content: '',
             isDone: false,
@@ -459,8 +609,8 @@ Stream<ChatStreamChunk> _sendGoogleStream(
             'functionResponse': {
               'name': name,
               'response': {'result': res},
+              if (fc.containsKey('id')) 'id': fc['id'],
             },
-            if (fc.containsKey('id')) 'id': fc['id'],
           };
           responseParts.add(frPart);
         }
@@ -715,13 +865,9 @@ Stream<ChatStreamChunk> _sendGoogleStream(
     contents.add({'role': role, 'parts': parts});
   }
 
-  // Effective model features (includes user overrides)
-  final effective = _effectiveModelInfo(config, modelId);
-  final isReasoning = effective.abilities.contains(ModelAbility.reasoning);
   final wantsImageOutput = effective.output.contains(Modality.image);
   bool expectImage = wantsImageOutput;
   bool receivedImage = false;
-  final off = _isOff(thinkingBudget);
 
   // Map OpenAI-style tools to Gemini functionDeclarations (MCP)
   List<Map<String, dynamic>>? geminiTools;
@@ -795,85 +941,26 @@ Stream<ChatStreamChunk> _sendGoogleStream(
   }
 
   while (true) {
+    final defaultMaxOutputTokens = _defaultGeminiMaxOutputTokens(
+      upstreamModelId,
+    );
+    final omitSamplingParams = _shouldOmitGeminiSamplingParams(upstreamModelId);
     final gen = <String, dynamic>{
-      if (temperature != null) 'temperature': temperature,
-      if (topP != null) 'topP': topP,
-      if (maxTokens != null) 'maxOutputTokens': maxTokens,
+      if (!omitSamplingParams && temperature != null)
+        'temperature': temperature,
+      if (!omitSamplingParams && topP != null) 'topP': topP,
+      if (maxTokens ?? defaultMaxOutputTokens case final resolvedMaxTokens?)
+        'maxOutputTokens': resolvedMaxTokens,
       // Enable IMAGE+TEXT output modalities when model is configured to output images
       if (wantsImageOutput) 'responseModalities': ['TEXT', 'IMAGE'],
       if (isReasoning)
-        'thinkingConfig': () {
-          // Match gemini-3-pro or gemini-3-pro-preview (and similar variants)
-          final isGemini3ProImage = upstreamModelId.contains(
-            RegExp(r'gemini-3-pro-image(-preview)?', caseSensitive: false),
+        ...() {
+          final thinkingConfig = _googleThinkingConfig(
+            upstreamModelId,
+            thinkingBudget,
           );
-          final isGemini31Pro = upstreamModelId.contains(
-            RegExp(r'gemini-3\.1-pro(-preview)?', caseSensitive: false),
-          );
-          final isGemini3Pro = upstreamModelId.contains(
-            RegExp(r'gemini-3-pro(-preview)?', caseSensitive: false),
-          );
-          final isGemini3Flash = upstreamModelId.contains(
-            RegExp(r'gemini-3-flash(-preview)?', caseSensitive: false),
-          );
-          if (isGemini3ProImage) {
-            return {
-              'includeThoughts': true,
-              if (thinkingBudget != null && thinkingBudget >= 0)
-                'thinkingBudget': thinkingBudget,
-            };
-          }
-          // Gemini 3.1 Pro: supports 'low', 'medium', 'high' (no minimal)
-          if (isGemini31Pro) {
-            String level = 'high';
-            if (off) {
-              level = 'low';
-            } else if (thinkingBudget != null && thinkingBudget > 0) {
-              if (thinkingBudget < 8000) {
-                level = 'low';
-              } else if (thinkingBudget < 24000) {
-                level = 'medium'; // gemini 3.1 pro support medium
-              }
-            }
-            return {'includeThoughts': true, 'thinkingLevel': level};
-          }
-          // Gemini 3 Pro: supports 'low' and 'high' only (no off)
-          if (isGemini3Pro) {
-            String level = 'high';
-            if (off ||
-                (thinkingBudget != null &&
-                    thinkingBudget > 0 &&
-                    thinkingBudget < 8000)) {
-              // Off or Light (1024) → low
-              level = 'low';
-            }
-            return {
-              'includeThoughts': true,
-              'thinkingLevel': level,
-            }; // Gemini 3.0 Pro does not support medium, only low and high
-          }
-          // Gemini 3 Flash: supports 'minimal', 'low', 'medium', 'high'
-          if (isGemini3Flash) {
-            String level = 'high';
-            if (off) {
-              level = 'minimal';
-            } else if (thinkingBudget != null && thinkingBudget > 0) {
-              // Light (1024) → low, Medium (16000) → medium, Heavy (32000) → high
-              if (thinkingBudget < 8000) {
-                level = 'low';
-              } else if (thinkingBudget < 24000) {
-                level = 'medium';
-              }
-            }
-            return {'includeThoughts': true, 'thinkingLevel': level};
-          }
-          // Gemini 2.x and below: use thinkingBudget
-          if (off) return {'includeThoughts': false};
-          return {
-            'includeThoughts': true,
-            if (thinkingBudget != null && thinkingBudget >= 0)
-              'thinkingBudget': thinkingBudget,
-          };
+          if (thinkingConfig.isEmpty) return const <String, dynamic>{};
+          return {'thinkingConfig': thinkingConfig};
         }(),
     };
     final body = <String, dynamic>{
@@ -921,6 +1008,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
         body[k] = (v is String) ? _parseOverrideValue(v) : v;
       });
     }
+    body['contents'] = _googleApiContents(convo);
     request.body = jsonEncode(body);
 
     final resp = await client.send(request);
@@ -1222,8 +1310,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
                   }
                   // Prefer API-provided id (part-level), fall back to synthetic
                   final apiId = p['id']?.toString();
-                  final id =
-                      apiId ?? 'call_${DateTime.now().microsecondsSinceEpoch}';
+                  final id = _effectiveToolCallId(apiId, 'call', p.hashCode);
 
                   // Capture thought signature (Gemini 3 Pro requirement)
                   // Preserve exact key/value as received
@@ -1262,7 +1349,7 @@ Stream<ChatStreamChunk> _sendGoogleStream(
                   );
                   String resText = '';
                   if (onToolCall != null) {
-                    resText = await onToolCall(name, args);
+                    resText = await onToolCall(name, args, toolCallId: id);
                     yield ChatStreamChunk(
                       content: '',
                       isDone: false,
@@ -1474,8 +1561,11 @@ Stream<ChatStreamChunk> _sendGoogleStream(
           responseObj = {'result': resText};
         }
         responseParts.add({
-          'functionResponse': {'name': name, 'response': responseObj},
-          if (apiId != null) 'id': apiId,
+          'functionResponse': {
+            'name': name,
+            'response': responseObj,
+            if (apiId != null) 'id': apiId,
+          },
         });
       }
       convo.add({'role': 'user', 'parts': responseParts});

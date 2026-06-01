@@ -597,12 +597,13 @@ class _BrandBadge extends StatelessWidget {
     if (s is LinkUpOptions) return 'linkup';
     if (s is BraveOptions) return 'brave';
     if (s is GoogleSearchOptions) return 'google';
-    if (s is GrokSearchOptions) return 'grok';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
     if (s is JinaOptions) return 'jina';
     if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';
+    if (s is SerperOptions) return 'serper';
+    if (s is GrokOptions) return 'grok';
     return 'search';
   }
 
@@ -771,14 +772,21 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
     'url': TextEditingController(),
     'tavilyUrl': TextEditingController(),
     'exaUrl': TextEditingController(),
-    'grokUrl': TextEditingController(),
     'searchEngineId': TextEditingController(),
-    'model': TextEditingController(),
     'engines': TextEditingController(),
     'language': TextEditingController(),
     'username': TextEditingController(),
     'password': TextEditingController(),
     'region': TextEditingController(text: 'us-en'),
+    'gl': TextEditingController(),
+    'hl': TextEditingController(),
+    'tbs': TextEditingController(),
+    'page': TextEditingController(),
+    'model': TextEditingController(text: GrokOptions.defaultModel),
+    'customUrl': TextEditingController(text: GrokOptions.defaultUrl),
+    'systemPrompt': TextEditingController(
+      text: GrokOptions.defaultSystemPrompt,
+    ),
   };
 
   @override
@@ -871,7 +879,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return [
           TextField(
             controller: _controllers['apiKey'],
-            decoration: deco(l10n.searchServicesFieldApiKey),
+            decoration: deco(l10n.searchServicesDialogApiKey),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -909,29 +917,6 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
             decoration: deco(l10n.searchServicesFieldSearchEngineId),
           ),
         ];
-      case 'grok':
-        return [
-          TextField(
-            controller: _controllers['apiKey'],
-            decoration: deco(l10n.searchServicesFieldApiKey),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controllers['model'],
-            decoration: _deskInputDecoration(context).copyWith(
-              labelText: l10n.searchServicesFieldModelOptional,
-              hintText: GrokSearchOptions.defaultModel,
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controllers['grokUrl'],
-            decoration: _deskInputDecoration(context).copyWith(
-              labelText: l10n.searchServicesFieldCustomUrlOptional,
-              hintText: GrokSearchOptions.defaultUrl,
-            ),
-          ),
-        ];
       case 'zhipu':
       case 'linkup':
       case 'brave':
@@ -944,6 +929,64 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           TextField(
             controller: _controllers['apiKey'],
             decoration: deco(l10n.searchServicesFieldApiKey),
+          ),
+        ];
+      case 'serper':
+        return [
+          TextField(
+            controller: _controllers['apiKey'],
+            decoration: deco(l10n.searchServicesDialogApiKey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['gl'],
+            decoration: deco(l10n.searchServicesDialogCountryOptional),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['hl'],
+            decoration: deco(l10n.searchServicesDialogLanguageOptional),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['tbs'],
+            decoration: deco(l10n.searchServicesDialogTimeFilterOptional),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['page'],
+            decoration: deco(l10n.searchServicesDialogPageOptional),
+            keyboardType: TextInputType.number,
+          ),
+        ];
+      case 'grok':
+        return [
+          TextField(
+            controller: _controllers['apiKey'],
+            decoration: deco(l10n.searchServicesDialogApiKey),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['model'],
+            decoration: _deskInputDecoration(context).copyWith(
+              labelText: l10n.searchServicesDialogModel,
+              hintText: GrokOptions.defaultModel,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['customUrl'],
+            decoration: _deskInputDecoration(context).copyWith(
+              labelText: l10n.searchServicesFieldCustomUrlOptional,
+              hintText: GrokOptions.defaultUrl,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controllers['systemPrompt'],
+            decoration: deco(l10n.searchServicesDialogSystemPrompt),
+            minLines: 3,
+            maxLines: 5,
           ),
         ];
       case 'searxng':
@@ -1022,13 +1065,6 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
           apiKey: _controllers['apiKey']!.text,
           searchEngineId: _controllers['searchEngineId']!.text.trim(),
         );
-      case 'grok':
-        return GrokSearchOptions(
-          id: id,
-          apiKey: _controllers['apiKey']!.text,
-          model: _controllers['model']!.text.trim(),
-          url: _controllers['grokUrl']!.text.trim(),
-        );
       case 'metaso':
         return MetasoOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'jina':
@@ -1039,6 +1075,24 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return PerplexityOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'bocha':
         return BochaOptions(id: id, apiKey: _controllers['apiKey']!.text);
+      case 'serper':
+        final page = int.tryParse(_controllers['page']!.text.trim());
+        return SerperOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          gl: _controllers['gl']!.text.trim(),
+          hl: _controllers['hl']!.text.trim(),
+          tbs: _controllers['tbs']!.text.trim(),
+          page: page == null || page < 1 ? 1 : page,
+        );
+      case 'grok':
+        return GrokOptions(
+          id: id,
+          apiKey: _controllers['apiKey']!.text,
+          model: _controllers['model']!.text.trim(),
+          customUrl: _controllers['customUrl']!.text.trim(),
+          systemPrompt: _controllers['systemPrompt']!.text,
+        );
       case 'bing_local':
       default:
         return BingLocalOptions(id: id);
@@ -1088,10 +1142,6 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       _controllers['searchEngineId'] = TextEditingController(
         text: s.searchEngineId,
       );
-    } else if (s is GrokSearchOptions) {
-      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
-      _controllers['model'] = TextEditingController(text: s.model);
-      _controllers['url'] = TextEditingController(text: s.url);
     } else if (s is MetasoOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is OllamaOptions) {
@@ -1102,6 +1152,21 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is BochaOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+    } else if (s is SerperOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+      _controllers['gl'] = TextEditingController(text: s.gl);
+      _controllers['hl'] = TextEditingController(text: s.hl);
+      _controllers['tbs'] = TextEditingController(text: s.tbs);
+      _controllers['page'] = TextEditingController(
+        text: s.page == 1 ? '' : s.page.toString(),
+      );
+    } else if (s is GrokOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+      _controllers['model'] = TextEditingController(text: s.model);
+      _controllers['customUrl'] = TextEditingController(text: s.customUrl);
+      _controllers['systemPrompt'] = TextEditingController(
+        text: s.systemPrompt,
+      );
     }
   }
 
@@ -1182,7 +1247,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
       return [
         TextField(
           controller: _controllers['apiKey'],
-          decoration: deco(l10n.searchServicesFieldApiKey),
+          decoration: deco(l10n.searchServicesDialogApiKey),
         ),
         const SizedBox(height: 12),
         TextField(
@@ -1220,29 +1285,6 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
           decoration: deco(l10n.searchServicesFieldSearchEngineId),
         ),
       ];
-    } else if (s is GrokSearchOptions) {
-      return [
-        TextField(
-          controller: _controllers['apiKey'],
-          decoration: deco(l10n.searchServicesFieldApiKey),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _controllers['model'],
-          decoration: _deskInputDecoration(context).copyWith(
-            labelText: l10n.searchServicesFieldModelOptional,
-            hintText: GrokSearchOptions.defaultModel,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _controllers['url'],
-          decoration: _deskInputDecoration(context).copyWith(
-            labelText: l10n.searchServicesFieldCustomUrlOptional,
-            hintText: GrokSearchOptions.defaultUrl,
-          ),
-        ),
-      ];
     } else if (s is ZhipuOptions ||
         s is LinkUpOptions ||
         s is BraveOptions ||
@@ -1255,6 +1297,64 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         TextField(
           controller: _controllers['apiKey'],
           decoration: deco(l10n.searchServicesFieldApiKey),
+        ),
+      ];
+    } else if (s is GrokOptions) {
+      return [
+        TextField(
+          controller: _controllers['apiKey'],
+          decoration: deco(l10n.searchServicesDialogApiKey),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['model'],
+          decoration: _deskInputDecoration(context).copyWith(
+            labelText: l10n.searchServicesDialogModel,
+            hintText: GrokOptions.defaultModel,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['customUrl'],
+          decoration: _deskInputDecoration(context).copyWith(
+            labelText: l10n.searchServicesFieldCustomUrlOptional,
+            hintText: GrokOptions.defaultUrl,
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['systemPrompt'],
+          decoration: deco(l10n.searchServicesDialogSystemPrompt),
+          minLines: 3,
+          maxLines: 5,
+        ),
+      ];
+    } else if (s is SerperOptions) {
+      return [
+        TextField(
+          controller: _controllers['apiKey'],
+          decoration: deco(l10n.searchServicesDialogApiKey),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['gl'],
+          decoration: deco(l10n.searchServicesDialogCountryOptional),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['hl'],
+          decoration: deco(l10n.searchServicesDialogLanguageOptional),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['tbs'],
+          decoration: deco(l10n.searchServicesDialogTimeFilterOptional),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _controllers['page'],
+          decoration: deco(l10n.searchServicesDialogPageOptional),
+          keyboardType: TextInputType.number,
         ),
       ];
     } else if (s is DuckDuckGoOptions) {
@@ -1345,14 +1445,6 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         searchEngineId: _controllers['searchEngineId']!.text.trim(),
       );
     }
-    if (s is GrokSearchOptions) {
-      return GrokSearchOptions(
-        id: s.id,
-        apiKey: _controllers['apiKey']!.text,
-        model: _controllers['model']!.text.trim(),
-        url: _controllers['url']!.text.trim(),
-      );
-    }
     if (s is MetasoOptions) {
       return MetasoOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
     }
@@ -1367,6 +1459,26 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     }
     if (s is BochaOptions) {
       return BochaOptions(id: s.id, apiKey: _controllers['apiKey']!.text);
+    }
+    if (s is SerperOptions) {
+      final page = int.tryParse(_controllers['page']!.text.trim());
+      return SerperOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        gl: _controllers['gl']!.text.trim(),
+        hl: _controllers['hl']!.text.trim(),
+        tbs: _controllers['tbs']!.text.trim(),
+        page: page == null || page < 1 ? 1 : page,
+      );
+    }
+    if (s is GrokOptions) {
+      return GrokOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        model: _controllers['model']!.text.trim(),
+        customUrl: _controllers['customUrl']!.text.trim(),
+        systemPrompt: _controllers['systemPrompt']!.text,
+      );
     }
     return s;
   }
@@ -1394,12 +1506,13 @@ class _ServiceTypeChipsState extends State<_ServiceTypeChips> {
     (type: 'linkup', name: 'LinkUp', brand: 'linkup'),
     (type: 'brave', name: 'Brave', brand: 'brave'),
     (type: 'google', name: 'Google', brand: 'google'),
-    (type: 'grok', name: 'Grok', brand: 'grok'),
     (type: 'metaso', name: 'Metaso', brand: 'metaso'),
     (type: 'jina', name: 'Jina', brand: 'jina'),
     (type: 'ollama', name: 'Ollama', brand: 'ollama'),
     (type: 'perplexity', name: 'Perplexity', brand: 'perplexity'),
     (type: 'bocha', name: 'Bocha', brand: 'bocha'),
+    (type: 'serper', name: 'Serper', brand: 'serper'),
+    (type: 'grok', name: 'Grok', brand: 'grok'),
   ];
   @override
   Widget build(BuildContext context) {

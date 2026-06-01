@@ -74,6 +74,8 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _RowDivider(),
                   _ToggleRowShowModelTimestamp(),
                   _RowDivider(),
+                  _ToggleRowShowProviderInChatMessage(),
+                  _RowDivider(),
                   _ToggleRowShowTokenStats(),
                 ],
               ),
@@ -106,23 +108,23 @@ class _DisplaySettingsBody extends StatelessWidget {
                   _RowDivider(),
                   _ToggleRowShowToolResultSummary(),
                   _RowDivider(),
+                  _ToggleRowInsertSuggestionOnly(),
+                  _RowDivider(),
                   _ToggleRowRegenerateDeleteTrailingMessages(),
                   _RowDivider(),
                   _ToggleRowShowRegenerateConfirmDialog(),
                   _RowDivider(),
                   _ToggleRowShowUpdates(),
                   _RowDivider(),
-                  _ToggleRowMsgNavButtons(),
-                  _RowDivider(),
                   _ToggleRowShowChatListDate(),
-                  _RowDivider(),
-                  _ToggleRowImageCropper(),
                   _RowDivider(),
                   _ToggleRowNewChatOnAssistantSwitch(),
                   _RowDivider(),
                   _ToggleRowNewChatAfterDelete(),
                   _RowDivider(),
                   _ToggleRowNewChatOnLaunch(),
+                  _RowDivider(),
+                  _ToggleRowMsgNavButtons(),
                   _RowDivider(),
                   _SendShortcutRow(),
                 ],
@@ -2028,6 +2030,21 @@ class _ToggleRowShowModelTimestamp extends StatelessWidget {
   }
 }
 
+class _ToggleRowShowProviderInChatMessage extends StatelessWidget {
+  const _ToggleRowShowProviderInChatMessage();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sp = context.watch<SettingsProvider>();
+    return _ToggleRow(
+      label: l10n.displaySettingsPageShowProviderInChatMessageTitle,
+      value: sp.showProviderInChatMessage,
+      onChanged: (v) =>
+          context.read<SettingsProvider>().setShowProviderInChatMessage(v),
+    );
+  }
+}
+
 class _ToggleRowShowTokenStats extends StatelessWidget {
   const _ToggleRowShowTokenStats();
   @override
@@ -2192,6 +2209,21 @@ class _ToggleRowShowToolResultSummary extends StatelessWidget {
   }
 }
 
+class _ToggleRowInsertSuggestionOnly extends StatelessWidget {
+  const _ToggleRowInsertSuggestionOnly();
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sp = context.watch<SettingsProvider>();
+    return _ToggleRow(
+      label: l10n.displaySettingsPageInsertSuggestionOnlyTitle,
+      value: sp.insertSuggestionOnTapOnly,
+      onChanged: (v) =>
+          context.read<SettingsProvider>().setInsertSuggestionOnTapOnly(v),
+    );
+  }
+}
+
 class _ToggleRowRegenerateDeleteTrailingMessages extends StatelessWidget {
   const _ToggleRowRegenerateDeleteTrailingMessages();
   @override
@@ -2234,22 +2266,6 @@ class _ToggleRowAutoScrollEnabled extends StatelessWidget {
       value: sp.autoScrollEnabled,
       onChanged: (v) =>
           context.read<SettingsProvider>().setAutoScrollEnabled(v),
-    );
-  }
-}
-
-class _ToggleRowImageCropper extends StatelessWidget {
-  const _ToggleRowImageCropper();
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final sp = context.watch<SettingsProvider>();
-    return _ToggleRow(
-      label: l10n.displaySettingsPageEnableImageCropperTitle,
-      subtitle: l10n.displaySettingsPageEnableImageCropperSubtitle,
-      value: sp.imageCropperEnabled,
-      onChanged: (v) =>
-          context.read<SettingsProvider>().setImageCropperEnabled(v),
     );
   }
 }
@@ -2403,11 +2419,40 @@ class _ToggleRowMsgNavButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final sp = context.watch<SettingsProvider>();
-    return _ToggleRow(
+    final options = <DesktopSelectOption<DesktopMessageNavButtonsMode>>[
+      DesktopSelectOption(
+        value: DesktopMessageNavButtonsMode.always,
+        label: l10n.displaySettingsPageMessageNavButtonsModeAlways,
+      ),
+      DesktopSelectOption(
+        value: DesktopMessageNavButtonsMode.scroll,
+        label: l10n.displaySettingsPageMessageNavButtonsModeScroll,
+      ),
+      DesktopSelectOption(
+        value: DesktopMessageNavButtonsMode.hover,
+        label: l10n.displaySettingsPageMessageNavButtonsModeHover,
+      ),
+      DesktopSelectOption(
+        value: DesktopMessageNavButtonsMode.scrollAndHover,
+        label: l10n.displaySettingsPageMessageNavButtonsModeScrollAndHover,
+      ),
+      DesktopSelectOption(
+        value: DesktopMessageNavButtonsMode.never,
+        label: l10n.displaySettingsPageMessageNavButtonsModeNever,
+      ),
+    ];
+
+    return _LabeledRow(
       label: l10n.displaySettingsPageMessageNavButtonsTitle,
-      value: sp.showMessageNavButtons,
-      onChanged: (v) =>
-          context.read<SettingsProvider>().setShowMessageNavButtons(v),
+      trailing: DesktopSelectDropdown<DesktopMessageNavButtonsMode>(
+        value: sp.desktopMessageNavButtonsMode,
+        options: options,
+        minWidth: 168,
+        maxLabelWidth: 190,
+        onSelected: (mode) => context
+            .read<SettingsProvider>()
+            .setDesktopMessageNavButtonsMode(mode),
+      ),
     );
   }
 }
@@ -2488,12 +2533,10 @@ class _ToggleRowNewChatOnLaunch extends StatelessWidget {
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({
     required this.label,
-    this.subtitle,
     required this.value,
     required this.onChanged,
   });
   final String label;
-  final String? subtitle;
   final bool value;
   final ValueChanged<bool>? onChanged;
   @override
@@ -2517,20 +2560,6 @@ class _ToggleRow extends StatelessWidget {
                     decoration: TextDecoration.none,
                   ),
                 ),
-                if (subtitle != null && subtitle!.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.25,
-                      color: cs.onSurface.withValues(alpha: 0.58),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),

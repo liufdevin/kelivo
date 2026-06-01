@@ -6,7 +6,11 @@ import 'package:http/http.dart' as http;
 import '../../../../l10n/app_localizations.dart';
 import '../search_service.dart';
 
-class GrokSearchService extends SearchService<GrokSearchOptions> {
+class GrokSearchService extends SearchService<GrokOptions> {
+  GrokSearchService({http.Client? client}) : _client = client ?? http.Client();
+
+  final http.Client _client;
+
   @override
   String get name => 'Grok';
 
@@ -23,27 +27,36 @@ class GrokSearchService extends SearchService<GrokSearchOptions> {
   Future<SearchResult> search({
     required String query,
     required SearchCommonOptions commonOptions,
-    required GrokSearchOptions serviceOptions,
+    required GrokOptions serviceOptions,
   }) async {
     try {
+      if (serviceOptions.apiKey.trim().isEmpty) {
+        throw Exception('Grok API key is required');
+      }
+
       final body = <String, dynamic>{
         'model': serviceOptions.resolvedModel,
-        'messages': [
-          {
-            'role': 'system',
-            'content':
-                'Search the web and summarize the most relevant sourced results.',
-          },
+        'input': [
+          {'role': 'system', 'content': serviceOptions.resolvedSystemPrompt},
           {'role': 'user', 'content': query},
         ],
-        'search_parameters': {'mode': 'on', 'return_citations': true},
+        'tools': [
+          {'type': 'web_search'},
+          {'type': 'x_search'},
+        ],
+        'store': false,
+        'stream': false,
       };
+      final reasoningEffort = serviceOptions.resolvedReasoningEffort;
+      if (reasoningEffort.isNotEmpty) {
+        body['reasoning'] = {'effort': reasoningEffort};
+      }
 
-      final response = await http
+      final response = await _client
           .post(
             Uri.parse(serviceOptions.resolvedUrl),
             headers: {
-              'Authorization': 'Bearer ${serviceOptions.apiKey}',
+              'Authorization': 'Bearer ${serviceOptions.apiKey.trim()}',
               'Content-Type': 'application/json',
             },
             body: jsonEncode(body),
@@ -51,71 +64,78 @@ class GrokSearchService extends SearchService<GrokSearchOptions> {
           .timeout(Duration(milliseconds: commonOptions.timeout));
 
       if (response.statusCode != 200) {
-        throw Exception('API request failed: ${response.statusCode}');
+        throw Exception(
+          'API request failed: ${response.statusCode} ${response.body}',
+        );
       }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      final message = _firstMessage(data);
-      final answer = _contentToText(message?['content']).trim();
-      final citations = _citationList(data, message);
+      final output = (data['output'] as List?) ?? const <dynamic>[];
+      final message = output.cast<Object?>().whereType<Map>().firstWhere(
+        (item) => item['type'] == 'message' && item['role'] == 'assistant',
+        orElse: () => const <String, dynamic>{},
+      );
+      final content = (message['content'] as List?) ?? const <dynamic>[];
+      final textContent = content.cast<Object?>().whereType<Map>().firstWhere(
+        (item) => item['type'] == 'output_text',
+        orElse: () => const <String, dynamic>{},
+      );
+
       final items = <SearchResultItem>[];
-
-      for (var i = 0; i < citations.length; i++) {
-        final url = citations[i].trim();
-        if (url.isEmpty) continue;
-        items.add(SearchResultItem(title: url, url: url, text: answer));
-      }
-
-      if (items.isEmpty && answer.isNotEmpty) {
-        items.add(
-          SearchResultItem(
-            title: name,
-            url: serviceOptions.resolvedUrl,
-            text: answer,
-          ),
+      _addCitationItems(
+        items: items,
+        citations: data['citations'],
+        maxItems: commonOptions.resultSize,
+      );
+      if (items.length < commonOptions.resultSize) {
+        _addCitationItems(
+          items: items,
+          citations: textContent['annotations'],
+          maxItems: commonOptions.resultSize,
         );
       }
 
       return SearchResult(
-        answer: answer.isEmpty ? null : answer,
-        items: items.take(commonOptions.resultSize).toList(),
+        answer: textContent['text']?.toString(),
+        items: items,
       );
     } catch (e) {
       throw Exception('Grok search failed: $e');
     }
   }
 
-  Map<String, dynamic>? _firstMessage(Map<String, dynamic> data) {
-    final choices = data['choices'] as List? ?? const <dynamic>[];
-    if (choices.isEmpty || choices.first is! Map) return null;
-    final message = (choices.first as Map)['message'];
-    if (message is Map<String, dynamic>) return message;
-    if (message is Map) return message.cast<String, dynamic>();
-    return null;
-  }
-
-  String _contentToText(dynamic content) {
-    if (content == null) return '';
-    if (content is String) return content;
-    if (content is List) {
-      return content
-          .map((part) {
-            if (part is String) return part;
-            if (part is Map && part['text'] != null) return part['text'];
-            return '';
-          })
-          .where((part) => part.toString().isNotEmpty)
-          .join('\n');
+  static void _addCitationItems({
+    required List<SearchResultItem> items,
+    required Object? citations,
+    required int maxItems,
+  }) {
+    final seenUrls = items.map((item) => item.url).toSet();
+    final citationList = (citations as List?) ?? const <dynamic>[];
+    for (final citation in citationList) {
+      final item = _citationItem(citation);
+      if (item == null || !seenUrls.add(item.url)) continue;
+      items.add(item);
+      if (items.length >= maxItems) return;
     }
-    return content.toString();
   }
 
-  List<String> _citationList(
-    Map<String, dynamic> data,
-    Map<String, dynamic>? message,
-  ) {
-    final raw = data['citations'] ?? message?['citations'];
-    if (raw is! List) return const <String>[];
-    return raw.map((item) => item.toString()).toList();
+  static SearchResultItem? _citationItem(Object? citation) {
+    if (citation is String) {
+      final url = citation.trim();
+      if (url.isEmpty) return null;
+      return SearchResultItem(title: url, url: url, text: '');
+    }
+
+    if (citation is! Map || citation['type'] != 'url_citation') {
+      return null;
+    }
+    final url = citation['url']?.toString().trim() ?? '';
+    if (url.isEmpty) return null;
+    final title = citation['title']?.toString().trim();
+    return SearchResultItem(
+      title: title?.isNotEmpty == true ? title! : url,
+      url: url,
+      text: '',
+    );
   }
 }

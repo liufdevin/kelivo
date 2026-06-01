@@ -16,6 +16,7 @@ import '../../../core/providers/quick_phrase_provider.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/providers/memory_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/tts/tts_text_selection.dart';
 import '../../../core/services/haptics.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
@@ -36,6 +37,7 @@ import 'scroll_controller.dart' as scroll_ctrl;
 import 'home_view_model.dart';
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
+import '../services/ask_user_interaction_service.dart';
 import '../services/ocr_service.dart';
 import '../services/translation_service.dart';
 import '../services/file_upload_service.dart';
@@ -242,6 +244,12 @@ class HomePageController extends ChangeNotifier {
 
   ValueNotifier<bool> get isProcessingFiles => _viewModel.isProcessingFiles;
 
+  bool get isTemporaryConversation =>
+      _chatService.isTemporaryConversation(currentConversation?.id);
+
+  bool get canToggleTemporaryConversation =>
+      currentConversation != null && messages.isEmpty;
+
   @override
   void notifyListeners() {
     if (_chatControllerReady) {
@@ -384,6 +392,7 @@ class HomePageController extends ChangeNotifier {
       // Trigger UI update when streaming finishes
       notifyListeners();
     };
+    _viewModel.onAssistantMessageFinished = _handleAssistantMessageFinished;
   }
 
   String _localizeGenerationError(AppLocalizations l10n, String error) {
@@ -617,6 +626,34 @@ class HomePageController extends ChangeNotifier {
     return result;
   }
 
+  Future<void> sendSuggestion(String suggestion) async {
+    final text = suggestion.trim();
+    if (text.isEmpty) return;
+    final settings = _context.read<SettingsProvider>();
+    if (settings.insertSuggestionOnTapOnly) {
+      _replaceInputWithSuggestion(text);
+      return;
+    }
+    await sendMessage(ChatInputData(text: text));
+  }
+
+  void _replaceInputWithSuggestion(String text) {
+    _inputController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+      composing: TextRange.empty,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_context.mounted) return;
+      _inputFocus.requestFocus();
+    });
+    notifyListeners();
+  }
+
+  Future<void> toggleTemporaryConversation() async {
+    await _viewModel.toggleTemporaryConversation();
+  }
+
   void cancelQueuedMessage() {
     final restored = _viewModel.cancelCurrentQueuedInput();
     if (restored == null) return;
@@ -659,10 +696,56 @@ class HomePageController extends ChangeNotifier {
     final success = await _viewModel.regenerateAtMessage(
       message,
       assistantAsNewReply: assistantAsNewReply,
+      allowImagesApiRouting: _mediaController.allowImagesApiRouting,
     );
     if (success) {
       notifyListeners();
     }
+  }
+
+  Future<void> submitRecoveredAskUserAnswer(
+    ChatMessage message,
+    ToolUIPart part,
+    AskUserResult result,
+  ) async {
+    if (currentConversation == null) return;
+
+    final content = result.toJsonString();
+    await _chatService.upsertToolEvent(
+      message.id,
+      id: part.id,
+      name: part.toolName,
+      arguments: part.arguments,
+      content: content,
+    );
+
+    final parts = List<ToolUIPart>.of(
+      _streamController.getToolParts(message.id) ?? const <ToolUIPart>[],
+    );
+    final idx = parts.indexWhere(
+      (candidate) =>
+          candidate.id == part.id ||
+          (candidate.id.isEmpty && candidate.toolName == part.toolName),
+    );
+    final answeredPart = ToolUIPart(
+      id: part.id,
+      toolName: part.toolName,
+      arguments: part.arguments,
+      content: content,
+      loading: false,
+    );
+    if (idx >= 0) {
+      parts[idx] = answeredPart;
+    } else {
+      parts.add(answeredPart);
+    }
+    _streamController.setToolParts(message.id, parts);
+    notifyListeners();
+
+    await _viewModel.continueAssistantMessageAfterToolAnswer(
+      message,
+      allowImagesApiRouting: _mediaController.allowImagesApiRouting,
+    );
   }
 
   Future<void> cancelStreaming() async {
@@ -747,8 +830,10 @@ class HomePageController extends ChangeNotifier {
 
   /// Compress context: summarize via LLM, create new conversation.
   /// Returns null on success, or an error string on failure.
-  Future<String?> compressContext() async {
-    final result = await _viewModel.compressContext();
+  Future<String?> compressContext({
+    required CompressContextOptions options,
+  }) async {
+    final result = await _viewModel.compressContext(options: options);
     if (result == null) {
       // Success - switched to new conversation
       _translations.clear();
@@ -813,13 +898,22 @@ class HomePageController extends ChangeNotifier {
     final MessageEditResult? result = await future;
     if (result == null) return;
 
+    if (currentConversation != null) {
+      await _chatService.clearConversationSuggestions(currentConversation!.id);
+      _viewModel.updateCurrentConversation(
+        _chatService.getConversation(currentConversation!.id),
+      );
+    }
+
     final newMsg = await _chatService.appendMessageVersion(
       messageId: message.id,
       content: result.content,
     );
     if (newMsg == null) return;
 
-    messages.add(newMsg);
+    if (_chatController.appendPersistedTailMessage(newMsg)) {
+      _viewModel.restoreMessageUiState();
+    }
     final gid = (newMsg.groupId ?? newMsg.id);
     versionSelections[gid] = newMsg.version;
     notifyListeners();
@@ -924,12 +1018,31 @@ class HomePageController extends ChangeNotifier {
     }
   }
 
+  void _handleAssistantMessageFinished(ChatMessage message) {
+    if (!_context.mounted || message.role != 'assistant') return;
+    final settings = _context.read<SettingsProvider>();
+    if (!settings.ttsAutoPlayAssistantReplies) return;
+    unawaited(_speakAssistantMessage(message, autoPlay: true));
+  }
+
   Future<void> speakMessage(ChatMessage message) async {
+    await _speakAssistantMessage(message, autoPlay: false);
+  }
+
+  Future<void> _speakAssistantMessage(
+    ChatMessage message, {
+    required bool autoPlay,
+  }) async {
+    final tts = _context.read<TtsProvider>();
+    if (!autoPlay && tts.playbackState.isActive) {
+      await tts.stop();
+      return;
+    }
+
     if (PlatformUtils.isDesktopTarget) {
       final sp = _context.read<SettingsProvider>();
-      final hasNetworkTts =
-          sp.ttsServiceSelected >= 0 && sp.ttsServices.isNotEmpty;
-      if (!hasNetworkTts) {
+      final hasNetworkTts = sp.selectedTtsService != null;
+      if (!hasNetworkTts && !tts.isAvailable) {
         showAppSnackBar(
           _context,
           message: AppLocalizations.of(_context)!.desktopTtsPleaseAddProvider,
@@ -938,12 +1051,14 @@ class HomePageController extends ChangeNotifier {
         return;
       }
     }
-    final tts = _context.read<TtsProvider>();
-    if (!tts.isSpeaking) {
-      await tts.speak(message.content);
-    } else {
-      await tts.stop();
-    }
+
+    final sp = _context.read<SettingsProvider>();
+    final text = TtsTextSelection.apply(
+      message.content,
+      mode: sp.ttsTextSelectionMode,
+    );
+    if (text.trim().isEmpty) return;
+    await tts.speak(text);
   }
 
   void shareMessage(int messageIndex, List<ChatMessage> messageList) {
@@ -1003,7 +1118,8 @@ class HomePageController extends ChangeNotifier {
   }
 
   void selectAll() {
-    final collapsed = _chatController.collapsedMessages;
+    final collapsed = _chatController
+        .allCollapsedMessagesForCurrentConversation();
     for (final m in collapsed) {
       if (m.role == 'user' || m.role == 'assistant') {
         _selectedItems.add(m.id);
@@ -1013,7 +1129,8 @@ class HomePageController extends ChangeNotifier {
   }
 
   void toggleSelectAll() {
-    final collapsed = _chatController.collapsedMessages;
+    final collapsed = _chatController
+        .allCollapsedMessagesForCurrentConversation();
     final selectable = collapsed
         .where((m) => m.role == 'user' || m.role == 'assistant')
         .toList();
@@ -1033,7 +1150,8 @@ class HomePageController extends ChangeNotifier {
   }
 
   void invertSelection() {
-    final collapsed = _chatController.collapsedMessages;
+    final collapsed = _chatController
+        .allCollapsedMessagesForCurrentConversation();
     for (final m in collapsed) {
       if (m.role != 'user' && m.role != 'assistant') continue;
       if (_selectedItems.contains(m.id)) {
@@ -1058,12 +1176,18 @@ class HomePageController extends ChangeNotifier {
   }
 
   List<ChatMessage> _selectedCollapsedMessages() {
-    final collapsed = _chatController.collapsedMessages;
-    final selected = <ChatMessage>[];
-    for (final m in collapsed) {
-      if (_selectedItems.contains(m.id)) selected.add(m);
-    }
-    return selected;
+    final convo = currentConversation;
+    if (convo == null) return const <ChatMessage>[];
+    final storedMessages = _chatService.getMessagesRange(
+      convo.id,
+      start: 0,
+      limit: _chatService.getMessageCount(convo.id),
+    );
+    return ChatController.selectedCollapsedMessagesForExport(
+      collapsedMessages: _chatController.collapseVersions(storedMessages),
+      selectedIds: _selectedItems,
+      storedMessages: storedMessages,
+    );
   }
 
   Future<void> exportSelectedAsMarkdown() async {
@@ -1150,11 +1274,7 @@ class HomePageController extends ChangeNotifier {
   Future<void> confirmSelection() async {
     final convo = currentConversation;
     if (convo == null) return;
-    final collapsed = _chatController.collapsedMessages;
-    final selected = <ChatMessage>[];
-    for (final m in collapsed) {
-      if (_selectedItems.contains(m.id)) selected.add(m);
-    }
+    final selected = _selectedCollapsedMessages();
     if (selected.isEmpty) {
       final l10n = AppLocalizations.of(_context)!;
       showAppSnackBar(
@@ -1424,14 +1544,29 @@ class HomePageController extends ChangeNotifier {
 
   void scrollToBottom({bool animate = true}) =>
       _scrollToBottom(animate: animate);
-  void forceScrollToBottom() => _scrollCtrl.forceScrollToBottom();
   void forceScrollToBottomSoon({bool animate = true}) =>
       _scrollCtrl.forceScrollToBottomSoon(
         animate: animate,
         postSwitchDelay: _postSwitchScrollDelay,
       );
 
+  bool loadMoreBefore() => _viewModel.loadMoreBefore();
+
+  bool loadMoreAfter() => _viewModel.loadMoreAfter();
+
+  List<ChatMessage> allCollapsedMessagesForCurrentConversation() =>
+      _chatController.allCollapsedMessagesForCurrentConversation();
+
   Future<void> scrollToMessageId(String targetId) async {
+    if (_chatController.indexOfCollapsedMessageId(targetId) < 0) {
+      final loaded = _viewModel.loadUntilMessageVisible(targetId);
+      if (loaded) {
+        _scrollCtrl.clearObserverCache();
+      }
+      try {
+        await WidgetsBinding.instance.endOfFrame;
+      } catch (_) {}
+    }
     final index = _chatController.indexOfCollapsedMessageId(targetId);
     if (index < 0) return;
     await _scrollCtrl.scrollToMessageId(targetId: targetId, targetIndex: index);
@@ -1452,7 +1587,25 @@ class HomePageController extends ChangeNotifier {
   }
 
   void scrollToTop({bool animate = true}) {
+    if (_chatController.hasMoreBefore) {
+      final loaded = _chatController.loadStartWindow();
+      if (loaded) {
+        _viewModel.restoreMessageUiState();
+        _scrollCtrl.clearObserverCache();
+      }
+    }
     _scrollCtrl.scrollToTop(animate: animate);
+  }
+
+  void forceScrollToBottom({bool animate = true}) {
+    if (_chatController.hasMoreAfter) {
+      final loaded = _chatController.loadEndWindow();
+      if (loaded) {
+        _viewModel.restoreMessageUiState();
+        _scrollCtrl.clearObserverCache();
+      }
+    }
+    _scrollToBottom(animate: animate);
   }
 
   // ============================================================================

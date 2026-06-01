@@ -64,6 +64,8 @@ class ChatInputSection extends StatelessWidget {
     this.onLongPressLearning,
     this.onClearContext,
     this.onCompressContext,
+    this.conversationId,
+    this.backgroundImageActive = false,
   });
 
   final GlobalKey inputBarKey;
@@ -103,6 +105,8 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onLongPressLearning;
   final VoidCallback? onClearContext;
   final VoidCallback? onCompressContext;
+  final String? conversationId;
+  final bool backgroundImageActive;
 
   @override
   Widget build(BuildContext context) {
@@ -135,6 +139,7 @@ class ChatInputSection extends StatelessWidget {
       },
       onSelectModel: onSelectModel,
       onLongPressSelectModel: onLongPressSelectModel,
+      conversationId: conversationId,
       onOpenMcp: onOpenMcp,
       onLongPressMcp: onLongPressMcp,
       onStop: onStop,
@@ -207,6 +212,7 @@ class ChatInputSection extends StatelessWidget {
       showMoreButton: !isTablet,
       onClearContext: isTablet ? onClearContext : null,
       onCompressContext: isTablet ? onCompressContext : null,
+      backgroundImageActive: backgroundImageActive,
     );
   }
 

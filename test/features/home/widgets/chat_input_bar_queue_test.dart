@@ -21,10 +21,14 @@ void main() {
     onSend,
     SettingsProvider? settingsProvider,
     AssistantProvider? assistantProvider,
+    ChatInputBarController? mediaController,
     bool loading = false,
     bool hasQueuedInput = false,
     String? queuedPreviewText,
     VoidCallback? onCancelQueuedInput,
+    String? conversationId,
+    ThemeData? theme,
+    bool backgroundImageActive = false,
   }) {
     return MultiProvider(
       providers: [
@@ -36,17 +40,21 @@ void main() {
         ),
       ],
       child: MaterialApp(
+        theme: theme,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ChatInputBar(
             controller: controller,
             focusNode: focusNode,
+            mediaController: mediaController,
             onSend: onSend,
             loading: loading,
             hasQueuedInput: hasQueuedInput,
             queuedPreviewText: queuedPreviewText,
             onCancelQueuedInput: onCancelQueuedInput,
+            conversationId: conversationId,
+            backgroundImageActive: backgroundImageActive,
           ),
         ),
       ),
@@ -162,9 +170,235 @@ void main() {
     controller.dispose();
     focusNode.dispose();
   });
+
+  testWidgets('绘图模式胶囊可关闭并传递聊天接口路由', (tester) async {
+    final controller = TextEditingController(text: 'draw a cat');
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    final settings = SettingsProvider();
+    await settings.setProviderConfig(
+      'OpenAITest',
+      ProviderConfig(
+        id: 'OpenAITest',
+        enabled: true,
+        name: 'OpenAITest',
+        apiKey: 'test-key',
+        baseUrl: 'https://example.com/v1',
+        providerType: ProviderKind.openai,
+      ),
+    );
+    await settings.setCurrentModel('OpenAITest', 'gpt-image-2');
+    ChatInputData? submitted;
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        settingsProvider: settings,
+        onSend: (input) async {
+          submitted = input;
+          return ChatInputSubmissionResult.rejected;
+        },
+      ),
+    );
+
+    expect(find.text('Image mode'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Lucide.X));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Image mode'), findsNothing);
+    expect(mediaController.allowImagesApiRouting, isFalse);
+
+    await tapSendButton(tester);
+
+    expect(submitted?.text, 'draw a cat');
+    expect(submitted?.allowImagesApiRouting, isFalse);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('绘图模式关闭后切换对话会重新显示', (tester) async {
+    final controller = TextEditingController(text: 'draw a cat');
+    final focusNode = FocusNode();
+    final settings = SettingsProvider();
+    await settings.setProviderConfig(
+      'OpenAITest',
+      ProviderConfig(
+        id: 'OpenAITest',
+        enabled: true,
+        name: 'OpenAITest',
+        apiKey: 'test-key',
+        baseUrl: 'https://example.com/v1',
+        providerType: ProviderKind.openai,
+      ),
+    );
+    await settings.setCurrentModel('OpenAITest', 'gpt-image-2');
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        settingsProvider: settings,
+        conversationId: 'conversation-a',
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    expect(find.text('Image mode'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Lucide.X));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Image mode'), findsNothing);
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        settingsProvider: settings,
+        conversationId: 'conversation-b',
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Image mode'), findsOneWidget);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('非绘图模型保持默认路由许可', (tester) async {
+    final controller = TextEditingController(text: 'hello');
+    final focusNode = FocusNode();
+    ChatInputData? submitted;
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        onSend: (input) async {
+          submitted = input;
+          return ChatInputSubmissionResult.rejected;
+        },
+      ),
+    );
+
+    expect(find.text('Image mode'), findsNothing);
+
+    await tapSendButton(tester);
+
+    expect(submitted?.allowImagesApiRouting, isTrue);
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('输入框在亮色主题下有稳定底色', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        theme: ThemeData.light(),
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    final decoration = _mainInputDecoration(tester);
+    expect(decoration.color?.a, greaterThanOrEqualTo(0.70));
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('输入框在暗色主题下不是纯透明毛玻璃', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        theme: ThemeData.dark(),
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    final decoration = _mainInputDecoration(tester);
+    expect(decoration.color?.a, greaterThanOrEqualTo(0.60));
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('输入框在背景图模式下降低纯色覆盖', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        theme: ThemeData.light(),
+        backgroundImageActive: true,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    final decoration = _mainInputDecoration(tester);
+    expect(decoration.color?.a, inExclusiveRange(0.35, 0.70));
+
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('输入框外层底部留白只下移一点', (tester) async {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        onSend: (_) async => ChatInputSubmissionResult.rejected,
+      ),
+    );
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Padding &&
+            widget.padding == const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      ),
+      findsOneWidget,
+    );
+
+    controller.dispose();
+    focusNode.dispose();
+  });
 }
 
 Future<void> tapSendButton(WidgetTester tester) async {
   await tester.tap(find.byIcon(Lucide.ArrowUp));
   await tester.pumpAndSettle();
+}
+
+BoxDecoration _mainInputDecoration(WidgetTester tester) {
+  final candidates = tester
+      .widgetList<Container>(find.byType(Container))
+      .map((widget) => widget.decoration)
+      .whereType<BoxDecoration>()
+      .where(
+        (decoration) => decoration.borderRadius == BorderRadius.circular(20),
+      )
+      .toList();
+
+  expect(candidates, hasLength(1));
+  return candidates.single;
 }

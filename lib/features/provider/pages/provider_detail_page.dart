@@ -29,8 +29,10 @@ import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import 'multi_key_manager_page.dart';
 import 'local_model_management_page.dart';
+import 'provider_balance_page.dart';
 import 'provider_network_page.dart';
 import '../../../core/services/haptics.dart';
+import '../../provider/widgets/provider_balance_badge.dart';
 import '../../provider/widgets/provider_avatar.dart';
 import '../../../utils/model_grouping.dart';
 
@@ -76,6 +78,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
   String? _currentDetectingModel;
   final Set<String> _pendingModels = {};
   bool _aihubmixAppCodeEnabled = false;
+  bool _claudePromptCachingEnabled = false;
+  String _claudePromptCachingTtl = ProviderConfig.claudePromptCachingTtl5m;
 
   @override
   void initState() {
@@ -101,6 +105,10 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     _saJsonCtrl.text = _cfg.serviceAccountJson ?? '';
     _multiKeyEnabled = _cfg.multiKeyEnabled ?? false;
     _aihubmixAppCodeEnabled = _cfg.aihubmixAppCodeEnabled ?? false;
+    _claudePromptCachingEnabled = _cfg.claudePromptCachingEnabled ?? false;
+    _claudePromptCachingTtl = ProviderConfig.resolveClaudePromptCachingTtl(
+      _cfg.claudePromptCachingTtl,
+    );
   }
 
   @override
@@ -726,6 +734,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   },
                 ),
               ),
+            if (_kind == ProviderKind.openai) _buildBalanceEntry(context),
             if (_kind == ProviderKind.google)
               _iosRow(
                 context,
@@ -747,6 +756,39 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   value: _aihubmixAppCodeEnabled,
                   onChanged: (v) {
                     setState(() => _aihubmixAppCodeEnabled = v);
+                    _save();
+                  },
+                ),
+              ),
+            if (_supportsClaudePromptCaching)
+              _iosRowWithHelp(
+                context,
+                label: l10n.providerDetailPageClaudePromptCachingTitle,
+                helpText: l10n.providerDetailPageClaudePromptCachingHelp,
+                trailing: IosSwitch(
+                  value: _claudePromptCachingEnabled,
+                  semanticLabel:
+                      l10n.providerDetailPageClaudePromptCachingTitle,
+                  onChanged: (v) {
+                    setState(() => _claudePromptCachingEnabled = v);
+                    _save();
+                  },
+                ),
+              ),
+            if (_supportsClaudePromptCaching && _claudePromptCachingEnabled)
+              _iosRowWithHelp(
+                context,
+                label: l10n.providerDetailPageClaudePromptCachingTtlTitle,
+                helpText: l10n.providerDetailPageClaudePromptCachingTtlHelp,
+                trailing: _PromptCachingTtlSegmentedControl(
+                  value: _claudePromptCachingTtl,
+                  fiveMinuteLabel:
+                      l10n.providerDetailPageClaudePromptCachingTtl5m,
+                  oneHourLabel: l10n.providerDetailPageClaudePromptCachingTtl1h,
+                  semanticLabel:
+                      l10n.providerDetailPageClaudePromptCachingTtlTitle,
+                  onChanged: (value) {
+                    setState(() => _claudePromptCachingTtl = value);
                     _save();
                   },
                 ),
@@ -1609,6 +1651,85 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     );
   }
 
+  Widget _buildBalanceEntry(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final cs = Theme.of(context).colorScheme;
+    final settings = context.watch<SettingsProvider>();
+    final cfg = settings.getProviderConfig(
+      widget.keyName,
+      defaultName: widget.displayName,
+    );
+    final enabled = cfg.balanceEnabled == true;
+    return _TactileRow(
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ProviderBalancePage(
+              providerKey: widget.keyName,
+              providerDisplayName: widget.displayName,
+            ),
+          ),
+        );
+        if (!mounted) return;
+        setState(() {
+          _cfg = context.read<SettingsProvider>().getProviderConfig(
+            widget.keyName,
+            defaultName: widget.displayName,
+          );
+        });
+      },
+      builder: (pressed) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final base = cs.onSurface;
+        final target = pressed
+            ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ??
+                  base)
+            : base;
+        return TweenAnimationBuilder<Color?>(
+          tween: ColorTween(end: target),
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          builder: (context, color, _) {
+            final c = color ?? base;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(
+                children: [
+                  // Icon(Lucide.Coins, size: 18, color: c),
+                  // const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.providerDetailPageBalanceInfo,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 15, color: c),
+                    ),
+                  ),
+                  if (enabled) ...[
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 108),
+                      child: ProviderBalanceBadge(
+                        providerKey: widget.keyName,
+                        displayName: widget.displayName,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        color: cs.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Icon(Lucide.ChevronRight, size: 16, color: c),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // --- iOS style helpers (consistent with MultiKeyManagerPage) ---
 
   Widget _iosSectionCard({required List<Widget> children}) {
@@ -1741,6 +1862,17 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
     final keyLower = widget.keyName.toLowerCase();
     final baseLower = _baseCtrl.text.toLowerCase();
     return keyLower.contains('aihubmix') || baseLower.contains('aihubmix.com');
+  }
+
+  bool get _isOpenRouter {
+    final keyLower = widget.keyName.toLowerCase();
+    final baseLower = _baseCtrl.text.toLowerCase();
+    return keyLower.contains('openrouter') || baseLower.contains('openrouter');
+  }
+
+  bool get _supportsClaudePromptCaching {
+    return _kind == ProviderKind.claude ||
+        (_kind == ProviderKind.openai && _isOpenRouter);
   }
 
   Widget _providerKindRow(BuildContext context) {
@@ -1984,6 +2116,12 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           : old.serviceAccountJson,
       multiKeyEnabled: _multiKeyEnabled,
       aihubmixAppCodeEnabled: _aihubmixAppCodeEnabled,
+      claudePromptCachingEnabled: _supportsClaudePromptCaching
+          ? _claudePromptCachingEnabled
+          : false,
+      claudePromptCachingTtl: _supportsClaudePromptCaching
+          ? _claudePromptCachingTtl
+          : ProviderConfig.claudePromptCachingTtl5m,
       // preserve models and modelOverrides and proxy fields implicitly via copyWith
     );
     await settings.setProviderConfig(widget.keyName, updated);
@@ -3768,6 +3906,103 @@ class _BottomTabItemState extends State<_BottomTabItem> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _PromptCachingTtlSegmentedControl extends StatelessWidget {
+  const _PromptCachingTtlSegmentedControl({
+    required this.value,
+    required this.fiveMinuteLabel,
+    required this.oneHourLabel,
+    required this.semanticLabel,
+    required this.onChanged,
+  });
+
+  final String value;
+  final String fiveMinuteLabel;
+  final String oneHourLabel;
+  final String semanticLabel;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final background = isDark
+        ? Colors.white.withValues(alpha: 0.08)
+        : Colors.black.withValues(alpha: 0.05);
+
+    return Semantics(
+      label: semanticLabel,
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _PromptCachingTtlSegment(
+              label: fiveMinuteLabel,
+              selected: value == ProviderConfig.claudePromptCachingTtl5m,
+              selectedColor: cs.primary,
+              onTap: () => onChanged(ProviderConfig.claudePromptCachingTtl5m),
+            ),
+            _PromptCachingTtlSegment(
+              label: oneHourLabel,
+              selected: value == ProviderConfig.claudePromptCachingTtl1h,
+              selectedColor: cs.primary,
+              onTap: () => onChanged(ProviderConfig.claudePromptCachingTtl1h),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PromptCachingTtlSegment extends StatelessWidget {
+  const _PromptCachingTtlSegment({
+    required this.label,
+    required this.selected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? selectedColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOutCubic,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected
+                ? cs.onPrimary
+                : cs.onSurface.withValues(alpha: 0.7),
+          ),
+          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
       ),
     );
   }

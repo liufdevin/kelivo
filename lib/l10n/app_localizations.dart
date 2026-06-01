@@ -754,6 +754,12 @@ abstract class AppLocalizations {
   /// **'About'**
   String get settingsPageAbout;
 
+  /// No description provided for @settingsPageStatistics.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get settingsPageStatistics;
+
   /// No description provided for @settingsPageDocs.
   ///
   /// In en, this message translates to:
@@ -777,6 +783,228 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share'**
   String get settingsPageShare;
+
+  /// No description provided for @statsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics'**
+  String get statsPageTitle;
+
+  /// No description provided for @statsPageRangeAllTime.
+  ///
+  /// In en, this message translates to:
+  /// **'All Time'**
+  String get statsPageRangeAllTime;
+
+  /// No description provided for @statsPageRangeLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 30 Days'**
+  String get statsPageRangeLast30Days;
+
+  /// No description provided for @statsPageRangePreviousMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Month'**
+  String get statsPageRangePreviousMonth;
+
+  /// No description provided for @statsPageRangePreviousQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Quarter'**
+  String get statsPageRangePreviousQuarter;
+
+  /// No description provided for @statsPageRangeCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get statsPageRangeCustom;
+
+  /// No description provided for @statsPageHeatmapTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Heatmap'**
+  String get statsPageHeatmapTitle;
+
+  /// No description provided for @statsPageHeatmapLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Less'**
+  String get statsPageHeatmapLess;
+
+  /// No description provided for @statsPageHeatmapMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get statsPageHeatmapMore;
+
+  /// No description provided for @statsPageSummaryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get statsPageSummaryTitle;
+
+  /// No description provided for @statsPageTotalConversations.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Conversations'**
+  String get statsPageTotalConversations;
+
+  /// No description provided for @statsPageTotalMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Messages'**
+  String get statsPageTotalMessages;
+
+  /// No description provided for @statsPageInputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Tokens'**
+  String get statsPageInputTokens;
+
+  /// No description provided for @statsPageOutputTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Output Tokens'**
+  String get statsPageOutputTokens;
+
+  /// No description provided for @statsPageCachedTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Cached Tokens'**
+  String get statsPageCachedTokens;
+
+  /// No description provided for @statsPageLaunchCount.
+  ///
+  /// In en, this message translates to:
+  /// **'App Launches'**
+  String get statsPageLaunchCount;
+
+  /// No description provided for @statsPageUsageTrendTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage Trend'**
+  String get statsPageUsageTrendTitle;
+
+  /// No description provided for @statsPageModelUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Model Usage'**
+  String get statsPageModelUsageTitle;
+
+  /// No description provided for @statsPageAssistantUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant Usage'**
+  String get statsPageAssistantUsageTitle;
+
+  /// No description provided for @statsPageTopicVolumeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Volume'**
+  String get statsPageTopicVolumeTitle;
+
+  /// No description provided for @statsPageModelColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get statsPageModelColumn;
+
+  /// No description provided for @statsPageAssistantColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant'**
+  String get statsPageAssistantColumn;
+
+  /// No description provided for @statsPageTopicColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Topic'**
+  String get statsPageTopicColumn;
+
+  /// No description provided for @statsPageMessagesColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Messages'**
+  String get statsPageMessagesColumn;
+
+  /// No description provided for @statsPageTopicsColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'Topics'**
+  String get statsPageTopicsColumn;
+
+  /// No description provided for @statsPageEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No statistics yet'**
+  String get statsPageEmptyTitle;
+
+  /// No description provided for @statsPageShowAllTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get statsPageShowAllTooltip;
+
+  /// No description provided for @statsPageClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get statsPageClose;
+
+  /// No description provided for @statsPageUnknownProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Provider'**
+  String get statsPageUnknownProvider;
+
+  /// No description provided for @statsPageUnknownAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'Default Assistant'**
+  String get statsPageUnknownAssistant;
+
+  /// No description provided for @statsPageUnknownModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Model'**
+  String get statsPageUnknownModel;
+
+  /// No description provided for @statsPageUnknownTopic.
+  ///
+  /// In en, this message translates to:
+  /// **'Untitled Topic'**
+  String get statsPageUnknownTopic;
+
+  /// No description provided for @statsPageCustomRangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Range'**
+  String get statsPageCustomRangeTitle;
+
+  /// No description provided for @statsPageCustomRangeStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get statsPageCustomRangeStart;
+
+  /// No description provided for @statsPageCustomRangeEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'End'**
+  String get statsPageCustomRangeEnd;
+
+  /// No description provided for @statsPageCustomRangeCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get statsPageCustomRangeCancel;
+
+  /// No description provided for @statsPageCustomRangeApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get statsPageCustomRangeApply;
 
   /// No description provided for @sponsorPageMethodsSectionTitle.
   ///
@@ -921,6 +1149,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Export failed'**
   String get mermaidExportFailed;
+
+  /// No description provided for @mermaidImageTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Image'**
+  String get mermaidImageTab;
+
+  /// No description provided for @mermaidCodeTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get mermaidCodeTab;
+
+  /// No description provided for @mermaidFullScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get mermaidFullScreen;
+
+  /// No description provided for @mermaidGeneratingImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Generating image'**
+  String get mermaidGeneratingImage;
+
+  /// No description provided for @mermaidGenerationFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation failed. Try asking another way.'**
+  String get mermaidGenerationFailedHint;
 
   /// No description provided for @mermaidPreviewOpen.
   ///
@@ -1330,6 +1588,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Regex Replace'**
   String get assistantEditPageRegexTab;
+
+  /// No description provided for @assistantEditPageLocalToolsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Tools'**
+  String get assistantEditPageLocalToolsTab;
+
+  /// No description provided for @assistantEditTabLayoutTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize tabs'**
+  String get assistantEditTabLayoutTooltip;
+
+  /// No description provided for @assistantEditTabLayoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customize tabs'**
+  String get assistantEditTabLayoutTitle;
+
+  /// No description provided for @assistantEditTabLayoutSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag tabs to reorder. Turn off tabs you do not need.'**
+  String get assistantEditTabLayoutSubtitle;
+
+  /// No description provided for @assistantEditOutlineModeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Section list style'**
+  String get assistantEditOutlineModeTitle;
+
+  /// No description provided for @assistantEditOutlineModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show an assistant overview first, then open each setting section from a list.'**
+  String get assistantEditOutlineModeSubtitle;
+
+  /// No description provided for @assistantEditTabLayoutResetTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset tab layout'**
+  String get assistantEditTabLayoutResetTooltip;
+
+  /// No description provided for @assistantEditTabLayoutAtLeastOneVisible.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep at least one tab visible'**
+  String get assistantEditTabLayoutAtLeastOneVisible;
+
+  /// No description provided for @assistantEditTabLayoutDragHandle.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag to reorder {tab}'**
+  String assistantEditTabLayoutDragHandle(String tab);
 
   /// No description provided for @assistantEditRegexDescription.
   ///
@@ -1792,6 +2104,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Background Generation (Android)'**
   String get displaySettingsPageAndroidBackgroundChatTitle;
+
+  /// No description provided for @displaySettingsPageIosBackgroundChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Generation (iOS)'**
+  String get displaySettingsPageIosBackgroundChatTitle;
+
+  /// No description provided for @iosBackgroundSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS Background Generation'**
+  String get iosBackgroundSettingsPageTitle;
+
+  /// No description provided for @iosBackgroundStatusOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get iosBackgroundStatusOn;
+
+  /// No description provided for @iosBackgroundStatusOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get iosBackgroundStatusOff;
+
+  /// No description provided for @iosBackgroundGenerationEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Generation'**
+  String get iosBackgroundGenerationEnableTitle;
+
+  /// No description provided for @iosBackgroundGenerationEnableSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Use iOS background time to keep the current reply running after the app leaves the foreground.'**
+  String get iosBackgroundGenerationEnableSubtitle;
+
+  /// No description provided for @iosBackgroundTaskRefreshTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Background Task Recovery'**
+  String get iosBackgroundTaskRefreshTitle;
+
+  /// No description provided for @iosBackgroundTaskRefreshSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask iOS for refresh and processing opportunities when system conditions allow.'**
+  String get iosBackgroundTaskRefreshSubtitle;
+
+  /// No description provided for @iosLiveActivityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Activity'**
+  String get iosLiveActivityTitle;
+
+  /// No description provided for @iosLiveActivitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show background replies on the Lock Screen and Dynamic Island when supported.'**
+  String get iosLiveActivitySubtitle;
+
+  /// No description provided for @iosBackgroundNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task Notifications'**
+  String get iosBackgroundNotificationsTitle;
+
+  /// No description provided for @iosBackgroundNotificationsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send a local notification when a background reply completes or is interrupted.'**
+  String get iosBackgroundNotificationsSubtitle;
+
+  /// No description provided for @iosBackgroundLimitNoticeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'iOS may still suspend work'**
+  String get iosBackgroundLimitNoticeTitle;
+
+  /// No description provided for @iosBackgroundLimitNoticeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'These options use Apple-supported background time, BackgroundTasks, notifications, and Live Activities. They improve continuity but cannot force iOS to keep Kelivo running forever.'**
+  String get iosBackgroundLimitNoticeBody;
+
+  /// No description provided for @iosBackgroundUnsupportedLiveActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Requires iOS 16.1 or later and Live Activities enabled in Settings.'**
+  String get iosBackgroundUnsupportedLiveActivity;
+
+  /// No description provided for @iosBackgroundNativeStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'System status'**
+  String get iosBackgroundNativeStatusTitle;
+
+  /// No description provided for @iosBackgroundNativeStatusUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable until running on iOS'**
+  String get iosBackgroundNativeStatusUnavailable;
+
+  /// No description provided for @iosBackgroundLiveActivityAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Activities available'**
+  String get iosBackgroundLiveActivityAvailable;
+
+  /// No description provided for @iosBackgroundLiveActivityUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Live Activities unavailable'**
+  String get iosBackgroundLiveActivityUnavailable;
+
+  /// No description provided for @iosBackgroundNotificationsAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications allowed'**
+  String get iosBackgroundNotificationsAuthorized;
+
+  /// No description provided for @iosBackgroundNotificationsNotAuthorized.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications not allowed'**
+  String get iosBackgroundNotificationsNotAuthorized;
+
+  /// No description provided for @iosBackgroundGenerationActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo is generating'**
+  String get iosBackgroundGenerationActiveTitle;
+
+  /// No description provided for @iosBackgroundGenerationActiveDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The assistant is replying in the background'**
+  String get iosBackgroundGenerationActiveDetail;
+
+  /// No description provided for @iosBackgroundGenerationStreamingDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Receiving assistant response'**
+  String get iosBackgroundGenerationStreamingDetail;
+
+  /// No description provided for @iosBackgroundGenerationTokenCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} tokens'**
+  String iosBackgroundGenerationTokenCount(int count);
+
+  /// No description provided for @iosBackgroundGenerationCompleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation complete'**
+  String get iosBackgroundGenerationCompleteTitle;
+
+  /// No description provided for @iosBackgroundGenerationCompleteDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistant reply is ready'**
+  String get iosBackgroundGenerationCompleteDetail;
+
+  /// No description provided for @iosBackgroundGenerationInterruptedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation interrupted'**
+  String get iosBackgroundGenerationInterruptedTitle;
+
+  /// No description provided for @iosBackgroundGenerationInterruptedDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'The background reply stopped before completion'**
+  String get iosBackgroundGenerationInterruptedDetail;
+
+  /// No description provided for @iosBackgroundGenerationCancelledDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Generation stopped'**
+  String get iosBackgroundGenerationCancelledDetail;
 
   /// No description provided for @androidBackgroundStatusOn.
   ///
@@ -2279,6 +2771,66 @@ abstract class AppLocalizations {
   /// **'Preview'**
   String get codeBlockPreviewButton;
 
+  /// No description provided for @codeBlockSaveAsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as file'**
+  String get codeBlockSaveAsButton;
+
+  /// No description provided for @codeBlockCollapseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get codeBlockCollapseButton;
+
+  /// No description provided for @codeBlockExpandButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand'**
+  String get codeBlockExpandButton;
+
+  /// No description provided for @codeBlockDefaultFileNameStem.
+  ///
+  /// In en, this message translates to:
+  /// **'code'**
+  String get codeBlockDefaultFileNameStem;
+
+  /// No description provided for @markdownTableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Table'**
+  String get markdownTableLabel;
+
+  /// No description provided for @markdownTableExportCsvTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Export CSV'**
+  String get markdownTableExportCsvTooltip;
+
+  /// No description provided for @markdownTableSaveImageTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Gallery'**
+  String get markdownTableSaveImageTooltip;
+
+  /// No description provided for @markdownTableDefaultFileNameStem.
+  ///
+  /// In en, this message translates to:
+  /// **'table'**
+  String get markdownTableDefaultFileNameStem;
+
+  /// No description provided for @markdownTableCopiedCsvSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV copied. Long press Copy to copy as image.'**
+  String get markdownTableCopiedCsvSnackbar;
+
+  /// No description provided for @markdownTableCopiedMarkdownSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Table copied.'**
+  String get markdownTableCopiedMarkdownSnackbar;
+
   /// No description provided for @codeBlockCollapsedLines.
   ///
   /// In en, this message translates to:
@@ -2338,12 +2890,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Assistant Settings'**
   String get assistantSettingsPageTitle;
-
-  /// No description provided for @assistantSettingsDefaultTag.
-  ///
-  /// In en, this message translates to:
-  /// **'Default'**
-  String get assistantSettingsDefaultTag;
 
   /// No description provided for @assistantSettingsCopyButton.
   ///
@@ -2897,6 +3443,162 @@ abstract class AppLocalizations {
   /// **'Import from Chatbox'**
   String get backupPageImportFromChatbox;
 
+  /// No description provided for @backupReminderSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Reminder'**
+  String get backupReminderSectionTitle;
+
+  /// No description provided for @backupReminderEnableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me to back up'**
+  String get backupReminderEnableTitle;
+
+  /// No description provided for @backupReminderFrequencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Frequency'**
+  String get backupReminderFrequencyTitle;
+
+  /// No description provided for @backupReminderTimeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder Time'**
+  String get backupReminderTimeTitle;
+
+  /// No description provided for @backupReminderTimeInputHint.
+  ///
+  /// In en, this message translates to:
+  /// **'HH:mm'**
+  String get backupReminderTimeInputHint;
+
+  /// No description provided for @backupReminderTimeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a time from 00:00 to 23:59.'**
+  String get backupReminderTimeInvalid;
+
+  /// No description provided for @backupReminderLastBackupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Backup'**
+  String get backupReminderLastBackupTitle;
+
+  /// No description provided for @backupReminderNextReminderTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Reminder'**
+  String get backupReminderNextReminderTitle;
+
+  /// No description provided for @backupReminderNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get backupReminderNever;
+
+  /// No description provided for @backupReminderDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get backupReminderDisabled;
+
+  /// No description provided for @backupReminderDueNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Due now'**
+  String get backupReminderDueNow;
+
+  /// No description provided for @backupReminderEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get backupReminderEveryDay;
+
+  /// No description provided for @backupReminderEveryThreeDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 3 days'**
+  String get backupReminderEveryThreeDays;
+
+  /// No description provided for @backupReminderEveryWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get backupReminderEveryWeek;
+
+  /// No description provided for @backupReminderEveryFourteenDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 14 days'**
+  String get backupReminderEveryFourteenDays;
+
+  /// No description provided for @backupReminderEveryMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month'**
+  String get backupReminderEveryMonth;
+
+  /// No description provided for @backupReminderCustomDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {days} days'**
+  String backupReminderCustomDays(int days);
+
+  /// No description provided for @backupReminderCustomOption.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom...'**
+  String get backupReminderCustomOption;
+
+  /// No description provided for @backupReminderCustomDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom Frequency'**
+  String get backupReminderCustomDialogTitle;
+
+  /// No description provided for @backupReminderCustomDialogDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter how many days to wait between backup reminders.'**
+  String get backupReminderCustomDialogDescription;
+
+  /// No description provided for @backupReminderCustomDaysLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Days'**
+  String get backupReminderCustomDaysLabel;
+
+  /// No description provided for @backupReminderCustomDaysInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number from 1 to 365.'**
+  String get backupReminderCustomDaysInvalid;
+
+  /// No description provided for @backupReminderSidebarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup reminder'**
+  String get backupReminderSidebarTitle;
+
+  /// No description provided for @backupReminderSidebarSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your backup interval has arrived.'**
+  String get backupReminderSidebarSubtitle;
+
+  /// No description provided for @backupReminderSidebarAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to backup'**
+  String get backupReminderSidebarAction;
+
+  /// No description provided for @backupReminderSnoozeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me later'**
+  String get backupReminderSnoozeTooltip;
+
   /// No description provided for @chatHistoryPageTitle.
   ///
   /// In en, this message translates to:
@@ -3082,6 +3784,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No messages to compress'**
   String get compressContextNoMessages;
+
+  /// No description provided for @compressContextNoConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'No conversation to compress'**
+  String get compressContextNoConversation;
+
+  /// No description provided for @compressContextNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'No compression model configured'**
+  String get compressContextNoModel;
+
+  /// No description provided for @compressContextEmptySummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Compression returned an empty summary'**
+  String get compressContextEmptySummary;
+
+  /// No description provided for @compressContextOptionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress Context'**
+  String get compressContextOptionsTitle;
+
+  /// No description provided for @compressContextOptionsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which part of the current chat is sent to the compression model.'**
+  String get compressContextOptionsDesc;
+
+  /// No description provided for @compressContextKeepStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get compressContextKeepStart;
+
+  /// No description provided for @compressContextKeepRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent'**
+  String get compressContextKeepRecent;
+
+  /// No description provided for @compressContextUnlimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlimited'**
+  String get compressContextUnlimited;
+
+  /// No description provided for @compressContextMaxCharsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Characters'**
+  String get compressContextMaxCharsLabel;
+
+  /// No description provided for @compressContextInvalidLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a positive character count'**
+  String get compressContextInvalidLimit;
+
+  /// No description provided for @compressContextStartButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Compress'**
+  String get compressContextStartButton;
 
   /// No description provided for @bottomToolsSheetLearningMode.
   ///
@@ -3359,6 +4127,18 @@ abstract class AppLocalizations {
   /// **'Citations ({count})'**
   String chatMessageWidgetCitationsTitle(int count);
 
+  /// No description provided for @chatMessageWidgetSearchResultsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search results'**
+  String get chatMessageWidgetSearchResultsTitle;
+
+  /// No description provided for @chatMessageWidgetCitationSourcesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Citation sources'**
+  String get chatMessageWidgetCitationSourcesTitle;
+
   /// No description provided for @chatMessageWidgetRegenerateTooltip.
   ///
   /// In en, this message translates to:
@@ -3455,6 +4235,24 @@ abstract class AppLocalizations {
   /// **'Built-in Search'**
   String get chatMessageWidgetBuiltinSearch;
 
+  /// No description provided for @chatMessageWidgetReadClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Clipboard'**
+  String get chatMessageWidgetReadClipboard;
+
+  /// No description provided for @chatMessageWidgetWriteClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Write Clipboard'**
+  String get chatMessageWidgetWriteClipboard;
+
+  /// No description provided for @chatMessageWidgetSpeakText.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking: {text}'**
+  String chatMessageWidgetSpeakText(String text);
+
   /// No description provided for @chatMessageWidgetToolCall.
   ///
   /// In en, this message translates to:
@@ -3500,7 +4298,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatMessageWidgetCitationsCount.
   ///
   /// In en, this message translates to:
-  /// **'Citations ({count})'**
+  /// **'{count} citations'**
   String chatMessageWidgetCitationsCount(int count);
 
   /// No description provided for @chatSelectionSelectedCountTitle.
@@ -4115,6 +4913,18 @@ abstract class AppLocalizations {
   /// **'Add'**
   String get chatInputBarMoreTooltip;
 
+  /// No description provided for @chatInputBarImageMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Image mode'**
+  String get chatInputBarImageMode;
+
+  /// No description provided for @chatInputBarDisableImageModeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn off image mode'**
+  String get chatInputBarDisableImageModeTooltip;
+
   /// No description provided for @chatInputBarQueuedPending.
   ///
   /// In en, this message translates to:
@@ -4481,6 +5291,18 @@ abstract class AppLocalizations {
   /// **'Used for generating conversation summaries; prefer fast and cheap models'**
   String get defaultModelPageSummaryModelSubtitle;
 
+  /// No description provided for @defaultModelPageSuggestionModelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat Suggestions Model'**
+  String get defaultModelPageSuggestionModelTitle;
+
+  /// No description provided for @defaultModelPageSuggestionModelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for follow-up suggestion bubbles after assistant replies. Disabled until a model is selected.'**
+  String get defaultModelPageSuggestionModelSubtitle;
+
   /// No description provided for @assistantEditRecentChatsSummaryFrequencyTitle.
   ///
   /// In en, this message translates to:
@@ -4577,6 +5399,12 @@ abstract class AppLocalizations {
   /// **'Enter prompt template for summary generation'**
   String get defaultModelPageSummaryPromptHint;
 
+  /// No description provided for @defaultModelPageSuggestionPromptHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter prompt template for chat suggestions'**
+  String get defaultModelPageSuggestionPromptHint;
+
   /// No description provided for @defaultModelPageTranslatePromptHint.
   ///
   /// In en, this message translates to:
@@ -4616,6 +5444,12 @@ abstract class AppLocalizations {
     String userMessagesVar,
   );
 
+  /// No description provided for @defaultModelPageSuggestionVars.
+  ///
+  /// In en, this message translates to:
+  /// **'Variables: conversation: {contentVar}, language: {localeVar}'**
+  String defaultModelPageSuggestionVars(String contentVar, String localeVar);
+
   /// No description provided for @defaultModelPageCompressModelTitle.
   ///
   /// In en, this message translates to:
@@ -4651,6 +5485,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use current chat model'**
   String get defaultModelPageUseCurrentModel;
+
+  /// No description provided for @defaultModelPageNotEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enabled'**
+  String get defaultModelPageNotEnabled;
 
   /// No description provided for @translatePagePasteButton.
   ///
@@ -5287,6 +6127,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adds header APP-Code requests to get a 10% discount. Only affects AIhubmix.'**
   String get providerDetailPageAihubmixAppCodeHelp;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Claude Prompt Caching'**
+  String get providerDetailPageClaudePromptCachingTitle;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds cache_control to Claude requests through Anthropic or OpenRouter.'**
+  String get providerDetailPageClaudePromptCachingHelp;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingTtlTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cache TTL'**
+  String get providerDetailPageClaudePromptCachingTtlTitle;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingTtlHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'5 minutes is the default. 1 hour costs more to write but can reduce rebuilds in long conversations.'**
+  String get providerDetailPageClaudePromptCachingTtlHelp;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingTtl5m.
+  ///
+  /// In en, this message translates to:
+  /// **'5 min'**
+  String get providerDetailPageClaudePromptCachingTtl5m;
+
+  /// No description provided for @providerDetailPageClaudePromptCachingTtl1h.
+  ///
+  /// In en, this message translates to:
+  /// **'1 hour'**
+  String get providerDetailPageClaudePromptCachingTtl1h;
+
+  /// No description provided for @providerDetailPageBalanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Balance'**
+  String get providerDetailPageBalanceTitle;
+
+  /// No description provided for @providerDetailPageBalanceInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Get account balance'**
+  String get providerDetailPageBalanceInfo;
+
+  /// No description provided for @providerDetailPageBalanceApiPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance API Path'**
+  String get providerDetailPageBalanceApiPathLabel;
+
+  /// No description provided for @providerDetailPageBalanceResultPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Result JSON Path'**
+  String get providerDetailPageBalanceResultPathLabel;
+
+  /// No description provided for @providerDetailPageBalanceQueryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Check Balance'**
+  String get providerDetailPageBalanceQueryButton;
+
+  /// No description provided for @providerDetailPageBalanceQuerying.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get providerDetailPageBalanceQuerying;
+
+  /// No description provided for @providerDetailPageBalanceResetDefaultsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get providerDetailPageBalanceResetDefaultsButton;
+
+  /// No description provided for @providerDetailPageBalanceResetDefaultsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset balance settings'**
+  String get providerDetailPageBalanceResetDefaultsTooltip;
+
+  /// No description provided for @providerDetailPageBalanceResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance: {value}'**
+  String providerDetailPageBalanceResult(String value);
+
+  /// No description provided for @providerDetailPageBalanceError.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance query failed: {message}'**
+  String providerDetailPageBalanceError(String message);
 
   /// No description provided for @providerDetailPageVertexAiTitle.
   ///
@@ -6302,6 +7238,24 @@ abstract class AppLocalizations {
   /// **'Search engine ID is required'**
   String get searchServicesAddDialogSearchEngineIdRequired;
 
+  /// No description provided for @searchServicesDialogApiKey.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key'**
+  String get searchServicesDialogApiKey;
+
+  /// No description provided for @searchServicesDialogModel.
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get searchServicesDialogModel;
+
+  /// No description provided for @searchServicesDialogSystemPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'System Prompt'**
+  String get searchServicesDialogSystemPrompt;
+
   /// No description provided for @searchServicesAddDialogInstanceUrl.
   ///
   /// In en, this message translates to:
@@ -6740,6 +7694,12 @@ abstract class AppLocalizations {
   /// **'Show Tool Result Summary'**
   String get displaySettingsPageShowToolResultSummaryTitle;
 
+  /// No description provided for @displaySettingsPageInsertSuggestionOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Insert suggestions without sending'**
+  String get displaySettingsPageInsertSuggestionOnlyTitle;
+
   /// No description provided for @displaySettingsPageShowToolResultSummarySubtitle.
   ///
   /// In en, this message translates to:
@@ -6833,8 +7793,38 @@ abstract class AppLocalizations {
   /// No description provided for @displaySettingsPageMessageNavButtonsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Show quick jump buttons when scrolling'**
+  /// **'Choose when quick jump buttons appear'**
   String get displaySettingsPageMessageNavButtonsSubtitle;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsModeAlways.
+  ///
+  /// In en, this message translates to:
+  /// **'Always show'**
+  String get displaySettingsPageMessageNavButtonsModeAlways;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsModeScroll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show while scrolling'**
+  String get displaySettingsPageMessageNavButtonsModeScroll;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsModeHover.
+  ///
+  /// In en, this message translates to:
+  /// **'Show on mouse hover'**
+  String get displaySettingsPageMessageNavButtonsModeHover;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsModeScrollAndHover.
+  ///
+  /// In en, this message translates to:
+  /// **'Show while scrolling or hovering'**
+  String get displaySettingsPageMessageNavButtonsModeScrollAndHover;
+
+  /// No description provided for @displaySettingsPageMessageNavButtonsModeNever.
+  ///
+  /// In en, this message translates to:
+  /// **'Never show'**
+  String get displaySettingsPageMessageNavButtonsModeNever;
 
   /// No description provided for @displaySettingsPageUseNewAssistantAvatarUxTitle.
   ///
@@ -7172,6 +8162,12 @@ abstract class AppLocalizations {
   /// **'Text-to-Speech'**
   String get ttsServicesPageTitle;
 
+  /// No description provided for @ttsServicesPageSettingsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'TTS settings'**
+  String get ttsServicesPageSettingsTooltip;
+
   /// No description provided for @ttsServicesPageAddTooltip.
   ///
   /// In en, this message translates to:
@@ -7382,6 +8378,24 @@ abstract class AppLocalizations {
   /// **'Speed'**
   String get ttsServicesFieldSpeedLabel;
 
+  /// No description provided for @ttsServicesFieldLanguageTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language type'**
+  String get ttsServicesFieldLanguageTypeLabel;
+
+  /// No description provided for @ttsServicesFieldLanguageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get ttsServicesFieldLanguageLabel;
+
+  /// No description provided for @ttsServicesValidationApiKeyRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'API Key is required'**
+  String get ttsServicesValidationApiKeyRequired;
+
   /// No description provided for @ttsServicesViewDetailsButton.
   ///
   /// In en, this message translates to:
@@ -7399,6 +8413,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get ttsServicesCloseButton;
+
+  /// No description provided for @ttsSettingsPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'TTS Settings'**
+  String get ttsSettingsPageTitle;
+
+  /// No description provided for @ttsSettingsPlaybackSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback'**
+  String get ttsSettingsPlaybackSection;
+
+  /// No description provided for @ttsSettingsAutoPlayTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-play Assistant Replies'**
+  String get ttsSettingsAutoPlayTitle;
+
+  /// No description provided for @ttsSettingsAutoPlayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Start TTS automatically after an assistant reply finishes.'**
+  String get ttsSettingsAutoPlayDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Text Selection'**
+  String get ttsSettingsTextSelectionSection;
+
+  /// No description provided for @ttsSettingsTextSelectionFallbackDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'If no matching text is found, the full reply is played.'**
+  String get ttsSettingsTextSelectionFallbackDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionFullTextTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Full text'**
+  String get ttsSettingsTextSelectionFullTextTitle;
+
+  /// No description provided for @ttsSettingsTextSelectionFullTextDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the complete assistant reply.'**
+  String get ttsSettingsTextSelectionFullTextDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionQuotedOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Quoted text only'**
+  String get ttsSettingsTextSelectionQuotedOnlyTitle;
+
+  /// No description provided for @ttsSettingsTextSelectionQuotedOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play text inside “”, ‘’, \"\", \'\', 「」, or 『』.'**
+  String get ttsSettingsTextSelectionQuotedOnlyDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionOutsideParenthesesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Outside parentheses'**
+  String get ttsSettingsTextSelectionOutsideParenthesesTitle;
+
+  /// No description provided for @ttsSettingsTextSelectionOutsideParenthesesDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip text inside () and （）.'**
+  String get ttsSettingsTextSelectionOutsideParenthesesDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionItalicOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Italic text only'**
+  String get ttsSettingsTextSelectionItalicOnlyTitle;
+
+  /// No description provided for @ttsSettingsTextSelectionItalicOnlyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Play Markdown or HTML italic text.'**
+  String get ttsSettingsTextSelectionItalicOnlyDescription;
+
+  /// No description provided for @ttsSettingsTextSelectionNonItalicTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Non-italic text only'**
+  String get ttsSettingsTextSelectionNonItalicTitle;
+
+  /// No description provided for @ttsSettingsTextSelectionNonItalicDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip Markdown or HTML italic text.'**
+  String get ttsSettingsTextSelectionNonItalicDescription;
+
+  /// No description provided for @ttsFloatingPlayerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'TTS player'**
+  String get ttsFloatingPlayerLabel;
+
+  /// No description provided for @ttsFloatingPauseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get ttsFloatingPauseTooltip;
+
+  /// No description provided for @ttsFloatingResumeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get ttsFloatingResumeTooltip;
+
+  /// No description provided for @ttsFloatingReplayTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get ttsFloatingReplayTooltip;
+
+  /// No description provided for @ttsFloatingRewind15Tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Back 15 seconds'**
+  String get ttsFloatingRewind15Tooltip;
+
+  /// No description provided for @ttsFloatingForward15Tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Forward 15 seconds'**
+  String get ttsFloatingForward15Tooltip;
+
+  /// No description provided for @ttsFloatingSpeedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback speed'**
+  String get ttsFloatingSpeedTooltip;
+
+  /// No description provided for @ttsFloatingCloseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Close player'**
+  String get ttsFloatingCloseTooltip;
+
+  /// No description provided for @ttsFloatingExpandTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand playback controls'**
+  String get ttsFloatingExpandTooltip;
+
+  /// No description provided for @ttsFloatingCollapseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse playback controls'**
+  String get ttsFloatingCollapseTooltip;
 
   /// No description provided for @imageViewerPageShareFailedOpenFile.
   ///
@@ -7418,11 +8588,95 @@ abstract class AppLocalizations {
   /// **'Share Image'**
   String get imageViewerPageShareButton;
 
+  /// No description provided for @imageViewerPageCloseButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Close preview'**
+  String get imageViewerPageCloseButton;
+
   /// No description provided for @imageViewerPageSaveButton.
   ///
   /// In en, this message translates to:
   /// **'Save Image'**
   String get imageViewerPageSaveButton;
+
+  /// No description provided for @imageViewerPageCopyButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy Image'**
+  String get imageViewerPageCopyButton;
+
+  /// No description provided for @imageViewerPagePreviousButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous Image'**
+  String get imageViewerPagePreviousButton;
+
+  /// No description provided for @imageViewerPageNextButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Image'**
+  String get imageViewerPageNextButton;
+
+  /// No description provided for @imageViewerPageZoomInButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom In'**
+  String get imageViewerPageZoomInButton;
+
+  /// No description provided for @imageViewerPageZoomOutButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom Out'**
+  String get imageViewerPageZoomOutButton;
+
+  /// No description provided for @imageViewerPageResetZoomButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Zoom'**
+  String get imageViewerPageResetZoomButton;
+
+  /// No description provided for @imageViewerPageFlipHorizontalButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip Horizontal'**
+  String get imageViewerPageFlipHorizontalButton;
+
+  /// No description provided for @imageViewerPageFlipVerticalButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip Vertical'**
+  String get imageViewerPageFlipVerticalButton;
+
+  /// No description provided for @imageViewerPageRotateLeftButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate Left'**
+  String get imageViewerPageRotateLeftButton;
+
+  /// No description provided for @imageViewerPageRotateRightButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate Right'**
+  String get imageViewerPageRotateRightButton;
+
+  /// No description provided for @imageViewerPageCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'{index}/{total}'**
+  String imageViewerPageCounter(int index, int total);
+
+  /// No description provided for @imageViewerPageImageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Image {index} of {total}'**
+  String imageViewerPageImageLabel(int index, int total);
+
+  /// No description provided for @imageViewerPageImageLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load image'**
+  String get imageViewerPageImageLoadFailed;
 
   /// No description provided for @imageViewerPageSaveSuccess.
   ///
@@ -7469,7 +8723,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchProviderGrokDescription.
   ///
   /// In en, this message translates to:
-  /// **'xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.'**
+  /// **'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.'**
   String get searchProviderGrokDescription;
 
   /// No description provided for @searchProviderExaDescription.
@@ -7622,6 +8876,48 @@ abstract class AppLocalizations {
   /// **'Bocha web search API. Accurate web results with optional summaries.'**
   String get searchProviderBochaDescription;
 
+  /// No description provided for @searchServiceNameSerper.
+  ///
+  /// In en, this message translates to:
+  /// **'Serper'**
+  String get searchServiceNameSerper;
+
+  /// No description provided for @searchProviderSerperDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Serper Google Search API. Fast web results with optional country, language, time, and page filters.'**
+  String get searchProviderSerperDescription;
+
+  /// No description provided for @searchServicesDialogCountryOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Country/region (optional)'**
+  String get searchServicesDialogCountryOptional;
+
+  /// No description provided for @searchServicesDialogLanguageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Language (optional)'**
+  String get searchServicesDialogLanguageOptional;
+
+  /// No description provided for @searchServicesDialogTimeFilterOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Time filter (optional)'**
+  String get searchServicesDialogTimeFilterOptional;
+
+  /// No description provided for @searchServicesDialogPageOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Page (optional)'**
+  String get searchServicesDialogPageOptional;
+
+  /// No description provided for @searchServicesDialogPageInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Page must be a positive integer.'**
+  String get searchServicesDialogPageInvalid;
+
   /// No description provided for @generationInterrupted.
   ///
   /// In en, this message translates to:
@@ -7639,6 +8935,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New Chat'**
   String get titleForLocale;
+
+  /// No description provided for @temporaryChatTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary Chat'**
+  String get temporaryChatTitle;
+
+  /// No description provided for @temporaryChatEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary chats do not appear in history and will be deleted completely after you leave.'**
+  String get temporaryChatEmptyMessage;
+
+  /// No description provided for @temporaryChatToggleTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle temporary chat'**
+  String get temporaryChatToggleTooltip;
 
   /// No description provided for @quickPhraseBackTooltip.
   ///
@@ -7885,6 +9199,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Memory'**
   String get assistantEditPageMemoryTab;
+
+  /// No description provided for @assistantEditLocalToolTimeInfoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Info'**
+  String get assistantEditLocalToolTimeInfoTitle;
+
+  /// No description provided for @assistantEditLocalToolTimeInfoSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read the device date, weekday, time, timezone, UTC offset, and timestamp.'**
+  String get assistantEditLocalToolTimeInfoSubtitle;
+
+  /// No description provided for @assistantEditLocalToolClipboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard'**
+  String get assistantEditLocalToolClipboardTitle;
+
+  /// No description provided for @assistantEditLocalToolClipboardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read or write plain text from the device clipboard when explicitly needed.'**
+  String get assistantEditLocalToolClipboardSubtitle;
+
+  /// No description provided for @assistantEditLocalToolTextToSpeechTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text to Speech'**
+  String get assistantEditLocalToolTextToSpeechTitle;
+
+  /// No description provided for @assistantEditLocalToolTextToSpeechSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the assistant read text aloud with the configured TTS playback.'**
+  String get assistantEditLocalToolTextToSpeechSubtitle;
+
+  /// No description provided for @assistantEditLocalToolAskUserTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask User'**
+  String get assistantEditLocalToolAskUserTitle;
+
+  /// No description provided for @assistantEditLocalToolAskUserSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let the assistant ask short questions and continue after you answer.'**
+  String get assistantEditLocalToolAskUserSubtitle;
 
   /// No description provided for @assistantEditMemorySwitchTitle.
   ///
@@ -8948,6 +10310,60 @@ abstract class AppLocalizations {
   /// **'Tool call \"{toolName}\" was denied by user. Reason: {reason}'**
   String toolApprovalDeniedMessage(Object reason, Object toolName);
 
+  /// No description provided for @askUserCardSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit answer'**
+  String get askUserCardSubmit;
+
+  /// No description provided for @askUserCardCustomHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Type your answer'**
+  String get askUserCardCustomHint;
+
+  /// No description provided for @askUserCardSomethingElse.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else'**
+  String get askUserCardSomethingElse;
+
+  /// No description provided for @askUserCardSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get askUserCardSkip;
+
+  /// No description provided for @askUserCardSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped'**
+  String get askUserCardSkipped;
+
+  /// No description provided for @askUserCardAnswered.
+  ///
+  /// In en, this message translates to:
+  /// **'Answered'**
+  String get askUserCardAnswered;
+
+  /// No description provided for @askUserCardInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'This question is no longer active. Regenerate or continue the conversation.'**
+  String get askUserCardInactive;
+
+  /// No description provided for @askUserCardCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Question cancelled'**
+  String get askUserCardCancelled;
+
+  /// No description provided for @askUserCardQuestionCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask {count} questions'**
+  String askUserCardQuestionCount(int count);
+
   /// No description provided for @tokenDetailPromptTokens.
   ///
   /// In en, this message translates to:
@@ -8983,6 +10399,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} tokens'**
   String tokenDetailTotalTokens(int count);
+
+  /// No description provided for @debugPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Debug'**
+  String get debugPageTitle;
+
+  /// No description provided for @debugPageConversationToolsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conversation tools'**
+  String get debugPageConversationToolsTitle;
+
+  /// No description provided for @debugPageCreateOversizedConversationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create oversized conversation (30 MB)'**
+  String get debugPageCreateOversizedConversationButton;
+
+  /// No description provided for @debugPageCreateManyMessagesConversationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create 1024-message conversation'**
+  String get debugPageCreateManyMessagesConversationButton;
+
+  /// No description provided for @debugPageCreateDailyMixedMarkdownConversationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create 3000 daily mixed Markdown messages'**
+  String get debugPageCreateDailyMixedMarkdownConversationButton;
+
+  /// No description provided for @debugPageCreateLongReasoningConversationButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create long reasoning conversation (128 messages)'**
+  String get debugPageCreateLongReasoningConversationButton;
+
+  /// No description provided for @debugPageCreatingButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating...'**
+  String get debugPageCreatingButton;
+
+  /// No description provided for @debugPageCreatingOversizedConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating a 30 MB oversized conversation...'**
+  String get debugPageCreatingOversizedConversation;
+
+  /// No description provided for @debugPageCreatingManyMessagesConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating a 1024-message conversation...'**
+  String get debugPageCreatingManyMessagesConversation;
+
+  /// No description provided for @debugPageCreatingDailyMixedMarkdownConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating a 3000-message daily mixed Markdown conversation...'**
+  String get debugPageCreatingDailyMixedMarkdownConversation;
+
+  /// No description provided for @debugPageCreatingLongReasoningConversation.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating a long reasoning debug conversation...'**
+  String get debugPageCreatingLongReasoningConversation;
+
+  /// No description provided for @debugPageNoCurrentAssistant.
+  ///
+  /// In en, this message translates to:
+  /// **'No current assistant. Create or select an assistant first.'**
+  String get debugPageNoCurrentAssistant;
+
+  /// No description provided for @debugPageConversationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created debug conversation with {count} messages.'**
+  String debugPageConversationCreated(int count);
+
+  /// No description provided for @debugPageCreateConversationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create debug conversation: {error}'**
+  String debugPageCreateConversationFailed(String error);
+
+  /// No description provided for @debugPageOversizedConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Oversized conversation test ({sizeMB} MB)'**
+  String debugPageOversizedConversationTitle(int sizeMB);
+
+  /// No description provided for @debugPageManyMessagesConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}-message conversation test'**
+  String debugPageManyMessagesConversationTitle(int count);
+
+  /// No description provided for @debugPageDailyMixedMarkdownConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}-message daily mixed Markdown test'**
+  String debugPageDailyMixedMarkdownConversationTitle(int count);
+
+  /// No description provided for @debugPageLongReasoningConversationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}-message long reasoning test'**
+  String debugPageLongReasoningConversationTitle(int count);
+
+  /// No description provided for @debugPageOversizedConversationSeedText.
+  ///
+  /// In en, this message translates to:
+  /// **'This is long debug text for reproducing slow rendering in oversized conversations. It includes repeated Markdown-like text, punctuation, CJK content, and plain words so chat rendering, storage, and scrolling can be profiled.'**
+  String get debugPageOversizedConversationSeedText;
+
+  /// No description provided for @debugPageManyMessagesSeedText.
+  ///
+  /// In en, this message translates to:
+  /// **'{role} message #{index}: quick random debug sample for testing list rendering, scrolling stability, message grouping, and conversation history performance.'**
+  String debugPageManyMessagesSeedText(String role, int index);
 }
 
 class _AppLocalizationsDelegate

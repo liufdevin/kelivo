@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import '../../providers/settings_provider.dart';
 import '../../providers/model_provider.dart';
 import '../../models/token_usage.dart';
@@ -12,6 +13,7 @@ import '../../utils/openai_model_compat.dart';
 import '../network/dio_http_client.dart';
 import 'google_service_account_auth.dart';
 import '../../services/api_key_manager.dart';
+import 'package:Kelivo/secrets/fallback.dart';
 import '../local_gguf_service.dart';
 import '../local_litert_service.dart';
 import '../local_litert_prompt_builder.dart';
@@ -29,6 +31,7 @@ import '../../utils/multimodal_input_utils.dart';
 part 'chat_api_service_shims.dart';
 part 'providers/openai_common.dart';
 part 'providers/openai_chat_completions.dart';
+part 'providers/openai_images.dart';
 part 'providers/openai_responses.dart';
 part 'providers/google_common.dart';
 part 'providers/google_gemini.dart';
@@ -36,11 +39,40 @@ part 'providers/google_vertex.dart';
 part 'providers/claude_official.dart';
 part 'providers/dify_chat.dart';
 
+typedef ToolCallHandler =
+    Future<String> Function(
+      String name,
+      Map<String, dynamic> args, {
+      String? toolCallId,
+    });
+
+String _effectiveToolCallId(
+  dynamic rawId,
+  String fallbackPrefix,
+  Object index,
+) {
+  final id = rawId?.toString().trim() ?? '';
+  if (id.isNotEmpty) return id;
+  return '${fallbackPrefix}_${DateTime.now().microsecondsSinceEpoch}_$index';
+}
+
 class ChatApiService {
   static const String _aihubmixAppCode = 'ZKRT3588';
   static final Map<String, CancelToken> _activeCancelTokens =
       <String, CancelToken>{};
   static final Map<String, String> _difyConversationIds = <String, String>{};
+
+  static bool supportsOpenAIImagesApiRouting(
+    ProviderConfig config,
+    String modelId,
+  ) {
+    final kind = ProviderConfig.classify(
+      config.id,
+      explicitType: config.providerType,
+    );
+    return kind == ProviderKind.openai &&
+        _shouldUseOpenAIImagesApi(config, modelId);
+  }
 
   static void cancelRequest(String requestId) {
     final key = requestId.trim();
@@ -66,6 +98,17 @@ class ChatApiService {
 
   static String _apiKeyForRequest(ProviderConfig cfg, String modelId) {
     final orig = _effectiveApiKey(cfg).trim();
+    if (orig.isNotEmpty) return orig;
+    if ((cfg.id) == 'SiliconFlow') {
+      final host = Uri.tryParse(cfg.baseUrl)?.host.toLowerCase() ?? '';
+      if (!host.contains('siliconflow')) return orig;
+      final m = _apiModelId(cfg, modelId).toLowerCase();
+      final allowed = m == 'thudm/glm-4-9b-0414' || m == 'qwen/qwen3-8b';
+      final fallback = siliconflowFallbackKey.trim();
+      if (allowed && fallback.isNotEmpty) {
+        return fallback;
+      }
+    }
     return orig;
   }
 
@@ -371,6 +414,13 @@ class ChatApiService {
     return DioHttpClient(cancelToken: cancelToken);
   }
 
+  static String _decodeUtf8Body(
+    http.Response response, {
+    bool allowMalformed = false,
+  }) {
+    return utf8.decode(response.bodyBytes, allowMalformed: allowMalformed);
+  }
+
   static Stream<ChatStreamChunk> sendMessageStream({
     required ProviderConfig config,
     required String modelId,
@@ -381,11 +431,12 @@ class ChatApiService {
     double? topP,
     int? maxTokens,
     List<Map<String, dynamic>>? tools,
-    Future<String> Function(String name, Map<String, dynamic> args)? onToolCall,
+    ToolCallHandler? onToolCall,
     Map<String, String>? extraHeaders,
     Map<String, dynamic>? extraBody,
     bool stream = true,
     String? requestId,
+    bool allowImagesApiRouting = true,
   }) async* {
     final kind = ProviderConfig.classify(
       config.id,
@@ -425,7 +476,18 @@ class ChatApiService {
       final client = _clientFor(config, cancelToken);
       try {
         if (kind == ProviderKind.openai) {
-          if (config.useResponseApi == true) {
+          if (allowImagesApiRouting &&
+              _shouldUseOpenAIImagesApi(config, modelId)) {
+            yield* _sendOpenAIImagesStream(
+              client,
+              config,
+              modelId,
+              safeMessages,
+              userImagePaths: userImagePaths,
+              extraHeaders: extraHeaders,
+              extraBody: extraBody,
+            );
+          } else if (config.useResponseApi == true) {
             yield* _sendOpenAIResponsesStream(
               client,
               config,
@@ -690,6 +752,11 @@ class ChatApiService {
           modelId: modelId,
           upstreamModelId: upstreamModelId,
         );
+        _applyOpenRouterClaudePromptCaching(
+          body,
+          config: config,
+          upstreamModelId: upstreamModelId,
+        );
         _applyCompatibleResponsesReasoning(
           body,
           config: config,
@@ -761,9 +828,11 @@ class ChatApiService {
           body: jsonEncode(body),
         );
         if (resp.statusCode < 200 || resp.statusCode >= 300) {
-          throw HttpException('HTTP ${resp.statusCode}: ${resp.body}');
+          final responseText = _decodeUtf8Body(resp, allowMalformed: true);
+          throw HttpException('HTTP ${resp.statusCode}: $responseText');
         }
-        final data = jsonDecode(resp.body);
+        final responseText = _decodeUtf8Body(resp);
+        final data = jsonDecode(responseText);
         if (config.useResponseApi == true) {
           // Prefer SDK-style convenience when present
           final ot = data['output_text'];
@@ -866,9 +935,11 @@ class ChatApiService {
           body: jsonEncode(body),
         );
         if (resp.statusCode < 200 || resp.statusCode >= 300) {
-          throw HttpException('HTTP ${resp.statusCode}: ${resp.body}');
+          final responseText = _decodeUtf8Body(resp, allowMalformed: true);
+          throw HttpException('HTTP ${resp.statusCode}: $responseText');
         }
-        final data = jsonDecode(resp.body);
+        final responseText = _decodeUtf8Body(resp);
+        final data = jsonDecode(responseText);
         final content = data['content'] as List?;
         if (content != null && content.isNotEmpty) {
           final text = content.first['text'];
@@ -973,9 +1044,11 @@ class ChatApiService {
           body: jsonEncode(body),
         );
         if (resp.statusCode < 200 || resp.statusCode >= 300) {
-          throw HttpException('HTTP ${resp.statusCode}: ${resp.body}');
+          final responseText = _decodeUtf8Body(resp, allowMalformed: true);
+          throw HttpException('HTTP ${resp.statusCode}: $responseText');
         }
-        final data = jsonDecode(resp.body);
+        final responseText = _decodeUtf8Body(resp);
+        final data = jsonDecode(responseText);
         final candidates = data['candidates'] as List?;
         if (candidates != null && candidates.isNotEmpty) {
           final parts = candidates.first['content']?['parts'] as List?;
@@ -1289,6 +1362,13 @@ class _GeminiSignatureMeta {
   bool get hasText => (textKey ?? '').isNotEmpty && textValue != null;
   bool get hasImages => images.isNotEmpty;
   bool get hasAny => hasText || hasImages;
+}
+
+class _ResponsesImageGenerationResult {
+  final String base64;
+  final String? outputFormat;
+
+  const _ResponsesImageGenerationResult({this.base64 = '', this.outputFormat});
 }
 
 class ChatStreamChunk {

@@ -95,7 +95,7 @@ class ChatScrollController {
     // Wire auto-follow callback for zero-lag bottom pinning
     if (scrollController is ChatAutoFollowScrollController) {
       scrollController.shouldAutoFollow = () =>
-          _autoStickToBottom && !_isUserScrolling;
+          _getAutoScrollEnabled() && _autoStickToBottom && !_isUserScrolling;
     }
   }
 
@@ -328,7 +328,7 @@ class ChatScrollController {
   /// lightweight safety-net for edge cases (e.g. plain ScrollController).
   void autoScrollToBottomIfNeeded() {
     final enabled = _getAutoScrollEnabled();
-    if (!enabled && !_autoStickToBottom) return;
+    if (!enabled || !_autoStickToBottom) return;
     // With the custom ScrollPosition, bottom-pinning happens inside
     // applyContentDimensions (during layout, before paint). No post-frame
     // callback needed for the streaming path.
@@ -450,7 +450,9 @@ class ChatScrollController {
         anchor = idx >= 0 ? idx : messages.length - 1;
       } else {
         // Use observer to find currently visible items
-        final result = await _observerController.dispatchOnceObserve();
+        final result = await _observerController.dispatchOnceObserve(
+          isDependObserveCallback: false,
+        );
         final visible = result.observeResult?.displayingChildIndexList;
         anchor = (visible != null && visible.isNotEmpty)
             ? visible.last
@@ -501,7 +503,9 @@ class ChatScrollController {
         anchor = idx >= 0 ? idx : 0;
       } else {
         // Use observer to find currently visible items
-        final result = await _observerController.dispatchOnceObserve();
+        final result = await _observerController.dispatchOnceObserve(
+          isDependObserveCallback: false,
+        );
         final visible = result.observeResult?.displayingChildIndexList;
         anchor = (visible != null && visible.isNotEmpty) ? visible.first : 0;
       }

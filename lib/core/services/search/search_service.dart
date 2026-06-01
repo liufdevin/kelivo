@@ -15,6 +15,7 @@ import 'providers/jina_search_service.dart';
 import 'providers/bocha_search_service.dart';
 import 'providers/perplexity_search_service.dart';
 import 'providers/duckduckgo_search_service.dart';
+import 'providers/serper_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
@@ -47,8 +48,6 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return BraveSearchService() as SearchService;
       case GoogleSearchOptions _:
         return GoogleSearchService() as SearchService;
-      case GrokSearchOptions _:
-        return GrokSearchService() as SearchService;
       case MetasoOptions _:
         return MetasoSearchService() as SearchService;
       case OllamaOptions _:
@@ -61,6 +60,10 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return PerplexitySearchService() as SearchService;
       case DuckDuckGoOptions _:
         return DuckDuckGoSearchService() as SearchService;
+      case SerperOptions _:
+        return SerperSearchService() as SearchService;
+      case GrokOptions _:
+        return GrokSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -166,8 +169,6 @@ abstract class SearchServiceOptions {
         return BraveOptions.fromJson(json);
       case 'google':
         return GoogleSearchOptions.fromJson(json);
-      case 'grok':
-        return GrokSearchOptions.fromJson(json);
       case 'metaso':
         return MetasoOptions.fromJson(json);
       case 'ollama':
@@ -180,6 +181,10 @@ abstract class SearchServiceOptions {
         return DuckDuckGoOptions.fromJson(json);
       case 'perplexity':
         return PerplexityOptions.fromJson(json);
+      case 'serper':
+        return SerperOptions.fromJson(json);
+      case 'grok':
+        return GrokOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -377,49 +382,6 @@ class GoogleSearchOptions extends SearchServiceOptions {
       );
 }
 
-class GrokSearchOptions extends SearchServiceOptions {
-  static const String defaultUrl = 'https://api.x.ai/v1/chat/completions';
-  static const String defaultModel = 'grok-3-mini';
-
-  final String apiKey;
-  final String url;
-  final String model;
-
-  GrokSearchOptions({
-    required super.id,
-    required this.apiKey,
-    this.url = '',
-    this.model = '',
-  });
-
-  String get resolvedUrl {
-    final trimmed = url.trim();
-    return trimmed.isEmpty ? defaultUrl : trimmed;
-  }
-
-  String get resolvedModel {
-    final trimmed = model.trim();
-    return trimmed.isEmpty ? defaultModel : trimmed;
-  }
-
-  @override
-  Map<String, dynamic> toJson() => {
-    'type': 'grok',
-    'id': id,
-    'apiKey': apiKey,
-    'url': url.trim(),
-    'model': model.trim(),
-  };
-
-  factory GrokSearchOptions.fromJson(Map<String, dynamic> json) =>
-      GrokSearchOptions(
-        id: json['id'],
-        apiKey: json['apiKey'] ?? '',
-        url: json['url'] ?? '',
-        model: json['model'] ?? '',
-      );
-}
-
 class MetasoOptions extends SearchServiceOptions {
   final String apiKey;
 
@@ -551,5 +513,104 @@ class BochaOptions extends SearchServiceOptions {
     summary: (json['summary'] ?? true) as bool,
     include: json['include'],
     exclude: json['exclude'],
+  );
+}
+
+class SerperOptions extends SearchServiceOptions {
+  final String apiKey;
+  final String gl;
+  final String hl;
+  final String tbs;
+  final int page;
+
+  SerperOptions({
+    required super.id,
+    required this.apiKey,
+    this.gl = '',
+    this.hl = '',
+    this.tbs = '',
+    this.page = 1,
+  });
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'serper',
+    'id': id,
+    'apiKey': apiKey,
+    'gl': gl.trim(),
+    'hl': hl.trim(),
+    'tbs': tbs.trim(),
+    'page': page,
+  };
+
+  factory SerperOptions.fromJson(Map<String, dynamic> json) => SerperOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    gl: json['gl'] ?? '',
+    hl: json['hl'] ?? '',
+    tbs: json['tbs'] ?? '',
+    page: json['page'] ?? 1,
+  );
+}
+
+class GrokOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.x.ai/v1/responses';
+  static const String defaultModel = 'grok-4.3';
+  static const String defaultReasoningEffort = 'none';
+  static const String defaultSystemPrompt =
+      "You are a helpful search assistant. Search the web to find accurate and up-to-date information for the user's query. Provide a comprehensive answer with citations.";
+
+  final String apiKey;
+  final String model;
+  final String customUrl;
+  final String systemPrompt;
+
+  GrokOptions({
+    required super.id,
+    required this.apiKey,
+    this.model = defaultModel,
+    this.customUrl = defaultUrl,
+    this.systemPrompt = defaultSystemPrompt,
+  });
+
+  String get resolvedUrl {
+    final trimmed = customUrl.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  String get resolvedModel {
+    final trimmed = model.trim();
+    return trimmed.isEmpty ? defaultModel : trimmed;
+  }
+
+  String get resolvedReasoningEffort {
+    final trimmed = model.trim();
+    if (trimmed.isEmpty || trimmed == defaultModel) {
+      return defaultReasoningEffort;
+    }
+    return '';
+  }
+
+  String get resolvedSystemPrompt {
+    final trimmed = systemPrompt.trim();
+    return trimmed.isEmpty ? defaultSystemPrompt : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'grok',
+    'id': id,
+    'apiKey': apiKey,
+    'model': model.trim(),
+    'customUrl': customUrl.trim(),
+    'systemPrompt': systemPrompt,
+  };
+
+  factory GrokOptions.fromJson(Map<String, dynamic> json) => GrokOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    model: json['model'] ?? defaultModel,
+    customUrl: json['customUrl'] ?? defaultUrl,
+    systemPrompt: json['systemPrompt'] ?? defaultSystemPrompt,
   );
 }

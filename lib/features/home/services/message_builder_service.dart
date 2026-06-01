@@ -129,40 +129,42 @@ class MessageBuilderService {
       if (includeToolMessages && m.role == 'assistant') {
         final events = chatService.getToolEvents(m.id);
         if (events.isNotEmpty) {
-          toolContinuationReasoningContent =
-              _reasoningContentForToolContinuation(m);
-          final calls = <Map<String, dynamic>>[];
-          final toolMessages = <Map<String, dynamic>>[];
+          // Tool-call history is only valid once every call has a result.
+          final hasPendingToolEvent = events.any((e) => e['content'] == null);
+          if (!hasPendingToolEvent) {
+            toolContinuationReasoningContent =
+                _reasoningContentForToolContinuation(m);
+            final calls = <Map<String, dynamic>>[];
+            final toolMessages = <Map<String, dynamic>>[];
 
-          for (int i = 0; i < events.length; i++) {
-            final e = events[i];
-            final name = (e['name'] ?? '').toString().trim();
-            if (name.isEmpty) continue;
-            final rawId = (e['id'] ?? '').toString().trim();
-            final id = rawId.isNotEmpty
-                ? rawId
-                : 'call_${m.id.substring(0, m.id.length < 8 ? m.id.length : 8)}_$i';
+            for (int i = 0; i < events.length; i++) {
+              final e = events[i];
+              final name = (e['name'] ?? '').toString().trim();
+              if (name.isEmpty) continue;
+              final rawId = (e['id'] ?? '').toString().trim();
+              final id = rawId.isNotEmpty
+                  ? rawId
+                  : 'call_${m.id.substring(0, m.id.length < 8 ? m.id.length : 8)}_$i';
 
-            Map<String, dynamic> args = const <String, dynamic>{};
-            final a = e['arguments'];
-            if (a is Map) {
-              args = a.map((k, v) => MapEntry(k.toString(), v));
-            }
-            String argumentsJson = '{}';
-            try {
-              argumentsJson = jsonEncode(args);
-            } catch (_) {}
+              Map<String, dynamic> args = const <String, dynamic>{};
+              final a = e['arguments'];
+              if (a is Map) {
+                args = a.map((k, v) => MapEntry(k.toString(), v));
+              }
+              String argumentsJson = '{}';
+              try {
+                argumentsJson = jsonEncode(args);
+              } catch (_) {}
 
-            calls.add({
-              'id': id,
-              'type': 'function',
-              'function': {'name': name, 'arguments': argumentsJson},
-              if (e['metadata'] is Map)
-                'metadata': (e['metadata'] as Map).cast<String, dynamic>(),
-            });
+              calls.add({
+                'id': id,
+                'type': 'function',
+                'function': {'name': name, 'arguments': argumentsJson},
+                if (e['metadata'] is Map)
+                  'metadata': (e['metadata'] as Map).cast<String, dynamic>(),
+              });
 
-            final c = e['content'];
-            if (c != null) {
+              final c = e['content'];
               toolMessages.add({
                 'role': 'tool',
                 'name': name,
@@ -172,20 +174,20 @@ class MessageBuilderService {
                   'metadata': (e['metadata'] as Map).cast<String, dynamic>(),
               });
             }
-          }
 
-          if (calls.isNotEmpty) {
-            final assistantToolMessage = <String, dynamic>{
-              'role': 'assistant',
-              'content': '\n\n',
-              'tool_calls': calls,
-            };
-            if (toolContinuationReasoningContent.isNotEmpty) {
-              assistantToolMessage['reasoning_content'] =
-                  toolContinuationReasoningContent;
+            if (calls.isNotEmpty) {
+              final assistantToolMessage = <String, dynamic>{
+                'role': 'assistant',
+                'content': '\n\n',
+                'tool_calls': calls,
+              };
+              if (toolContinuationReasoningContent.isNotEmpty) {
+                assistantToolMessage['reasoning_content'] =
+                    toolContinuationReasoningContent;
+              }
+              out.add(assistantToolMessage);
+              out.addAll(toolMessages);
             }
-            out.add(assistantToolMessage);
-            out.addAll(toolMessages);
           }
         }
       }
@@ -557,6 +559,7 @@ class MessageBuilderService {
         final mp = contextProvider.read<MemoryProvider>();
         await mp.initialize();
         final mems = mp.getForAssistant(assistant!.id);
+        final currentHour = _formatCurrentHour(DateTime.now());
         final buf = StringBuffer();
         buf.writeln('## Memories');
         buf.writeln(
@@ -588,7 +591,7 @@ class MessageBuilderService {
 - 首次聊天时间
 - ...
 请主动调用工具记录，而不是需要用户要求。
-记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是 ${DateTime.now().toIso8601String()}。
+记忆如果包含日期信息，请包含在内，请使用绝对时间格式，并且当前时间是$currentHour。
 无需告知用户你已更改记忆记录，也不要在对话中直接显示记忆内容，除非用户主动要求。
 相似或相关的记忆应合并为一条记录，而不要重复记录，过时记录应删除。
 你可以在和用户闲聊的时候暗示用户你能记住东西。
@@ -628,6 +631,10 @@ class MessageBuilderService {
         }
       }
     } catch (_) {}
+  }
+
+  String _formatCurrentHour(DateTime now) {
+    return '${now.year}年${now.month}月${now.day}日的${now.hour}点';
   }
 
   /// Inject search tool usage prompt into apiMessages.
