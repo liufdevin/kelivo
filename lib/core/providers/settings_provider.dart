@@ -1953,6 +1953,8 @@ class SettingsProvider extends ChangeNotifier {
     if (!selectedFile.isAbsolute) {
       if (selection.baseDirectory != null) {
         addPath(_joinPath(selection.baseDirectory!, path));
+        final baseParent = File(selection.baseDirectory!).parent.path;
+        addPath(_joinPath(baseParent, path));
       }
       addPath(_joinPath(Directory.current.path, path));
     }
