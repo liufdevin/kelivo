@@ -1750,6 +1750,8 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
           return 'Gemini';
         case ProviderKind.claude:
           return 'Claude';
+        case ProviderKind.dify:
+          return 'Dify';
         case ProviderKind.openai:
           return 'OpenAI';
       }
@@ -1887,6 +1889,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 _providerKindTile(ctx, ProviderKind.openai, label: 'OpenAI'),
                 _providerKindTile(ctx, ProviderKind.google, label: 'Gemini'),
                 _providerKindTile(ctx, ProviderKind.claude, label: 'Claude'),
+                _providerKindTile(ctx, ProviderKind.dify, label: 'Dify'),
               ],
             ),
           ),

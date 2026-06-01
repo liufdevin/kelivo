@@ -133,6 +133,22 @@ List<_ImportResult> _decodeChatBoxJson(BuildContext context, String s) {
       out.add(_ImportResult(key, cfg));
     }
   }
+  // Dify
+  final dify = providers['dify'] as Map?;
+  if (dify != null) {
+    final apiKey = (dify['apiKey'] ?? '').toString();
+    final baseUrl = (dify['baseUrl'] ?? '').toString();
+    final providedName = (dify['name'] ?? '').toString();
+    if (apiKey.trim().isNotEmpty) {
+      final name = providedName.isNotEmpty ? providedName : 'Dify';
+      final key = uniqueKey('Dify', name);
+      final cfg = ProviderConfig.defaultsFor(key, displayName: name).copyWith(
+        apiKey: apiKey,
+        baseUrl: baseUrl.isNotEmpty ? baseUrl : 'https://api.dify.ai/v1',
+      );
+      out.add(_ImportResult(key, cfg));
+    }
+  }
   return out;
 }
 
@@ -229,6 +245,17 @@ _ImportResult _decodeSingle(BuildContext context, String s) {
       proxyUsername: '',
       proxyPassword: '',
     );
+    return _ImportResult(key, cfg);
+  } else if (type == 'dify') {
+    final key = uniqueKey('Dify', name.isEmpty ? 'Dify' : name);
+    final cfg =
+        ProviderConfig.defaultsFor(
+          key,
+          displayName: name.isEmpty ? 'Dify' : name,
+        ).copyWith(
+          apiKey: apiKey,
+          baseUrl: baseUrl.isNotEmpty ? baseUrl : 'https://api.dify.ai/v1',
+        );
     return _ImportResult(key, cfg);
   } else {
     throw FormatException('Unknown provider type: $type');

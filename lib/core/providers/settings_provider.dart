@@ -87,6 +87,7 @@ class SettingsProvider extends ChangeNotifier {
     'SiliconFlow',
     'Gemini',
     'OpenRouter',
+    'Dify',
     'KelivoIN',
     'Tensdaq',
     'DeepSeek',
@@ -4162,7 +4163,7 @@ class _SocksProxyHttpOverrides extends HttpOverrides {
   }
 }
 
-enum ProviderKind { openai, google, claude }
+enum ProviderKind { openai, google, claude, dify }
 
 // Background rendering mode for chat message bubbles
 enum ChatMessageBackgroundStyle { defaultStyle, frosted, solid }
@@ -4404,6 +4405,9 @@ class ProviderConfig {
     if (k.contains('claude') || k.contains('anthropic')) {
       return ProviderKind.claude;
     }
+    if (k.contains('dify')) {
+      return ProviderKind.dify;
+    }
     return ProviderKind.openai;
   }
 
@@ -4424,6 +4428,7 @@ class ProviderConfig {
       return 'https://api.x.ai/v1';
     }
     if (k.contains('deepseek')) return 'https://api.deepseek.com/v1';
+    if (k.contains('dify')) return 'https://api.dify.ai/v1';
     if (RegExp(r'zhipu|智谱|glm').hasMatch(k)) {
       return 'https://open.bigmodel.cn/api/paas/v4';
     }
@@ -4487,6 +4492,34 @@ class ProviderConfig {
           models: const [],
           cachedModels: const [],
           modelOverrides: const {},
+          proxyEnabled: false,
+          proxyHost: '',
+          proxyPort: '8080',
+          proxyUsername: '',
+          proxyPassword: '',
+          multiKeyEnabled: false,
+          apiKeys: const [],
+          keyManagement: const KeyManagementConfig(),
+          aihubmixAppCodeEnabled: false,
+        );
+      case ProviderKind.dify:
+        return ProviderConfig(
+          id: key,
+          enabled: defaultEnabled(key),
+          name: displayName ?? key,
+          apiKey: '',
+          baseUrl: _defaultBase(key),
+          providerType: ProviderKind.dify,
+          models: const ['dify-chat'],
+          cachedModels: const ['dify-chat'],
+          modelOverrides: const {
+            'dify-chat': {
+              'name': 'Dify Chat',
+              'type': 'chat',
+              'input': ['text'],
+              'output': ['text'],
+            },
+          },
           proxyEnabled: false,
           proxyHost: '',
           proxyPort: '8080',

@@ -126,6 +126,7 @@ class MessageGenerationService {
     );
     final includeToolMessages = switch (kind) {
       ProviderKind.openai || ProviderKind.claude || ProviderKind.google => true,
+      ProviderKind.dify => false,
     };
 
     onFileProcessingStarted?.call();

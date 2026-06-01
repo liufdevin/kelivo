@@ -363,6 +363,16 @@ class LocalLiteRtProvider extends BaseProvider {
   }
 }
 
+class DifyProvider extends BaseProvider {
+  @override
+  Future<List<ModelInfo>> listModels(ProviderConfig cfg) async {
+    return [
+      for (final id in cfg.models)
+        ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
+    ];
+  }
+}
+
 class ProviderManager {
   static String _effectiveApiKey(ProviderConfig cfg) {
     try {
@@ -412,6 +422,8 @@ class ProviderManager {
         return GoogleProvider();
       case ProviderKind.claude:
         return ClaudeProvider();
+      case ProviderKind.dify:
+        return DifyProvider();
       case ProviderKind.openai:
         return OpenAIProvider();
     }
@@ -494,6 +506,43 @@ class ProviderManager {
           throw HttpException('HTTP ${res.statusCode}: ${res.body}');
         }
         // For streaming, verify the response contains SSE data
+        if (useStream) {
+          final contentType = res.headers['content-type'] ?? '';
+          if (!contentType.contains('text/event-stream') && res.body.isEmpty) {
+            throw HttpException('Stream response expected but not received');
+          }
+        }
+        return;
+      } else if (kind == ProviderKind.dify) {
+        final base = cfg.baseUrl.endsWith('/')
+            ? cfg.baseUrl.substring(0, cfg.baseUrl.length - 1)
+            : cfg.baseUrl;
+        final url = Uri.parse(
+          base.endsWith('/chat-messages') ? base : '$base/chat-messages',
+        );
+        final body = {
+          'inputs': <String, dynamic>{},
+          'query': 'hello',
+          'response_mode': useStream ? 'streaming' : 'blocking',
+          'user': 'kelivo-test',
+        };
+        final extra = _customBody(cfg, modelId);
+        if (extra.isNotEmpty) (body as Map<String, dynamic>).addAll(extra);
+        body['response_mode'] = useStream ? 'streaming' : 'blocking';
+        final headers = <String, String>{
+          'Authorization': 'Bearer ${_effectiveApiKey(cfg)}',
+          'Content-Type': 'application/json',
+          'Accept': useStream ? 'text/event-stream' : 'application/json',
+        };
+        headers.addAll(_customHeaders(cfg, modelId));
+        final res = await client.post(
+          url,
+          headers: headers,
+          body: jsonEncode(body),
+        );
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          throw HttpException('HTTP ${res.statusCode}: ${res.body}');
+        }
         if (useStream) {
           final contentType = res.headers['content-type'] ?? '';
           if (!contentType.contains('text/event-stream') && res.body.isEmpty) {

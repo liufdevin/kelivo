@@ -34,11 +34,13 @@ part 'providers/google_common.dart';
 part 'providers/google_gemini.dart';
 part 'providers/google_vertex.dart';
 part 'providers/claude_official.dart';
+part 'providers/dify_chat.dart';
 
 class ChatApiService {
   static const String _aihubmixAppCode = 'ZKRT3588';
   static final Map<String, CancelToken> _activeCancelTokens =
       <String, CancelToken>{};
+  static final Map<String, String> _difyConversationIds = <String, String>{};
 
   static void cancelRequest(String requestId) {
     final key = requestId.trim();
@@ -475,6 +477,16 @@ class ChatApiService {
             extraBody: extraBody,
             stream: stream,
           );
+        } else if (kind == ProviderKind.dify) {
+          yield* _sendDifyChatStream(
+            client,
+            config,
+            modelId,
+            safeMessages,
+            extraHeaders: extraHeaders,
+            extraBody: extraBody,
+            stream: stream,
+          );
         } else if (kind == ProviderKind.google) {
           final isVertex = config.vertexAI == true;
           final isVertexClaude =
@@ -785,6 +797,23 @@ class ChatApiService {
           }
           return '';
         }
+      } else if (kind == ProviderKind.dify) {
+        final stream = _sendDifyChatStream(
+          client,
+          config,
+          modelId,
+          [
+            {'role': 'user', 'content': safePrompt},
+          ],
+          extraHeaders: extraHeaders,
+          extraBody: extraBody,
+          stream: false,
+        );
+        final buffer = StringBuffer();
+        await for (final chunk in stream) {
+          buffer.write(chunk.content);
+        }
+        return buffer.toString();
       } else if (kind == ProviderKind.claude) {
         final base = config.baseUrl.endsWith('/')
             ? config.baseUrl.substring(0, config.baseUrl.length - 1)

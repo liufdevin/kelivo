@@ -20,6 +20,9 @@ String encodeProviderConfig(ProviderConfig cfg) {
     case ProviderKind.claude:
       type = 'claude';
       break;
+    case ProviderKind.dify:
+      type = 'dify';
+      break;
     case ProviderKind.openai:
       type = 'openai';
   }

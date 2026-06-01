@@ -116,6 +116,7 @@ class ToolHandlerService {
         break;
       case ProviderKind.openai:
       case ProviderKind.claude:
+      case ProviderKind.dify:
         allowed = {
           'type',
           'description',

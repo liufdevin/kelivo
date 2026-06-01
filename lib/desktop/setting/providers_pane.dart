@@ -295,6 +295,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
       (name: l10n.providersPageSiliconFlowName, key: 'SiliconFlow'),
       (name: 'Gemini', key: 'Gemini'),
       (name: 'OpenRouter', key: 'OpenRouter'),
+      (name: 'Dify', key: 'Dify'),
       (name: 'KelivoIN', key: 'KelivoIN'),
       (name: 'Tensdaq', key: 'Tensdaq'),
       (name: 'DeepSeek', key: 'DeepSeek'),
@@ -4095,6 +4096,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
       (ProviderKind.openai, 'OpenAI'),
       (ProviderKind.google, 'Google'),
       (ProviderKind.claude, 'Claude'),
+      (ProviderKind.dify, 'Dify'),
     ];
     _entry = OverlayEntry(
       builder: (ctx) {
@@ -4179,6 +4181,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
       ProviderKind.openai => 'OpenAI',
       ProviderKind.google => 'Google',
       ProviderKind.claude => 'Claude',
+      ProviderKind.dify => 'Dify',
     };
     return CompositedTransformTarget(
       link: _link,

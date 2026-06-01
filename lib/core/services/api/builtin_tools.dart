@@ -291,6 +291,8 @@ abstract class BuiltInToolsHelper {
         return true;
       case ProviderKind.claude:
         return isClaudeBuiltInSearchSupportedModel(upstreamModelId);
+      case ProviderKind.dify:
+        return false;
       case ProviderKind.openai:
         if (isGrokModel(upstreamModelId)) return true;
         if (cfg.useResponseApi == true) {
@@ -435,6 +437,8 @@ abstract class BuiltInToolsHelper {
         return true;
       case ProviderKind.claude:
         return true;
+      case ProviderKind.dify:
+        return false;
       case ProviderKind.openai:
         // OpenAI requires Responses API, or Grok models
         if (useResponseApi &&

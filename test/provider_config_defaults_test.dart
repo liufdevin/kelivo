@@ -13,5 +13,16 @@ void main() {
       expect(cfg.cachedModels, isEmpty);
       expect(cfg.modelOverrides, isEmpty);
     });
+
+    test('Dify defaults to native chat app endpoint and logical model', () {
+      final cfg = ProviderConfig.defaultsFor('Dify');
+
+      expect(cfg.enabled, isFalse);
+      expect(cfg.apiKey, isEmpty);
+      expect(cfg.baseUrl, 'https://api.dify.ai/v1');
+      expect(cfg.providerType, ProviderKind.dify);
+      expect(cfg.models, ['dify-chat']);
+      expect(cfg.modelOverrides['dify-chat'], containsPair('type', 'chat'));
+    });
   });
 }
