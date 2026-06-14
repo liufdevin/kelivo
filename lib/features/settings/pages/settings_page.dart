@@ -23,6 +23,7 @@ import 'storage_space_page.dart';
 import '../../stats/pages/stats_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
+import 'package:Kelivo/theme/app_font_weights.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -97,7 +98,7 @@ class SettingsPage extends StatelessWidget {
         text,
         style: TextStyle(
           fontSize: 13,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppFontWeights.semibold,
           color: cs.onSurface.withValues(alpha: 0.8),
         ),
       ),
@@ -574,7 +575,7 @@ Widget _iosNavRow(
                     style: TextStyle(
                       fontSize: 15,
                       color: c,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: AppFontWeights.medium,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

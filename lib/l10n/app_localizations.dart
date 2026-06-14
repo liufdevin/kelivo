@@ -157,13 +157,13 @@ abstract class AppLocalizations {
   /// No description provided for @settingsPageDisplay.
   ///
   /// In en, this message translates to:
-  /// **'Display'**
+  /// **'Preferences'**
   String get settingsPageDisplay;
 
   /// No description provided for @settingsPageDisplaySubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Appearance and text size'**
+  /// **'Appearance, behavior, and interaction preferences'**
   String get settingsPageDisplaySubtitle;
 
   /// No description provided for @settingsPageAssistant.
@@ -3413,6 +3413,18 @@ abstract class AppLocalizations {
   /// **'Path-style addressing'**
   String get backupPageS3PathStyle;
 
+  /// No description provided for @backupPageUserAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'User-Agent'**
+  String get backupPageUserAgent;
+
+  /// No description provided for @backupPageUserAgentHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get backupPageUserAgentHint;
+
   /// No description provided for @backupPageSave.
   ///
   /// In en, this message translates to:
@@ -3701,6 +3713,30 @@ abstract class AppLocalizations {
   /// **'Enter message…'**
   String get messageEditPageHint;
 
+  /// No description provided for @userMessageEditSaveOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Save Only'**
+  String get userMessageEditSaveOnly;
+
+  /// No description provided for @userMessageEditUnsupportedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'This content does not support editing'**
+  String get userMessageEditUnsupportedSnackbar;
+
+  /// No description provided for @userMessageEditOverwriteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notice'**
+  String get userMessageEditOverwriteTitle;
+
+  /// No description provided for @userMessageEditOverwriteContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing will overwrite the existing input. Overwrite it?'**
+  String get userMessageEditOverwriteContent;
+
   /// No description provided for @selectCopyPageTitle.
   ///
   /// In en, this message translates to:
@@ -3935,6 +3971,12 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get messageMoreSheetShare;
 
+  /// No description provided for @messageMoreSheetSelectMessages.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Messages'**
+  String get messageMoreSheetSelectMessages;
+
   /// No description provided for @messageMoreSheetCreateBranch.
   ///
   /// In en, this message translates to:
@@ -3988,6 +4030,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Extreme Reasoning'**
   String get reasoningBudgetSheetXhigh;
+
+  /// No description provided for @reasoningBudgetSheetMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Maximum Reasoning'**
+  String get reasoningBudgetSheetMax;
 
   /// No description provided for @reasoningBudgetSheetTitle.
   ///
@@ -4247,6 +4295,12 @@ abstract class AppLocalizations {
   /// **'Write Clipboard'**
   String get chatMessageWidgetWriteClipboard;
 
+  /// No description provided for @chatMessageWidgetSpeakingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Speaking:'**
+  String get chatMessageWidgetSpeakingTitle;
+
   /// No description provided for @chatMessageWidgetSpeakText.
   ///
   /// In en, this message translates to:
@@ -4336,6 +4390,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Thinking content'**
   String get chatSelectionThinkingContent;
+
+  /// No description provided for @chatSelectionDeleteSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Selected'**
+  String get chatSelectionDeleteSelected;
+
+  /// No description provided for @chatSelectionSelectMessagesToDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select messages to delete'**
+  String get chatSelectionSelectMessagesToDelete;
+
+  /// No description provided for @chatSelectionDeleteSelectedConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} selected version(s)? This cannot be undone.'**
+  String chatSelectionDeleteSelectedConfirm(int count);
+
+  /// No description provided for @chatSelectionDeleteSelectedAllVersionsConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all versions of {count} selected message(s)? This cannot be undone.'**
+  String chatSelectionDeleteSelectedAllVersionsConfirm(int count);
 
   /// No description provided for @messageExportSheetAssistant.
   ///
@@ -5380,6 +5458,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Used for extracting text and descriptions from images'**
   String get defaultModelPageOcrModelSubtitle;
+
+  /// No description provided for @defaultModelPageOcrModelRequiresImageInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a model tagged with image input for OCR'**
+  String get defaultModelPageOcrModelRequiresImageInput;
 
   /// No description provided for @defaultModelPagePromptLabel.
   ///
@@ -7994,6 +8078,12 @@ abstract class AppLocalizations {
   /// **'Chat Background Overlay Opacity'**
   String get displaySettingsPageChatBackgroundMaskTitle;
 
+  /// No description provided for @displaySettingsPageChatInputBackgroundOpacityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Input Box Background Opacity'**
+  String get displaySettingsPageChatInputBackgroundOpacityTitle;
+
   /// No description provided for @displaySettingsPageThemeSettingsTitle.
   ///
   /// In en, this message translates to:
@@ -8888,6 +8978,18 @@ abstract class AppLocalizations {
   /// **'Serper Google Search API. Fast web results with optional country, language, time, and page filters.'**
   String get searchProviderSerperDescription;
 
+  /// No description provided for @searchServiceNameQuerit.
+  ///
+  /// In en, this message translates to:
+  /// **'Querit'**
+  String get searchServiceNameQuerit;
+
+  /// No description provided for @searchProviderQueritDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Querit Search API for LLM applications. Returns real-time web results with site, time, country, and language filters.'**
+  String get searchProviderQueritDescription;
+
   /// No description provided for @searchServicesDialogCountryOptional.
   ///
   /// In en, this message translates to:
@@ -8917,6 +9019,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Page must be a positive integer.'**
   String get searchServicesDialogPageInvalid;
+
+  /// No description provided for @searchServicesDialogSitesIncludeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Include sites (optional)'**
+  String get searchServicesDialogSitesIncludeOptional;
+
+  /// No description provided for @searchServicesDialogSitesExcludeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude sites (optional)'**
+  String get searchServicesDialogSitesExcludeOptional;
+
+  /// No description provided for @searchServicesDialogTimeRangeOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Time range (optional)'**
+  String get searchServicesDialogTimeRangeOptional;
+
+  /// No description provided for @searchServicesDialogCountriesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Countries (optional)'**
+  String get searchServicesDialogCountriesOptional;
+
+  /// No description provided for @searchServicesDialogLanguagesOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Languages (optional)'**
+  String get searchServicesDialogLanguagesOptional;
+
+  /// No description provided for @searchServicesDialogSitesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'example.com, docs.example.com'**
+  String get searchServicesDialogSitesHint;
+
+  /// No description provided for @searchServicesDialogTimeRangeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'d7'**
+  String get searchServicesDialogTimeRangeHint;
+
+  /// No description provided for @searchServicesDialogCountriesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'united states, japan'**
+  String get searchServicesDialogCountriesHint;
+
+  /// No description provided for @searchServicesDialogLanguagesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'english, japanese'**
+  String get searchServicesDialogLanguagesHint;
 
   /// No description provided for @generationInterrupted.
   ///
@@ -9674,6 +9830,12 @@ abstract class AppLocalizations {
   /// **'Image OCR'**
   String get chatInputBarOcrTooltip;
 
+  /// No description provided for @providerDetailPageMultiSelectButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-select'**
+  String get providerDetailPageMultiSelectButton;
+
   /// No description provided for @providerDetailPageBatchDetectButton.
   ///
   /// In en, this message translates to:
@@ -9703,6 +9865,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Detection failed'**
   String get providerDetailPageDetectFailed;
+
+  /// No description provided for @providerDetailPageDeleteSelectedModelsButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get providerDetailPageDeleteSelectedModelsButton;
+
+  /// No description provided for @providerDetailPageDeleteSelectedModelsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete selected models'**
+  String get providerDetailPageDeleteSelectedModelsTooltip;
+
+  /// No description provided for @providerDetailPageDeleteSelectedModelsConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {count} selected model(s)? This cannot be undone.'**
+  String providerDetailPageDeleteSelectedModelsConfirm(int count);
+
+  /// No description provided for @providerDetailPageSelectedModelsDeletedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {count} model(s)'**
+  String providerDetailPageSelectedModelsDeletedSnackbar(int count);
+
+  /// No description provided for @providerDetailPageDeleteAllModelsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all models'**
+  String get providerDetailPageDeleteAllModelsTooltip;
 
   /// No description provided for @providerDetailPageDeleteAllModelsWarning.
   ///
@@ -10361,7 +10553,7 @@ abstract class AppLocalizations {
   /// No description provided for @askUserCardQuestionCount.
   ///
   /// In en, this message translates to:
-  /// **'Ask {count} questions'**
+  /// **'{count, plural, =1{Ask 1 question} other{Ask {count} questions}}'**
   String askUserCardQuestionCount(int count);
 
   /// No description provided for @tokenDetailPromptTokens.

@@ -10,6 +10,7 @@ import '../icons/lucide_adapter.dart' as lucide;
 import '../utils/brand_assets.dart';
 import '../utils/model_grouping.dart';
 import '../shared/widgets/model_tag_wrap.dart';
+import '../theme/app_font_weights.dart';
 
 Future<void> showModelFetchDialog(
   BuildContext context, {
@@ -189,9 +190,9 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                             '${widget.providerDisplayName} ${l10n.providerDetailPageModelsTab}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: AppFontWeights.emphasis,
                             ),
                           ),
                         ),
@@ -523,9 +524,9 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                             g,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13.5,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: AppFontWeights.emphasis,
                             ),
                           ),
                         ),
@@ -640,7 +641,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                     m.displayName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5),
+                    style: TextStyle(fontSize: 13.5),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -790,7 +791,7 @@ class _BrandAvatar extends StatelessWidget {
         name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
         style: TextStyle(
           color: cs.primary,
-          fontWeight: FontWeight.w700,
+          fontWeight: AppFontWeights.emphasis,
           fontSize: size * 0.42,
         ),
       );

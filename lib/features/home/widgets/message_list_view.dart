@@ -40,6 +40,8 @@ typedef OnDeleteAllVersions =
 typedef OnForkConversation = Future<void> Function(ChatMessage message);
 typedef OnShareMessage =
     void Function(int messageIndex, List<ChatMessage> messages);
+typedef OnSelectMessages =
+    void Function(int messageIndex, List<ChatMessage> messages);
 typedef OnSpeakMessage = Future<void> Function(ChatMessage message);
 typedef OnSuggestionTap = void Function(String suggestion);
 typedef OnRecoveredAskUserAnswer =
@@ -116,6 +118,7 @@ class MessageListView extends StatefulWidget {
     this.onDeleteAllVersions,
     this.onForkConversation,
     this.onShareMessage,
+    this.onSelectMessages,
     this.onSpeakMessage,
     this.suggestions = const <String>[],
     this.onSuggestionTap,
@@ -183,6 +186,7 @@ class MessageListView extends StatefulWidget {
   final OnDeleteAllVersions? onDeleteAllVersions;
   final OnForkConversation? onForkConversation;
   final OnShareMessage? onShareMessage;
+  final OnSelectMessages? onSelectMessages;
   final OnSpeakMessage? onSpeakMessage;
   final List<String> suggestions;
   final OnSuggestionTap? onSuggestionTap;
@@ -212,6 +216,18 @@ class _MessageListViewState extends State<MessageListView> {
   DateTime? _lastHistoryLoadAt;
   Timer? _scrollIdleTimer;
   bool _pointerScrollActivityCheckScheduled = false;
+
+  bool get _isDesktopPlatform =>
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.linux;
+
+  ScrollViewKeyboardDismissBehavior get _keyboardDismissBehavior {
+    if (_isDesktopPlatform) {
+      return ScrollViewKeyboardDismissBehavior.manual;
+    }
+    return ScrollViewKeyboardDismissBehavior.onDrag;
+  }
 
   @override
   void dispose() {
@@ -276,7 +292,7 @@ class _MessageListViewState extends State<MessageListView> {
                     (widget.isPinnedIndicatorActive ? 12 : 0),
               ),
               itemCount: widget.messages.length,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              keyboardDismissBehavior: _keyboardDismissBehavior,
               itemBuilder: (context, index) {
                 if (index < 0 || index >= widget.messages.length) {
                   return const SizedBox.shrink();
@@ -805,7 +821,7 @@ class _MessageListViewState extends State<MessageListView> {
       onSpeak: message.role == 'assistant'
           ? () => widget.onSpeakMessage?.call(message)
           : null,
-      onEdit: (message.role == 'user' || message.role == 'assistant')
+      onEdit: (message.role == 'assistant' || message.role == 'user')
           ? () => widget.onEditMessage?.call(message)
           : null,
       onContinueImageGeneration: message.role == 'assistant'
@@ -830,6 +846,8 @@ class _MessageListViewState extends State<MessageListView> {
           await widget.onForkConversation?.call(message);
         } else if (action == MessageMoreAction.share) {
           widget.onShareMessage?.call(index, widget.messages);
+        } else if (action == MessageMoreAction.selectMessages) {
+          widget.onSelectMessages?.call(index, widget.messages);
         }
       },
       toolParts: message.role == 'assistant'

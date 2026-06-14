@@ -38,6 +38,7 @@ import '../../../core/services/haptics.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/menu_anchor.dart';
 import '../../../shared/widgets/emoji_text.dart';
+import '../../../theme/app_font_weights.dart';
 import '../../../core/providers/tag_provider.dart';
 import '../../assistant/widgets/assistant_select_sheet.dart';
 import '../utils/title_generation_sanitizer.dart';
@@ -351,7 +352,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         label,
                         style: TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: AppFontWeights.medium,
                           color: color ?? cs.onSurface,
                         ),
                         maxLines: 1,
@@ -536,7 +537,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(
                 l10n.sideDrawerMenuDelete,
-                style: const TextStyle(color: Colors.red),
+                style: TextStyle(color: Colors.red),
               ),
             ),
           ],
@@ -919,7 +920,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             style: TextStyle(
               fontSize: 12,
               color: textBase.withValues(alpha: 0.5),
-              fontWeight: FontWeight.w500,
+              fontWeight: AppFontWeights.medium,
             ),
           ),
         ),
@@ -940,12 +941,12 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         : Colors.transparent);
               final titleStyle = TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: AppFontWeights.medium,
                 color: textBase,
               );
               final titleHighlight = TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: AppFontWeights.medium,
                 color: textBase,
                 backgroundColor: highlightColor,
               );
@@ -1141,7 +1142,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: _isDesktop ? 13.5 : 14.5,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: AppFontWeights.emphasis,
                           color: textBase.withValues(alpha: 0.92),
                         ),
                       ),
@@ -1161,7 +1162,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                         l10n.backupReminderSidebarAction,
                         style: TextStyle(
                           fontSize: _isDesktop ? 12.5 : 13,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: AppFontWeights.emphasis,
                           color: cs.primary,
                         ),
                       ),
@@ -1282,7 +1283,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                     style: TextStyle(
                       color: cs.primary,
                       fontSize: size * 0.42,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: AppFontWeights.emphasis,
                     ),
                   ),
                 ),
@@ -1320,7 +1321,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           style: TextStyle(
             color: cs.primary,
             fontSize: size * 0.42,
-            fontWeight: FontWeight.w700,
+            fontWeight: AppFontWeights.emphasis,
           ),
         ),
       );
@@ -1902,7 +1903,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 11.5,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: AppFontWeights.medium,
                                           color: textBase.withValues(
                                             alpha: 0.52,
                                           ),
@@ -1990,7 +1991,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: _isDesktop ? 14 : 15,
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: AppFontWeights.medium,
                                           color: textBase,
                                         ),
                                       ),
@@ -2136,7 +2137,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
                                       fontSize: _isDesktop ? 14 : 16,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: AppFontWeights.emphasis,
                                       color: textBase,
                                     ),
                                   ),
@@ -2371,9 +2372,9 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: AppFontWeights.medium,
                     ),
                   ),
                 ),
@@ -2691,7 +2692,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       color: validGrapheme(value)
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ),
@@ -2766,7 +2767,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       color: valid(value)
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ),
@@ -2936,7 +2937,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           color: valid(value)
                               ? cs.primary
                               : cs.onSurface.withValues(alpha: 0.38),
-                          fontWeight: FontWeight.w600,
+                          fontWeight: AppFontWeights.semibold,
                         ),
                       ),
                     ),
@@ -3088,7 +3089,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                       color: valid(value)
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ),
@@ -3184,8 +3185,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
             },
           );
         },
-        onReorder: (oldIndex, newIndex) async {
-          if (newIndex > oldIndex) newIndex -= 1;
+        onReorderItem: (oldIndex, newIndex) async {
           try {
             await context.read<AssistantProvider>().reorderAssistantsWithin(
               subsetIds: subsetIds,
@@ -3316,8 +3316,8 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             Expanded(
                               child: Text(
                                 title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                style: TextStyle(
+                                  fontWeight: AppFontWeights.emphasis,
                                 ),
                               ),
                             ),
@@ -3374,7 +3374,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                           AppLocalizations.of(context)!.sideDrawerPinnedLabel,
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: AppFontWeights.semibold,
                             color: cs.primary,
                           ),
                         )
@@ -3439,7 +3439,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
                             textAlign: TextAlign.left,
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: AppFontWeights.semibold,
                               color: cs.primary,
                             ),
                           )
@@ -3610,7 +3610,7 @@ class _ChatTileState extends State<_ChatTile> {
                     style: TextStyle(
                       fontSize: _isDesktop ? 14 : 15,
                       color: widget.textColor,
-                      fontWeight: FontWeight.w400,
+                      fontWeight: AppFontWeights.regular,
                     ),
                   ),
                 ),
@@ -3706,7 +3706,7 @@ class _GroupHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: AppFontWeights.emphasis,
                   color: textBase,
                 ),
               ),
@@ -3832,10 +3832,11 @@ class _DesktopSidebarTabsState extends State<_DesktopSidebarTabs> {
                                         (Theme.of(
                                                   context,
                                                 ).textTheme.titleSmall ??
-                                                const TextStyle())
+                                                TextStyle())
                                             .copyWith(
                                               fontSize: 13.5,
-                                              fontWeight: FontWeight.w700,
+                                              fontWeight:
+                                                  AppFontWeights.emphasis,
                                               color: idx == 0
                                                   ? cs.primary
                                                   : widget.textColor.withValues(
@@ -3888,10 +3889,11 @@ class _DesktopSidebarTabsState extends State<_DesktopSidebarTabs> {
                                         (Theme.of(
                                                   context,
                                                 ).textTheme.titleSmall ??
-                                                const TextStyle())
+                                                TextStyle())
                                             .copyWith(
                                               fontSize: 13.5,
-                                              fontWeight: FontWeight.w700,
+                                              fontWeight:
+                                                  AppFontWeights.emphasis,
                                               color: idx == 1
                                                   ? cs.primary
                                                   : widget.textColor.withValues(
@@ -4098,7 +4100,7 @@ class _AssistantInlineTileState extends State<_AssistantInlineTile> {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: _isDesktop ? 14 : 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: AppFontWeights.medium,
                   color: widget.textColor,
                 ),
               ),

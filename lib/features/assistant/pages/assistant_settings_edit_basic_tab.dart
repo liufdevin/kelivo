@@ -102,7 +102,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
             av,
             style: TextStyle(
               color: cs.primary,
-              fontWeight: FontWeight.w700,
+              fontWeight: AppFontWeights.emphasis,
               fontSize: size * 0.42,
             ),
           );
@@ -114,7 +114,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
               : 'A'),
           style: TextStyle(
             color: cs.primary,
-            fontWeight: FontWeight.w700,
+            fontWeight: AppFontWeights.emphasis,
             fontSize: size * 0.42,
           ),
         );
@@ -302,9 +302,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                         l10n.assistantEditChatModelTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: AppFontWeights.semibold,
                         ),
                       ),
                     ),
@@ -395,9 +395,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                               display,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: AppFontWeights.semibold,
                               ),
                             ),
                           ),
@@ -572,9 +572,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                     Expanded(
                       child: Text(
                         l10n.assistantEditChatBackgroundTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: AppFontWeights.semibold,
                         ),
                       ),
                     ),
@@ -636,7 +636,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                               l10n.assistantEditChooseImageButton,
                               style: TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: AppFontWeights.semibold,
                                 color: textColor,
                               ),
                             ),
@@ -717,9 +717,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     text,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: AppFontWeights.medium,
                     ),
                   ),
                 ),
@@ -848,9 +848,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                         Expanded(
                           child: Text(
                             'Temperature',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: AppFontWeights.semibold,
                             ),
                           ),
                         ),
@@ -961,9 +961,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                         Expanded(
                           child: Text(
                             'Top P',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: AppFontWeights.semibold,
                             ),
                           ),
                         ),
@@ -1077,9 +1077,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                         Expanded(
                           child: Text(
                             l10n.assistantEditContextMessagesTitle,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: AppFontWeights.semibold,
                             ),
                           ),
                         ),
@@ -1219,9 +1219,9 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                       child: Center(
                         child: Text(
                           l10n.assistantEditMaxTokensTitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: AppFontWeights.semibold,
                           ),
                         ),
                       ),
@@ -1247,7 +1247,7 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                           style: TextStyle(
                             color: color,
                             fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: AppFontWeights.semibold,
                           ),
                         );
                       },
@@ -1466,7 +1466,7 @@ class _SliderTileNew extends StatelessWidget {
                       tooltipBackgroundColor: cs.primary,
                       tooltipTextStyle: TextStyle(
                         color: cs.onPrimary,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: AppFontWeights.semibold,
                       ),
                       thumbStrokeColor: Colors.transparent,
                       thumbStrokeWidth: 0,
@@ -1600,7 +1600,7 @@ class _ValuePill extends StatelessWidget {
             text,
             style: TextStyle(
               color: cs.primary,
-              fontWeight: FontWeight.w700,
+              fontWeight: AppFontWeights.emphasis,
               fontSize: 12,
             ),
           ),
@@ -1863,7 +1863,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                       color: validGrapheme(value)
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ),
@@ -1937,7 +1937,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                       color: valid(value)
                           ? cs.primary
                           : cs.onSurface.withValues(alpha: 0.38),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppFontWeights.semibold,
                     ),
                   ),
                 ),
@@ -2102,7 +2102,7 @@ extension _AssistantAvatarActions on _BasicSettingsTabState {
                           color: valid(value)
                               ? cs.primary
                               : cs.onSurface.withValues(alpha: 0.38),
-                          fontWeight: FontWeight.w600,
+                          fontWeight: AppFontWeights.semibold,
                         ),
                       ),
                     ),

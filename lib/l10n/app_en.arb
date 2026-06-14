@@ -8,8 +8,8 @@
   "settingsPageWarningMessage": "Some services are not configured; features may be limited.",
   "settingsPageGeneralSection": "General",
   "settingsPageColorMode": "Color Mode",
-  "settingsPageDisplay": "Display",
-  "settingsPageDisplaySubtitle": "Appearance and text size",
+  "settingsPageDisplay": "Preferences",
+  "settingsPageDisplaySubtitle": "Appearance, behavior, and interaction preferences",
   "settingsPageAssistant": "Assistant",
   "settingsPageAssistantSubtitle": "Default assistant and style",
   "settingsPageModelsServicesSection": "Models & Services",
@@ -728,6 +728,8 @@
   "backupPageS3SessionToken": "Session Token (Optional)",
   "backupPageS3Prefix": "Prefix",
   "backupPageS3PathStyle": "Path-style addressing",
+  "backupPageUserAgent": "User-Agent",
+  "backupPageUserAgentHint": "Optional",
   "backupPageSave": "Save",
   "backupPageBackupNow": "Backup Now",
   "backupPageLocalBackup": "Local Backup",
@@ -783,6 +785,10 @@
   "messageEditPageSave": "Save",
   "messageEditPageSaveAndSend": "Save & Send",
   "messageEditPageHint": "Enter message…",
+  "userMessageEditSaveOnly": "Save Only",
+  "userMessageEditUnsupportedSnackbar": "This content does not support editing",
+  "userMessageEditOverwriteTitle": "Notice",
+  "userMessageEditOverwriteContent": "Editing will overwrite the existing input. Overwrite it?",
   "selectCopyPageTitle": "Select & Copy",
   "selectCopyPageCopyAll": "Copy All",
   "selectCopyPageCopiedAll": "Copied all",
@@ -822,6 +828,7 @@
   "messageMoreSheetNotImplemented": "Not yet implemented",
   "messageMoreSheetEdit": "Edit",
   "messageMoreSheetShare": "Share",
+  "messageMoreSheetSelectMessages": "Select Messages",
   "messageMoreSheetCreateBranch": "Create Branch",
   "messageMoreSheetDelete": "Delete This Version",
   "messageMoreSheetDeleteAllVersions": "Delete All Versions",
@@ -831,6 +838,7 @@
   "reasoningBudgetSheetMedium": "Medium Reasoning",
   "reasoningBudgetSheetHeavy": "Heavy Reasoning",
   "reasoningBudgetSheetXhigh": "Extreme Reasoning",
+  "reasoningBudgetSheetMax": "Maximum Reasoning",
   "reasoningBudgetSheetTitle": "Reasoning Chain Strength",
   "reasoningBudgetSheetCurrentLevel": "Current Level: {level}",
   "@reasoningBudgetSheetCurrentLevel": {
@@ -923,6 +931,7 @@
   "chatMessageWidgetBuiltinSearch": "Built-in Search",
   "chatMessageWidgetReadClipboard": "Read Clipboard",
   "chatMessageWidgetWriteClipboard": "Write Clipboard",
+  "chatMessageWidgetSpeakingTitle": "Speaking:",
   "chatMessageWidgetSpeakText": "Speaking: {text}",
   "@chatMessageWidgetSpeakText": {
     "placeholders": {
@@ -973,6 +982,24 @@
   "chatSelectionExportImage": "Image",
   "chatSelectionThinkingTools": "Thinking tools",
   "chatSelectionThinkingContent": "Thinking content",
+  "chatSelectionDeleteSelected": "Delete Selected",
+  "chatSelectionSelectMessagesToDelete": "Please select messages to delete",
+  "chatSelectionDeleteSelectedConfirm": "Delete {count} selected version(s)? This cannot be undone.",
+  "@chatSelectionDeleteSelectedConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatSelectionDeleteSelectedAllVersionsConfirm": "Delete all versions of {count} selected message(s)? This cannot be undone.",
+  "@chatSelectionDeleteSelectedAllVersionsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "messageExportSheetAssistant": "Assistant",
   "messageExportSheetDefaultTitle": "New Chat",
   "messageExportSheetExporting": "Exporting…",
@@ -1226,6 +1253,7 @@
   "defaultModelPageTranslateModelSubtitle": "Used for translating message content; prefer fast & accurate models",
   "defaultModelPageOcrModelTitle": "OCR Model",
   "defaultModelPageOcrModelSubtitle": "Used for extracting text and descriptions from images",
+  "defaultModelPageOcrModelRequiresImageInput": "Select a model tagged with image input for OCR",
   "defaultModelPagePromptLabel": "Prompt",
   "defaultModelPageTitlePromptHint": "Enter prompt template for title summarization",
   "defaultModelPageSummaryPromptHint": "Enter prompt template for summary generation",
@@ -1826,6 +1854,7 @@
   "displaySettingsPageAutoScrollDisabledLabel": "Off",
   "displaySettingsPageChatFontSampleText": "This is a sample chat text",
   "displaySettingsPageChatBackgroundMaskTitle": "Chat Background Overlay Opacity",
+  "displaySettingsPageChatInputBackgroundOpacityTitle": "Input Box Background Opacity",
   "displaySettingsPageThemeSettingsTitle": "Theme Settings",
   "displaySettingsPageThemeColorTitle": "Theme Color",
   "desktopSettingsFontsTitle": "Fonts",
@@ -2023,6 +2052,8 @@
   "searchProviderBochaDescription": "Bocha web search API. Accurate web results with optional summaries.",
   "searchServiceNameSerper": "Serper",
   "searchProviderSerperDescription": "Serper Google Search API. Fast web results with optional country, language, time, and page filters.",
+  "searchServiceNameQuerit": "Querit",
+  "searchProviderQueritDescription": "Querit Search API for LLM applications. Returns real-time web results with site, time, country, and language filters.",
   "searchServiceNameGrok": "Grok",
   "searchProviderGrokDescription": "Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.",
   "searchServicesDialogCountryOptional": "Country/region (optional)",
@@ -2030,6 +2061,15 @@
   "searchServicesDialogTimeFilterOptional": "Time filter (optional)",
   "searchServicesDialogPageOptional": "Page (optional)",
   "searchServicesDialogPageInvalid": "Page must be a positive integer.",
+  "searchServicesDialogSitesIncludeOptional": "Include sites (optional)",
+  "searchServicesDialogSitesExcludeOptional": "Exclude sites (optional)",
+  "searchServicesDialogTimeRangeOptional": "Time range (optional)",
+  "searchServicesDialogCountriesOptional": "Countries (optional)",
+  "searchServicesDialogLanguagesOptional": "Languages (optional)",
+  "searchServicesDialogSitesHint": "example.com, docs.example.com",
+  "searchServicesDialogTimeRangeHint": "d7",
+  "searchServicesDialogCountriesHint": "united states, japan",
+  "searchServicesDialogLanguagesHint": "english, japanese",
   "generationInterrupted": "Generation interrupted",
   "localLiteRtModelTooLargeForDevice": "This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.",
   "titleForLocale": "New Chat",
@@ -2184,11 +2224,31 @@
   "messageWebViewRefreshTooltip": "Refresh",
   "messageWebViewForwardTooltip": "Forward",
   "chatInputBarOcrTooltip": "Image OCR",
+  "providerDetailPageMultiSelectButton": "Multi-select",
   "providerDetailPageBatchDetectButton": "Detect",
   "providerDetailPageBatchDetecting": "Detecting...",
   "providerDetailPageBatchDetectStart": "Start Detection",
   "providerDetailPageDetectSuccess": "Detection successful",
   "providerDetailPageDetectFailed": "Detection failed",
+  "providerDetailPageDeleteSelectedModelsButton": "Delete",
+  "providerDetailPageDeleteSelectedModelsTooltip": "Delete selected models",
+  "providerDetailPageDeleteSelectedModelsConfirm": "Delete {count} selected model(s)? This cannot be undone.",
+  "@providerDetailPageDeleteSelectedModelsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "providerDetailPageSelectedModelsDeletedSnackbar": "Deleted {count} model(s)",
+  "@providerDetailPageSelectedModelsDeletedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "providerDetailPageDeleteAllModelsTooltip": "Delete all models",
   "providerDetailPageDeleteAllModelsWarning": "This action cannot be undone.",
   "requestLogSettingTitle": "Request Logging",
   "requestLogSettingSubtitle": "When enabled, request/response details are written to logs/logs.txt (rotated daily).",
@@ -2347,7 +2407,7 @@
   "askUserCardAnswered": "Answered",
   "askUserCardInactive": "This question is no longer active. Regenerate or continue the conversation.",
   "askUserCardCancelled": "Question cancelled",
-  "askUserCardQuestionCount": "Ask {count} questions",
+  "askUserCardQuestionCount": "{count, plural, =1{Ask 1 question} other{Ask {count} questions}}",
   "@askUserCardQuestionCount": {
     "placeholders": {
       "count": {

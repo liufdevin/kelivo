@@ -37,10 +37,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageColorMode => 'Color Mode';
 
   @override
-  String get settingsPageDisplay => 'Display';
+  String get settingsPageDisplay => 'Preferences';
 
   @override
-  String get settingsPageDisplaySubtitle => 'Appearance and text size';
+  String get settingsPageDisplaySubtitle =>
+      'Appearance, behavior, and interaction preferences';
 
   @override
   String get settingsPageAssistant => 'Assistant';
@@ -1780,6 +1781,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageS3PathStyle => 'Path-style addressing';
 
   @override
+  String get backupPageUserAgent => 'User-Agent';
+
+  @override
+  String get backupPageUserAgentHint => 'Optional';
+
+  @override
   String get backupPageSave => 'Save';
 
   @override
@@ -1931,6 +1938,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messageEditPageHint => 'Enter message…';
 
   @override
+  String get userMessageEditSaveOnly => 'Save Only';
+
+  @override
+  String get userMessageEditUnsupportedSnackbar =>
+      'This content does not support editing';
+
+  @override
+  String get userMessageEditOverwriteTitle => 'Notice';
+
+  @override
+  String get userMessageEditOverwriteContent =>
+      'Editing will overwrite the existing input. Overwrite it?';
+
+  @override
   String get selectCopyPageTitle => 'Select & Copy';
 
   @override
@@ -2051,6 +2072,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get messageMoreSheetShare => 'Share';
 
   @override
+  String get messageMoreSheetSelectMessages => 'Select Messages';
+
+  @override
   String get messageMoreSheetCreateBranch => 'Create Branch';
 
   @override
@@ -2076,6 +2100,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reasoningBudgetSheetXhigh => 'Extreme Reasoning';
+
+  @override
+  String get reasoningBudgetSheetMax => 'Maximum Reasoning';
 
   @override
   String get reasoningBudgetSheetTitle => 'Reasoning Chain Strength';
@@ -2230,6 +2257,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetWriteClipboard => 'Write Clipboard';
 
   @override
+  String get chatMessageWidgetSpeakingTitle => 'Speaking:';
+
+  @override
   String chatMessageWidgetSpeakText(String text) {
     return 'Speaking: $text';
   }
@@ -2283,6 +2313,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatSelectionThinkingContent => 'Thinking content';
+
+  @override
+  String get chatSelectionDeleteSelected => 'Delete Selected';
+
+  @override
+  String get chatSelectionSelectMessagesToDelete =>
+      'Please select messages to delete';
+
+  @override
+  String chatSelectionDeleteSelectedConfirm(int count) {
+    return 'Delete $count selected version(s)? This cannot be undone.';
+  }
+
+  @override
+  String chatSelectionDeleteSelectedAllVersionsConfirm(int count) {
+    return 'Delete all versions of $count selected message(s)? This cannot be undone.';
+  }
 
   @override
   String get messageExportSheetAssistant => 'Assistant';
@@ -2864,6 +2911,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get defaultModelPageOcrModelSubtitle =>
       'Used for extracting text and descriptions from images';
+
+  @override
+  String get defaultModelPageOcrModelRequiresImageInput =>
+      'Select a model tagged with image input for OCR';
 
   @override
   String get defaultModelPagePromptLabel => 'Prompt';
@@ -4319,6 +4370,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Chat Background Overlay Opacity';
 
   @override
+  String get displaySettingsPageChatInputBackgroundOpacityTitle =>
+      'Input Box Background Opacity';
+
+  @override
   String get displaySettingsPageThemeSettingsTitle => 'Theme Settings';
 
   @override
@@ -4808,6 +4863,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Serper Google Search API. Fast web results with optional country, language, time, and page filters.';
 
   @override
+  String get searchServiceNameQuerit => 'Querit';
+
+  @override
+  String get searchProviderQueritDescription =>
+      'Querit Search API for LLM applications. Returns real-time web results with site, time, country, and language filters.';
+
+  @override
   String get searchServicesDialogCountryOptional => 'Country/region (optional)';
 
   @override
@@ -4822,6 +4884,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get searchServicesDialogPageInvalid =>
       'Page must be a positive integer.';
+
+  @override
+  String get searchServicesDialogSitesIncludeOptional =>
+      'Include sites (optional)';
+
+  @override
+  String get searchServicesDialogSitesExcludeOptional =>
+      'Exclude sites (optional)';
+
+  @override
+  String get searchServicesDialogTimeRangeOptional => 'Time range (optional)';
+
+  @override
+  String get searchServicesDialogCountriesOptional => 'Countries (optional)';
+
+  @override
+  String get searchServicesDialogLanguagesOptional => 'Languages (optional)';
+
+  @override
+  String get searchServicesDialogSitesHint => 'example.com, docs.example.com';
+
+  @override
+  String get searchServicesDialogTimeRangeHint => 'd7';
+
+  @override
+  String get searchServicesDialogCountriesHint => 'united states, japan';
+
+  @override
+  String get searchServicesDialogLanguagesHint => 'english, japanese';
 
   @override
   String get generationInterrupted => 'Generation interrupted';
@@ -5228,6 +5319,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputBarOcrTooltip => 'Image OCR';
 
   @override
+  String get providerDetailPageMultiSelectButton => 'Multi-select';
+
+  @override
   String get providerDetailPageBatchDetectButton => 'Detect';
 
   @override
@@ -5241,6 +5335,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get providerDetailPageDetectFailed => 'Detection failed';
+
+  @override
+  String get providerDetailPageDeleteSelectedModelsButton => 'Delete';
+
+  @override
+  String get providerDetailPageDeleteSelectedModelsTooltip =>
+      'Delete selected models';
+
+  @override
+  String providerDetailPageDeleteSelectedModelsConfirm(int count) {
+    return 'Delete $count selected model(s)? This cannot be undone.';
+  }
+
+  @override
+  String providerDetailPageSelectedModelsDeletedSnackbar(int count) {
+    return 'Deleted $count model(s)';
+  }
+
+  @override
+  String get providerDetailPageDeleteAllModelsTooltip => 'Delete all models';
 
   @override
   String get providerDetailPageDeleteAllModelsWarning =>
@@ -5597,7 +5711,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String askUserCardQuestionCount(int count) {
-    return 'Ask $count questions';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ask $count questions',
+      one: 'Ask 1 question',
+    );
+    return '$_temp0';
   }
 
   @override

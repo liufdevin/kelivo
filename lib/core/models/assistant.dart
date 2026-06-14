@@ -35,6 +35,7 @@ class Assistant {
   final int? maxTokens; // null = unlimited
   final String systemPrompt;
   final String messageTemplate; // e.g. "{{ message }}"
+  final bool searchEnabled; // per-assistant external web search switch
   final List<String> mcpServerIds; // bound MCP server IDs
   final List<String> localToolIds; // enabled local tool IDs
   final String? background; // chat background (color/image ref)
@@ -71,6 +72,7 @@ class Assistant {
     this.maxTokens,
     this.systemPrompt = '',
     this.messageTemplate = '{{ message }}',
+    this.searchEnabled = false,
     this.mcpServerIds = const <String>[],
     this.localToolIds = const <String>[],
     this.background,
@@ -102,6 +104,7 @@ class Assistant {
     int? maxTokens,
     String? systemPrompt,
     String? messageTemplate,
+    bool? searchEnabled,
     List<String>? mcpServerIds,
     List<String>? localToolIds,
     String? background,
@@ -148,6 +151,7 @@ class Assistant {
       maxTokens: clearMaxTokens ? null : (maxTokens ?? this.maxTokens),
       systemPrompt: systemPrompt ?? this.systemPrompt,
       messageTemplate: messageTemplate ?? this.messageTemplate,
+      searchEnabled: searchEnabled ?? this.searchEnabled,
       mcpServerIds: mcpServerIds ?? this.mcpServerIds,
       localToolIds: localToolIds ?? this.localToolIds,
       background: clearBackground ? null : (background ?? this.background),
@@ -182,6 +186,7 @@ class Assistant {
     'maxTokens': maxTokens,
     'systemPrompt': systemPrompt,
     'messageTemplate': messageTemplate,
+    'searchEnabled': searchEnabled,
     'mcpServerIds': mcpServerIds,
     'localToolIds': localToolIds,
     'background': background,
@@ -213,6 +218,7 @@ class Assistant {
     maxTokens: (json['maxTokens'] as num?)?.toInt(),
     systemPrompt: (json['systemPrompt'] as String?) ?? '',
     messageTemplate: (json['messageTemplate'] as String?) ?? '{{ message }}',
+    searchEnabled: json['searchEnabled'] as bool? ?? false,
     mcpServerIds:
         (json['mcpServerIds'] as List?)?.cast<String>() ?? const <String>[],
     localToolIds:
