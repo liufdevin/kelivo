@@ -140,5 +140,27 @@ void main() {
         isTrue,
       );
     });
+
+    test('Dify does not expose reasoning levels', () async {
+      SharedPreferences.setMockInitialValues({});
+      final settings = SettingsProvider();
+
+      await _waitForSettingsLoad();
+      await settings.setProviderConfig(
+        'Dify',
+        ProviderConfig(
+          id: 'Dify',
+          enabled: true,
+          name: 'Dify',
+          apiKey: 'test-key',
+          baseUrl: 'https://api.dify.ai/v1',
+          providerType: ProviderKind.dify,
+          models: const ['dify-chat'],
+        ),
+      );
+
+      expect(settings.supportsXhighReasoning('Dify', 'dify-chat'), isFalse);
+      expect(settings.supportsMaxReasoning('Dify', 'dify-chat'), isFalse);
+    });
   });
 }

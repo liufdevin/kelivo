@@ -464,6 +464,7 @@ class SettingsProvider extends ChangeNotifier {
         return _isDeepSeekClaudeCompatible(cfg, modelForCheck) ||
             _claudeSupportsXhighReasoning(modelForCheck);
       case ProviderKind.google:
+      case ProviderKind.dify:
         return false;
     }
   }
@@ -477,6 +478,7 @@ class SettingsProvider extends ChangeNotifier {
     switch (kind) {
       case ProviderKind.openai:
       case ProviderKind.google:
+      case ProviderKind.dify:
         return false;
       case ProviderKind.claude:
         final rawOv = cfg.modelOverrides[modelId];
