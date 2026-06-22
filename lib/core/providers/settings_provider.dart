@@ -23,6 +23,7 @@ import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/avatar_cache.dart';
 import '../utils/openai_model_compat.dart';
 import '../../utils/provider_grouping_logic.dart';
+import '../../utils/brand_assets.dart';
 
 // Desktop: topic list position
 enum DesktopTopicPosition { left, right }
@@ -146,6 +147,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _themePaletteKey = 'theme_palette_v1';
   static const String _useDynamicColorKey = 'use_dynamic_color_v1';
   static const String _thinkingBudgetKey = 'thinking_budget_v1';
+  static const String _titleGenerationThinkingEnabledKey =
+      'title_generation_thinking_enabled_v1';
   static const String _displayShowUserAvatarKey = 'display_show_user_avatar_v1';
   static const String _displayShowModelIconKey = 'display_show_model_icon_v1';
   static const String _displayShowModelNameTimestampKey =
@@ -952,6 +955,8 @@ class SettingsProvider extends ChangeNotifier {
         : lmp;
     // load thinking budget (reasoning strength)
     _thinkingBudget = prefs.getInt(_thinkingBudgetKey);
+    _titleGenerationThinkingEnabled =
+        prefs.getBool(_titleGenerationThinkingEnabledKey) ?? true;
 
     // display settings
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
@@ -3056,6 +3061,27 @@ class SettingsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> setProviderAvatarIcon(String key, String asset) async {
+    final normalized = BrandAssets.selectableAssetOrNull(asset.trim());
+    if (normalized == null) return;
+    final old = getProviderConfig(key);
+    await setProviderConfig(
+      key,
+      old.copyWith(avatarType: 'icon', avatarValue: normalized),
+    );
+  }
+
+  // Store a LobeHub icon name (not the full URL); URL is built at render time.
+  Future<void> setProviderAvatarLobehub(String key, String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final old = getProviderConfig(key);
+    await setProviderConfig(
+      key,
+      old.copyWith(avatarType: 'lobehub', avatarValue: trimmed),
+    );
+  }
+
   Future<void> resetProviderAvatar(String key) async {
     final old = getProviderConfig(key);
     // Attempt to remove old local file if we managed it
@@ -3747,6 +3773,25 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     } else {
       await prefs.setInt(_thinkingBudgetKey, budget);
     }
+  }
+
+  // Title generation thinking toggle. Defaults to true for backward compatibility.
+  bool _titleGenerationThinkingEnabled = true;
+  bool get titleGenerationThinkingEnabled => _titleGenerationThinkingEnabled;
+  Future<void> setTitleGenerationThinkingEnabled(bool enabled) async {
+    if (_titleGenerationThinkingEnabled == enabled) return;
+    _titleGenerationThinkingEnabled = enabled;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_titleGenerationThinkingEnabledKey, enabled);
+  }
+
+  Future<void> resetTitleGenerationThinkingEnabled() async =>
+      setTitleGenerationThinkingEnabled(true);
+
+  int? titleGenerationThinkingBudgetFor(int? assistantBudget) {
+    if (!_titleGenerationThinkingEnabled) return 0;
+    return assistantBudget ?? _thinkingBudget;
   }
 
   // Display settings: user avatar and model icon visibility
@@ -4660,6 +4705,7 @@ DO NOT GIVE ANSWERS OR DO HOMEWORK FOR THE USER. If the user asks a math or logi
     copy._ocrPrompt = _ocrPrompt;
     copy._ocrEnabled = _ocrEnabled;
     copy._thinkingBudget = _thinkingBudget;
+    copy._titleGenerationThinkingEnabled = _titleGenerationThinkingEnabled;
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
     copy._showModelNameTimestamp = _showModelNameTimestamp;
@@ -4973,8 +5019,8 @@ class ProviderConfig {
   final String? proxyPort;
   final String? proxyUsername;
   final String? proxyPassword;
-  // Custom provider avatar (same scheme as user: emoji | url | file)
-  final String? avatarType; // 'emoji' | 'url' | 'file'
+  // Custom provider avatar (same scheme as user plus built-in icon: emoji | url | file | icon | lobehub)
+  final String? avatarType; // 'emoji' | 'url' | 'file' | 'icon' | 'lobehub'
   final String? avatarValue;
   // Multi-key mode
   final bool? multiKeyEnabled; // default false

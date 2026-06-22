@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
 import '../../features/settings/pages/debug_page.dart';
+import '../../shared/widgets/qq_group_join_sheet.dart';
 import '../../theme/app_font_weights.dart';
 
 class DesktopAboutPane extends StatefulWidget {
@@ -184,9 +185,22 @@ class _DesktopAboutPaneState extends State<DesktopAboutPane> {
                   ),
                   const _DeskRowDivider(),
                   _DeskNavRowSvg(
+                    svgAsset: 'assets/icons/tencent-qq.svg',
+                    label: l10n.aboutPageJoinQQGroup,
+                    onTap: () => showQQGroupJoinSheet(context: context),
+                  ),
+                  const _DeskRowDivider(),
+                  _DeskNavRowSvg(
                     svgAsset: 'assets/icons/discord.svg',
                     label: l10n.aboutPageJoinDiscord,
                     onTap: () => _openUrl('https://discord.gg/Tb8DyvvV5T'),
+                  ),
+                  const _DeskRowDivider(),
+                  // Donation item (desktop): mirrors mobile "Sponsor"
+                  _DeskNavRow(
+                    icon: lucide.Lucide.Heart,
+                    label: l10n.settingsPageSponsor,
+                    onTap: () => _showSponsorDesktopDialog(context),
                   ),
                 ],
               ),

@@ -275,7 +275,11 @@ Widget _markdownHarness(
 }) {
   SharedPreferences.setMockInitialValues(preferences ?? {});
   return ChangeNotifierProvider(
-    create: (_) => SettingsProvider(),
+    create: (_) {
+      final settings = SettingsProvider();
+      _applyMarkdownPreferenceOverrides(settings, preferences);
+      return settings;
+    },
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -305,6 +309,37 @@ Widget _markdownHarness(
   );
 }
 
+void _applyMarkdownPreferenceOverrides(
+  SettingsProvider settings,
+  Map<String, Object>? preferences,
+) {
+  if (preferences == null) return;
+
+  final appFontFamily = preferences['display_app_font_family_v1'];
+  if (appFontFamily is String) {
+    unawaited(settings.setAppFontSystemFamily(appFontFamily));
+  }
+
+  final enableDollarLatex = preferences['display_enable_dollar_latex_v1'];
+  if (enableDollarLatex is bool) {
+    unawaited(settings.setEnableDollarLatex(enableDollarLatex));
+  }
+
+  final autoCollapseCodeBlock =
+      preferences['display_auto_collapse_code_block_v1'];
+  if (autoCollapseCodeBlock is bool) {
+    unawaited(settings.setAutoCollapseCodeBlock(autoCollapseCodeBlock));
+  }
+
+  final autoCollapseCodeBlockLines =
+      preferences['display_auto_collapse_code_block_lines_v1'];
+  if (autoCollapseCodeBlockLines is int) {
+    unawaited(
+      settings.setAutoCollapseCodeBlockLines(autoCollapseCodeBlockLines),
+    );
+  }
+}
+
 void _overrideMarkdownTablePlatform(TargetPlatform platform) {
   markdownTableTargetPlatformOverride = platform;
   addTearDown(() => markdownTableTargetPlatformOverride = null);
@@ -317,7 +352,11 @@ Widget _streamingMarkdownHarness(
 }) {
   SharedPreferences.setMockInitialValues(preferences ?? {});
   return ChangeNotifierProvider(
-    create: (_) => SettingsProvider(),
+    create: (_) {
+      final settings = SettingsProvider();
+      _applyMarkdownPreferenceOverrides(settings, preferences);
+      return settings;
+    },
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,

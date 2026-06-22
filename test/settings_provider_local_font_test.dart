@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 // ignore: depend_on_referenced_packages
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,8 +76,11 @@ void main() {
       final prefs = await SharedPreferences.getInstance();
       final storedPath = prefs.getString('display_app_font_local_path_v1');
       expect(storedPath, isNotNull);
-      expect(storedPath, startsWith('${tempDir.path}/fonts/'));
-      expect(await File(storedPath!).exists(), isTrue);
+      expect(
+        p.equals(p.dirname(storedPath!), p.join(tempDir.path, 'fonts')),
+        isTrue,
+      );
+      expect(await File(storedPath).exists(), isTrue);
       expect(storedPath, isNot(sourceFile.path));
       expect(prefs.getString('display_app_font_local_alias_v1'), isNotEmpty);
     });

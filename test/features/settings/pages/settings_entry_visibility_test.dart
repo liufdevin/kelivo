@@ -52,7 +52,7 @@ void main() {
     expect(find.text('Sponsor'), findsNothing);
   });
 
-  testWidgets('移动端关于页不再显示 QQ 群入口', (tester) async {
+  testWidgets('移动端关于页显示 QQ 群入口', (tester) async {
     await tester.pumpWidget(
       _buildApp(
         const AboutPage(),
@@ -65,14 +65,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Join our QQ Group'), findsNothing);
+    expect(find.text('Join our QQ Group'), findsOneWidget);
   });
 
-  testWidgets('桌面关于页不再显示 QQ 群和 Sponsor 入口', (tester) async {
+  testWidgets('桌面关于页显示 QQ 群和 Sponsor 入口', (tester) async {
     await tester.pumpWidget(_buildApp(const DesktopAboutPane()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Join our QQ Group'), findsNothing);
-    expect(find.text('Sponsor'), findsNothing);
+    expect(find.text('Join our QQ Group'), findsOneWidget);
+    expect(find.text('Sponsor'), findsOneWidget);
   });
 }

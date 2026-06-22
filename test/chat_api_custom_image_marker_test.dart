@@ -350,11 +350,11 @@ void main() {
         ).toList();
       });
 
-      final parts = _extractSingleMessageParts(body);
-      expect(parts, hasLength(1));
-      expect(parts.single['type'], 'text');
-      expect(parts.single['text'], startsWith('before [image:'));
-      expect(parts.single['text'], endsWith('] after'));
+      final messages = (body['messages'] as List)
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .toList(growable: false);
+      expect(messages, hasLength(1));
+      expect(messages.single['content'], 'before  after');
     });
 
     test('does not attach pending images for text-only models', () async {
@@ -382,10 +382,11 @@ void main() {
         ).toList();
       });
 
-      final parts = _extractSingleMessageParts(body);
-      expect(parts, hasLength(1));
-      expect(parts.single['type'], 'text');
-      expect(parts.single['text'], 'hello');
+      final messages = (body['messages'] as List)
+          .map((e) => (e as Map).cast<String, dynamic>())
+          .toList(growable: false);
+      expect(messages, hasLength(1));
+      expect(messages.single['content'], 'hello');
     });
 
     test(
