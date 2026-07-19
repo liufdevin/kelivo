@@ -233,11 +233,20 @@ void main() {
     );
 
     expect(find.text('Image mode'), findsOneWidget);
+    expect(find.byTooltip('Image Generation'), findsNothing);
+
+    await tapSendButton(tester);
+
+    expect(submitted?.text, 'draw a cat');
+    expect(submitted?.generateImage, isFalse);
+    expect(submitted?.allowImagesApiRouting, isTrue);
+    submitted = null;
 
     await tester.tap(find.byIcon(Lucide.X));
     await tester.pumpAndSettle();
 
     expect(find.text('Image mode'), findsNothing);
+    expect(find.byTooltip('Image Generation'), findsOneWidget);
     expect(mediaController.allowImagesApiRouting, isFalse);
 
     await tapSendButton(tester);
