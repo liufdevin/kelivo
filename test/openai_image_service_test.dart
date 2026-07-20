@@ -22,6 +22,17 @@ ProviderConfig _config(String baseUrl) {
   );
 }
 
+ProviderConfig _grokConfig(String baseUrl) {
+  return ProviderConfig(
+    id: 'Grok',
+    enabled: true,
+    name: 'Grok',
+    apiKey: 'test-key',
+    baseUrl: baseUrl,
+    providerType: ProviderKind.openai,
+  );
+}
+
 class _CapturedRequest {
   const _CapturedRequest({
     required this.method,
@@ -155,6 +166,35 @@ void main() {
     expect(body['model'], 'gpt-image-2');
   });
 
+  test('Grok generate uses xAI-compatible JSON fields', () async {
+    final client = _RecordingClient(
+      statusCode: 200,
+      responseBody: jsonEncode({
+        'data': [
+          {'b64_json': _onePixelPng, 'mime_type': 'image/png'},
+        ],
+      }),
+    );
+
+    final result = await OpenAIImageService.generate(
+      config: _grokConfig('https://api.x.ai/v1'),
+      prompt: 'draw a moon',
+      model: 'grok-imagine-image-quality',
+      client: client,
+    );
+
+    final body =
+        jsonDecode(client.requests.single.utf8Body) as Map<String, dynamic>;
+    expect(body['model'], 'grok-imagine-image-quality');
+    expect(body['prompt'], 'draw a moon');
+    expect(body['n'], 1);
+    expect(body['response_format'], 'b64_json');
+    expect(body.containsKey('size'), isFalse);
+    expect(body.containsKey('quality'), isFalse);
+    expect(body.containsKey('output_format'), isFalse);
+    expect(File(result.imagePaths.single).existsSync(), isTrue);
+  });
+
   test('edit posts multipart images edit request', () async {
     final inputFile = File('${tempDir.path}/input.png');
     await inputFile.writeAsBytes(base64Decode(_onePixelPng));
@@ -187,6 +227,44 @@ void main() {
     expect(request.latin1Body, contains('turn it blue'));
     expect(request.latin1Body, contains('name="image"'));
     expect(request.latin1Body, contains('name="mask"'));
+    expect(result.imagePaths, hasLength(1));
+    expect(File(result.imagePaths.single).existsSync(), isTrue);
+  });
+
+  test('Grok edit posts JSON image data', () async {
+    final inputFile = File('${tempDir.path}/input.png');
+    await inputFile.writeAsBytes(base64Decode(_onePixelPng));
+    final client = _RecordingClient(
+      statusCode: 200,
+      responseBody: jsonEncode({
+        'data': [
+          {'b64_json': _onePixelPng, 'mime_type': 'image/png'},
+        ],
+      }),
+    );
+
+    final result = await OpenAIImageService.edit(
+      config: _grokConfig('https://api.x.ai/v1'),
+      prompt: 'turn it blue',
+      imagePaths: [inputFile.path],
+      model: 'grok-imagine-image-quality',
+      client: client,
+    );
+
+    final request = client.requests.single;
+    final body = jsonDecode(request.utf8Body) as Map<String, dynamic>;
+    expect(request.method, 'POST');
+    expect(request.url.path, '/v1/images/edits');
+    expect(
+      request.headers.entries
+          .singleWhere((entry) => entry.key.toLowerCase() == 'content-type')
+          .value,
+      'application/json',
+    );
+    expect(body['model'], 'grok-imagine-image-quality');
+    expect(body['prompt'], 'turn it blue');
+    expect(body['image']['type'], 'image_url');
+    expect(body['image']['url'], startsWith('data:image/png;base64,'));
     expect(result.imagePaths, hasLength(1));
     expect(File(result.imagePaths.single).existsSync(), isTrue);
   });

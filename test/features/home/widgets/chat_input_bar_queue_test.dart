@@ -116,28 +116,19 @@ void main() {
     focusNode.dispose();
   });
 
-  testWidgets('点击图片生成按钮后提交生图模式', (tester) async {
+  testWidgets('普通聊天模式不显示手动图片生成按钮', (tester) async {
     final controller = TextEditingController(text: '一只白猫');
     final focusNode = FocusNode();
-    ChatInputData? submitted;
 
     await tester.pumpWidget(
       buildHarness(
         controller: controller,
         focusNode: focusNode,
-        onSend: (input) async {
-          submitted = input;
-          return ChatInputSubmissionResult.sent;
-        },
+        onSend: (_) async => ChatInputSubmissionResult.sent,
       ),
     );
 
-    await tester.tap(find.byTooltip('Image Generation'));
-    await tester.pumpAndSettle();
-    await tapSendButton(tester);
-
-    expect(submitted?.text, '一只白猫');
-    expect(submitted?.generateImage, isTrue);
+    expect(find.byTooltip('Image Generation'), findsNothing);
 
     controller.dispose();
     focusNode.dispose();
@@ -200,23 +191,23 @@ void main() {
     focusNode.dispose();
   });
 
-  testWidgets('绘图模式胶囊可关闭并传递聊天接口路由', (tester) async {
+  testWidgets('Grok 图片模型别名自动进入绘图模式并传递图片接口路由', (tester) async {
     final controller = TextEditingController(text: 'draw a cat');
     final focusNode = FocusNode();
     final mediaController = ChatInputBarController();
     final settings = SettingsProvider();
     await settings.setProviderConfig(
-      'OpenAITest',
+      'GrokTest',
       ProviderConfig(
-        id: 'OpenAITest',
+        id: 'GrokTest',
         enabled: true,
-        name: 'OpenAITest',
+        name: 'GrokTest',
         apiKey: 'test-key',
-        baseUrl: 'https://example.com/v1',
+        baseUrl: 'https://api.x.ai/v1',
         providerType: ProviderKind.openai,
       ),
     );
-    await settings.setCurrentModel('OpenAITest', 'gpt-image-2');
+    await settings.setCurrentModel('GrokTest', 'grok-image');
     ChatInputData? submitted;
 
     await tester.pumpWidget(
@@ -246,7 +237,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Image mode'), findsNothing);
-    expect(find.byTooltip('Image Generation'), findsOneWidget);
+    expect(find.byTooltip('Image Generation'), findsNothing);
     expect(mediaController.allowImagesApiRouting, isFalse);
 
     await tapSendButton(tester);

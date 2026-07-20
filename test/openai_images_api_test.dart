@@ -20,6 +20,17 @@ ProviderConfig _openAiConfig(String baseUrl, {bool useResponseApi = false}) {
   );
 }
 
+ProviderConfig _grokConfig(String baseUrl) {
+  return ProviderConfig(
+    id: 'Grok',
+    enabled: true,
+    name: 'Grok',
+    apiKey: 'test-key',
+    baseUrl: baseUrl,
+    providerType: ProviderKind.openai,
+  );
+}
+
 String _baseUrl(HttpServer server) {
   return 'http://${server.address.address}:${server.port}/v1';
 }
@@ -51,6 +62,31 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 }
 
 void main() {
+  group('OpenAI Images API model routing', () {
+    final config = _grokConfig('https://api.x.ai/v1');
+
+    test('recognizes concise Grok image model aliases', () {
+      expect(
+        ChatApiService.supportsOpenAIImagesApiRouting(config, 'grok-image'),
+        isTrue,
+      );
+      expect(
+        ChatApiService.supportsOpenAIImagesApiRouting(
+          config,
+          'grok-imagine-image-quality',
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not classify ordinary Grok chat models as image models', () {
+      expect(
+        ChatApiService.supportsOpenAIImagesApiRouting(config, 'grok-4'),
+        isFalse,
+      );
+    });
+  });
+
   group('OpenAI Images API', () {
     test('routes image model without input images to generations', () async {
       late Uri requestUri;
@@ -179,6 +215,46 @@ void main() {
       expect(requestBody['model'], 'agnes-image-2.1-flash');
       expect(requestBody['prompt'], 'draw a clean app icon');
       expect(chunks.single.content, contains('agnes-generated.png'));
+    });
+
+    test('routes concise Grok image aliases to generations', () async {
+      late Uri requestUri;
+      late Map<String, dynamic> requestBody;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        requestBody =
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>;
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/grok-generated.jpg'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _grokConfig(_baseUrl(server)),
+        modelId: 'grok-image',
+        messages: const [
+          {'role': 'user', 'content': 'draw a futuristic city'},
+        ],
+      ).toList();
+
+      expect(requestUri.path, '/v1/images/generations');
+      expect(requestBody['model'], 'grok-image');
+      expect(requestBody['prompt'], 'draw a futuristic city');
+      expect(requestBody['response_format'], 'b64_json');
+      expect(chunks.single.content, contains('grok-generated.jpg'));
     });
 
     test('can disable Images API routing for image models', () async {
@@ -338,6 +414,63 @@ void main() {
       expect(requestBody, contains('content-type: image/png'));
       expect(requestBody, contains('filename="source.png"'));
       expect(chunks.single.content, '![image](https://example.com/edited.png)');
+    });
+
+    test('routes Grok Imagine edits as JSON image data', () async {
+      late Uri requestUri;
+      late String contentType;
+      late Map<String, dynamic> requestBody;
+      final tempDir = await Directory.systemTemp.createTemp(
+        'kelivo_grok_image_edit_',
+      );
+      addTearDown(() async {
+        if (await tempDir.exists()) {
+          await tempDir.delete(recursive: true);
+        }
+      });
+      final inputImage = File('${tempDir.path}/source.png');
+      await inputImage.writeAsBytes(const [1, 2, 3, 4]);
+
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestUri = request.uri;
+        contentType = request.headers.contentType?.mimeType ?? '';
+        requestBody =
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, dynamic>;
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'data': [
+              {'url': 'https://example.com/grok-edited.jpg'},
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      final chunks = await ChatApiService.sendMessageStream(
+        config: _grokConfig(_baseUrl(server)),
+        modelId: 'grok-imagine-image-quality',
+        messages: const [
+          {'role': 'user', 'content': 'make the sky purple'},
+        ],
+        userImagePaths: [inputImage.path],
+      ).toList();
+
+      expect(requestUri.path, '/v1/images/edits');
+      expect(contentType, ContentType.json.mimeType);
+      expect(requestBody['model'], 'grok-imagine-image-quality');
+      expect(requestBody['prompt'], 'make the sky purple');
+      expect(requestBody['response_format'], 'b64_json');
+      expect(requestBody['image']['type'], 'image_url');
+      expect(requestBody['image']['url'], startsWith('data:image/png;base64,'));
+      expect(chunks.single.content, contains('grok-edited.jpg'));
     });
 
     test('sets jpeg content type for jpg image edit uploads', () async {

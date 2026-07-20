@@ -10,6 +10,7 @@ bool _supportsOpenAIImageGenerations(String modelId) {
   return normalized.startsWith('gpt-image-') ||
       normalized.startsWith('chatgpt-image-') ||
       normalized.startsWith('agnes-image-') ||
+      _isGrokImageModelAlias(normalized) ||
       normalized == 'sensenova-u1-fast' ||
       normalized == 'dall-e-2' ||
       normalized == 'dall-e-3';
@@ -19,7 +20,26 @@ bool _supportsOpenAIImageEdits(String modelId) {
   final normalized = modelId.toLowerCase();
   return normalized.startsWith('gpt-image-') ||
       normalized.startsWith('chatgpt-image-') ||
+      _isGrokImageModelAlias(normalized) ||
       normalized == 'dall-e-2';
+}
+
+bool _isGrokImageModelAlias(String normalizedModelId) {
+  final tokens = normalizedModelId
+      .split(RegExp(r'[^a-z0-9]+'))
+      .where((token) => token.isNotEmpty)
+      .toSet();
+  return tokens.contains('grok') &&
+      (tokens.contains('image') || tokens.contains('imagine'));
+}
+
+bool _isXAiImagesProvider(ProviderConfig config) {
+  final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
+  if (host == 'x.ai' || host.endsWith('.x.ai')) return true;
+  final identity = '${config.id} ${config.name}'.toLowerCase();
+  return RegExp(
+    r'(^|[^a-z0-9])(grok|xai|x\.ai)([^a-z0-9]|$)',
+  ).hasMatch(identity);
 }
 
 Uri _openAIImagesUrl(ProviderConfig config, String path) {
@@ -89,6 +109,7 @@ Future<Map<String, dynamic>> _sendOpenAIImageGeneration(
   final body = <String, dynamic>{
     'model': _apiModelId(config, modelId),
     'prompt': prompt,
+    if (_isXAiImagesProvider(config)) 'response_format': 'b64_json',
   };
   _applyOpenAIImagesExtraBody(body, config, modelId, extraBody);
   final response = await client.post(
@@ -112,6 +133,29 @@ Future<Map<String, dynamic>> _sendOpenAIImageEdit(
   Map<String, String>? extraHeaders,
   Map<String, dynamic>? extraBody,
 }) async {
+  if (_isXAiImagesProvider(config)) {
+    final images = <Map<String, String>>[
+      for (final ref in imageRefs) await _xAiImageReference(ref),
+    ];
+    final body = <String, dynamic>{
+      'model': _apiModelId(config, modelId),
+      'prompt': prompt,
+      if (images.length == 1) 'image': images.single else 'images': images,
+      'response_format': 'b64_json',
+    };
+    _applyOpenAIImagesExtraBody(body, config, modelId, extraBody);
+    final response = await client.post(
+      _openAIImagesUrl(config, '/images/edits'),
+      headers: _openAIImagesJsonHeaders(
+        config,
+        modelId,
+        extraHeaders: extraHeaders,
+      ),
+      body: jsonEncode(body),
+    );
+    return _decodeOpenAIImagesResponse(response);
+  }
+
   final allRemote = imageRefs.every((ref) => ref.kind == 'url');
   if (allRemote) {
     final body = <String, dynamic>{
@@ -161,6 +205,19 @@ Future<Map<String, dynamic>> _sendOpenAIImageEdit(
   final streamed = await client.send(request);
   final response = await http.Response.fromStream(streamed);
   return _decodeOpenAIImagesResponse(response);
+}
+
+Future<Map<String, String>> _xAiImageReference(_ImageRef ref) async {
+  final String source;
+  if (ref.kind == 'path') {
+    final fixed = SandboxPathResolver.fix(ref.src);
+    final mime = _mimeFromPath(fixed);
+    final bytes = await File(fixed).readAsBytes();
+    source = 'data:$mime;base64,${base64Encode(bytes)}';
+  } else {
+    source = ref.src;
+  }
+  return <String, String>{'type': 'image_url', 'url': source};
 }
 
 Future<String> _lastOpenAIImagePrompt(
@@ -478,7 +535,11 @@ Future<String> _openAIImagesResponseToMarkdown(
     }
     final b64 = (item['b64_json'] ?? '').toString().trim();
     if (b64.isEmpty) continue;
-    final path = await AppDirectories.saveBase64Image(outputMime, b64);
+    final itemMime = (item['mime_type'] ?? '').toString().trim();
+    final path = await AppDirectories.saveBase64Image(
+      itemMime.isEmpty ? outputMime : itemMime,
+      b64,
+    );
     if (path == null || path.isEmpty) {
       throw const FileSystemException(
         'Failed to save OpenAI Images API base64 image.',

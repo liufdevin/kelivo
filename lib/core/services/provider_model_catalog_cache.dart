@@ -14,3 +14,14 @@ ProviderConfig cacheFetchedProviderModels(
 
   return config.copyWith(cachedModels: fetched);
 }
+
+ProviderConfig invalidateFetchedProviderModelsForConnectionChange(
+  ProviderConfig previous,
+  ProviderConfig updated,
+) {
+  final connectionChanged =
+      previous.apiKey.trim() != updated.apiKey.trim() ||
+      previous.baseUrl.trim() != updated.baseUrl.trim();
+  if (!connectionChanged || updated.cachedModels.isEmpty) return updated;
+  return updated.copyWith(cachedModels: const []);
+}

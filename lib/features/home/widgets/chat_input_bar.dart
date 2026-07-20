@@ -962,33 +962,6 @@ class _ChatInputBarState extends State<ChatInputBar>
           ),
         );
 
-        if (!_imageModeActive) {
-          actions.add(
-            _OverflowAction(
-              width: normalButtonW,
-              builder: () => _CompactIconButton(
-                tooltip: l10n.chatInputBarImageGenerationTooltip,
-                icon: Lucide.Image,
-                active: _imageGenerationMode,
-                onTap: _composerLocked
-                    ? null
-                    : () => setState(
-                        () => _imageGenerationMode = !_imageGenerationMode,
-                      ),
-              ),
-              menu: DesktopContextMenuItem(
-                icon: Lucide.Image,
-                label: l10n.chatInputBarImageGenerationTooltip,
-                onTap: _composerLocked
-                    ? null
-                    : () => setState(
-                        () => _imageGenerationMode = !_imageGenerationMode,
-                      ),
-              ),
-            ),
-          );
-        }
-
         // Search button (stateful icon depending on provider config)
         final settings = context.watch<SettingsProvider>();
         final ap = context.watch<AssistantProvider>();

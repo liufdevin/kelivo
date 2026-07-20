@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -52,6 +53,7 @@ class OpenAIImageService {
     final ownsClient = client == null;
     final resolvedClient = client ?? clientFor(config);
     try {
+      final xAi = _isXAiProvider(config);
       final response = await resolvedClient
           .post(
             _endpoint(config, 'images/generations'),
@@ -63,13 +65,21 @@ class OpenAIImageService {
               'model': _effectiveModelId(config, model),
               'prompt': promptText,
               'n': n.clamp(1, 4),
-              'size': size,
-              'quality': quality,
-              'output_format': outputFormat,
+              if (xAi)
+                'response_format': 'b64_json'
+              else ...{
+                'size': size,
+                'quality': quality,
+                'output_format': outputFormat,
+              },
             }),
           )
           .timeout(_timeout);
-      return await _parseResponse(response, prefix: 'openai_img');
+      return await _parseResponse(
+        response,
+        prefix: 'openai_img',
+        fallbackMime: _outputMime(outputFormat),
+      );
     } finally {
       if (ownsClient) resolvedClient.close();
     }
@@ -106,6 +116,35 @@ class OpenAIImageService {
     final ownsClient = client == null;
     final resolvedClient = client ?? clientFor(config);
     try {
+      if (_isXAiProvider(config)) {
+        final imageRefs = <Map<String, String>>[
+          for (final path in images) await _xAiImageReference(path),
+        ];
+        final response = await resolvedClient
+            .post(
+              _endpoint(config, 'images/edits'),
+              headers: {
+                'Authorization': 'Bearer $apiKey',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'model': _effectiveModelId(config, model),
+                'prompt': promptText,
+                if (imageRefs.length == 1)
+                  'image': imageRefs.single
+                else
+                  'images': imageRefs,
+                'response_format': 'b64_json',
+              }),
+            )
+            .timeout(_timeout);
+        return await _parseResponse(
+          response,
+          prefix: 'openai_edit',
+          fallbackMime: _outputMime(outputFormat),
+        );
+      }
+
       final request = http.MultipartRequest(
         'POST',
         _endpoint(config, 'images/edits'),
@@ -129,7 +168,11 @@ class OpenAIImageService {
 
       final streamed = await resolvedClient.send(request).timeout(_timeout);
       final response = await http.Response.fromStream(streamed);
-      return await _parseResponse(response, prefix: 'openai_edit');
+      return await _parseResponse(
+        response,
+        prefix: 'openai_edit',
+        fallbackMime: _outputMime(outputFormat),
+      );
     } finally {
       if (ownsClient) resolvedClient.close();
     }
@@ -193,9 +236,51 @@ class OpenAIImageService {
     return Uri.parse('$base/$path');
   }
 
+  static bool _isXAiProvider(ProviderConfig config) {
+    final host = Uri.tryParse(config.baseUrl)?.host.toLowerCase() ?? '';
+    if (host == 'x.ai' || host.endsWith('.x.ai')) return true;
+    final identity = '${config.id} ${config.name}'.toLowerCase();
+    return RegExp(
+      r'(^|[^a-z0-9])(grok|xai|x\.ai)([^a-z0-9]|$)',
+    ).hasMatch(identity);
+  }
+
+  static Future<Map<String, String>> _xAiImageReference(String path) async {
+    final source = path.trim();
+    if (source.startsWith('http://') || source.startsWith('https://')) {
+      return <String, String>{'type': 'image_url', 'url': source};
+    }
+    if (source.startsWith('data:')) {
+      return <String, String>{'type': 'image_url', 'url': source};
+    }
+    final mime = _mimeFromPath(source);
+    final bytes = await File(source).readAsBytes();
+    return <String, String>{
+      'type': 'image_url',
+      'url': 'data:$mime;base64,${base64Encode(bytes)}',
+    };
+  }
+
+  static String _mimeFromPath(String path) {
+    final normalized = path.toLowerCase().split('?').first.split('#').first;
+    if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (normalized.endsWith('.webp')) return 'image/webp';
+    return 'image/png';
+  }
+
+  static String _outputMime(String outputFormat) {
+    final normalized = outputFormat.trim().toLowerCase();
+    if (normalized == 'jpg' || normalized == 'jpeg') return 'image/jpeg';
+    if (normalized == 'webp') return 'image/webp';
+    return 'image/png';
+  }
+
   static Future<OpenAIImageResult> _parseResponse(
     http.Response response, {
     required String prefix,
+    required String fallbackMime,
   }) async {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OpenAIImageServiceException(_extractError(response.body));
@@ -220,8 +305,9 @@ class OpenAIImageService {
       }
       final b64 = item['b64_json']?.toString();
       if (b64 != null && b64.isNotEmpty) {
+        final mime = item['mime_type']?.toString().trim();
         final path = await AppDirectories.saveBase64Image(
-          'image/png',
+          mime == null || mime.isEmpty ? fallbackMime : mime,
           b64,
           prefix: prefix,
         );

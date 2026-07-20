@@ -15,6 +15,7 @@ import '../core/providers/model_provider.dart';
 import '../core/services/logging/flutter_logger.dart';
 import '../core/services/model_override_resolver.dart';
 import '../core/services/provider_balance_service.dart';
+import '../core/services/provider_model_catalog_cache.dart';
 import 'model_fetch_dialog.dart' show showModelFetchDialog;
 import 'widgets/desktop_select_dropdown.dart';
 import '../shared/widgets/ios_switch.dart';

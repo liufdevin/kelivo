@@ -32,4 +32,52 @@ void main() {
       expect(cached.cachedModels, ['model-a', 'model-b']);
     });
   });
+
+  group('invalidateFetchedProviderModelsForConnectionChange', () {
+    test('clears fetched catalog when base URL changes', () {
+      final previous = ProviderConfig.defaultsFor('ExampleAI').copyWith(
+        models: const ['selected-model'],
+        cachedModels: const ['old-model'],
+      );
+
+      final updated = invalidateFetchedProviderModelsForConnectionChange(
+        previous,
+        previous.copyWith(baseUrl: 'https://new.example.com/v1'),
+      );
+
+      expect(updated.models, ['selected-model']);
+      expect(updated.cachedModels, isEmpty);
+    });
+
+    test('clears fetched catalog when API key changes', () {
+      final previous = ProviderConfig.defaultsFor(
+        'ExampleAI',
+      ).copyWith(apiKey: 'old-key', cachedModels: const ['old-model']);
+
+      final updated = invalidateFetchedProviderModelsForConnectionChange(
+        previous,
+        previous.copyWith(apiKey: 'new-key'),
+      );
+
+      expect(updated.cachedModels, isEmpty);
+    });
+
+    test('keeps fetched catalog when effective connection is unchanged', () {
+      final previous = ProviderConfig.defaultsFor('ExampleAI').copyWith(
+        apiKey: 'same-key',
+        baseUrl: 'https://example.com/v1',
+        cachedModels: const ['cached-model'],
+      );
+
+      final updated = invalidateFetchedProviderModelsForConnectionChange(
+        previous,
+        previous.copyWith(
+          apiKey: ' same-key ',
+          baseUrl: ' https://example.com/v1 ',
+        ),
+      );
+
+      expect(updated.cachedModels, ['cached-model']);
+    });
+  });
 }

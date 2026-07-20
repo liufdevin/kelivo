@@ -1381,7 +1381,10 @@ class _DesktopProviderDetailPaneState
                       );
                       await sp.setProviderConfig(
                         widget.providerKey,
-                        old.copyWith(apiKey: v),
+                        invalidateFetchedProviderModelsForConnectionChange(
+                          old,
+                          old.copyWith(apiKey: v),
+                        ),
                       );
                     },
                     style: TextStyle(fontSize: 14),
@@ -1459,7 +1462,10 @@ class _DesktopProviderDetailPaneState
                       );
                       await sp.setProviderConfig(
                         widget.providerKey,
-                        old.copyWith(baseUrl: v),
+                        invalidateFetchedProviderModelsForConnectionChange(
+                          old,
+                          old.copyWith(baseUrl: v),
+                        ),
                       );
                     }
                   },
@@ -1474,7 +1480,10 @@ class _DesktopProviderDetailPaneState
                       );
                       await sp.setProviderConfig(
                         widget.providerKey,
-                        old.copyWith(baseUrl: v),
+                        invalidateFetchedProviderModelsForConnectionChange(
+                          old,
+                          old.copyWith(baseUrl: v),
+                        ),
                       );
                     },
                     onEditingComplete: () async {
@@ -1485,7 +1494,10 @@ class _DesktopProviderDetailPaneState
                       );
                       await sp.setProviderConfig(
                         widget.providerKey,
-                        old.copyWith(baseUrl: v),
+                        invalidateFetchedProviderModelsForConnectionChange(
+                          old,
+                          old.copyWith(baseUrl: v),
+                        ),
                       );
                     },
                     onChanged: (v) async {
@@ -1496,7 +1508,10 @@ class _DesktopProviderDetailPaneState
                       );
                       await sp.setProviderConfig(
                         widget.providerKey,
-                        old.copyWith(baseUrl: v),
+                        invalidateFetchedProviderModelsForConnectionChange(
+                          old,
+                          old.copyWith(baseUrl: v),
+                        ),
                       );
                     },
                     style: TextStyle(fontSize: 14),

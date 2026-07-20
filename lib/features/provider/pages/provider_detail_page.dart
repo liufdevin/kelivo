@@ -2104,37 +2104,40 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
         projectId = (obj['project_id'] as String?)?.trim() ?? '';
       } catch (_) {}
     }
-    final updated = old.copyWith(
-      enabled: _enabled,
-      name: _nameCtrl.text.trim().isEmpty
-          ? widget.displayName
-          : _nameCtrl.text.trim(),
-      apiKey: _keyCtrl.text.trim(),
-      baseUrl: _baseCtrl.text.trim(),
-      providerType: _kind, // Save the selected provider type
-      chatPath: _kind == ProviderKind.openai
-          ? _pathCtrl.text.trim()
-          : old.chatPath,
-      useResponseApi: _kind == ProviderKind.openai
-          ? _useResp
-          : old.useResponseApi,
-      vertexAI: _kind == ProviderKind.google ? _vertexAI : old.vertexAI,
-      location: _kind == ProviderKind.google
-          ? _locationCtrl.text.trim()
-          : old.location,
-      projectId: _kind == ProviderKind.google ? projectId : old.projectId,
-      serviceAccountJson: _kind == ProviderKind.google
-          ? _saJsonCtrl.text.trim()
-          : old.serviceAccountJson,
-      multiKeyEnabled: _multiKeyEnabled,
-      aihubmixAppCodeEnabled: _aihubmixAppCodeEnabled,
-      claudePromptCachingEnabled: _supportsClaudePromptCaching
-          ? _claudePromptCachingEnabled
-          : false,
-      claudePromptCachingTtl: _supportsClaudePromptCaching
-          ? _claudePromptCachingTtl
-          : ProviderConfig.claudePromptCachingTtl5m,
-      // preserve models and modelOverrides and proxy fields implicitly via copyWith
+    final updated = invalidateFetchedProviderModelsForConnectionChange(
+      old,
+      old.copyWith(
+        enabled: _enabled,
+        name: _nameCtrl.text.trim().isEmpty
+            ? widget.displayName
+            : _nameCtrl.text.trim(),
+        apiKey: _keyCtrl.text.trim(),
+        baseUrl: _baseCtrl.text.trim(),
+        providerType: _kind, // Save the selected provider type
+        chatPath: _kind == ProviderKind.openai
+            ? _pathCtrl.text.trim()
+            : old.chatPath,
+        useResponseApi: _kind == ProviderKind.openai
+            ? _useResp
+            : old.useResponseApi,
+        vertexAI: _kind == ProviderKind.google ? _vertexAI : old.vertexAI,
+        location: _kind == ProviderKind.google
+            ? _locationCtrl.text.trim()
+            : old.location,
+        projectId: _kind == ProviderKind.google ? projectId : old.projectId,
+        serviceAccountJson: _kind == ProviderKind.google
+            ? _saJsonCtrl.text.trim()
+            : old.serviceAccountJson,
+        multiKeyEnabled: _multiKeyEnabled,
+        aihubmixAppCodeEnabled: _aihubmixAppCodeEnabled,
+        claudePromptCachingEnabled: _supportsClaudePromptCaching
+            ? _claudePromptCachingEnabled
+            : false,
+        claudePromptCachingTtl: _supportsClaudePromptCaching
+            ? _claudePromptCachingTtl
+            : ProviderConfig.claudePromptCachingTtl5m,
+        // preserve models and modelOverrides and proxy fields implicitly via copyWith
+      ),
     );
     await settings.setProviderConfig(widget.keyName, updated);
 
