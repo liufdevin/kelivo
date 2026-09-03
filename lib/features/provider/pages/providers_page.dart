@@ -7,6 +7,7 @@ import '../widgets/add_provider_sheet.dart';
 // grid reorder removed in favor of iOS-style list reordering
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/chat/chat_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
@@ -22,6 +23,7 @@ import '../widgets/provider_avatar.dart';
 import '../widgets/provider_group_select_sheet.dart';
 import '../../../utils/provider_grouping_logic.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class ProvidersPage extends StatefulWidget {
   const ProvidersPage({super.key});
@@ -477,6 +479,8 @@ class _ProvidersPageState extends State<ProvidersPage> {
     _p('Tensdaq', 'Tensdaq', enabled: false, models: 0),
     _p('DeepSeek', 'DeepSeek', enabled: false, models: 0),
     _p('AIhubmix', 'AIhubmix', enabled: false, models: 0),
+    _p('随想AI中转站', '随想AI中转站', enabled: false, models: 0),
+    _p('MaruCode', 'MaruCode', enabled: false, models: 0),
     _p(l10n.providersPageAliyunName, 'Aliyun', enabled: false, models: 0),
     _p(l10n.providersPageZhipuName, 'Zhipu AI', enabled: false, models: 0),
     _p('Claude', 'Claude', enabled: false, models: 0),
@@ -642,6 +646,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
     final l10n = AppLocalizations.of(context)!;
     final assistantProvider = context.read<AssistantProvider>();
     final settingsProvider = context.read<SettingsProvider>();
+    final chatService = context.read<ChatService>();
     // Skip built-in providers (default ones)
     final builtInKeys = {for (final p in _providers(l10n: l10n)) p.keyName};
     final keysToDelete = _selected
@@ -669,7 +674,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.providerDetailPageDeleteButton,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -689,6 +694,11 @@ class _ProvidersPageState extends State<ProvidersPage> {
           ),
         );
       }
+    }
+    // Conversations can pin a model too; clear the ones pointing at a provider
+    // that is about to disappear so they fall back to the assistant.
+    for (final key in keysToDelete) {
+      await chatService.clearConversationModelOverrides(providerKey: key);
     }
     for (final key in keysToDelete) {
       await settingsProvider.removeProviderConfig(key);
@@ -761,7 +771,7 @@ class _ProvidersList extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.08 : 0.06,
     );
@@ -885,7 +895,7 @@ class _GroupedProvidersList extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final bg = context.appColors.surfaceCard;
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.08 : 0.06,
     );
@@ -1059,7 +1069,6 @@ class _ProvidersSearchField extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final hasText = controller.text.trim().isNotEmpty;
 
     return Padding(
@@ -1067,10 +1076,7 @@ class _ProvidersSearchField extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
-        style: TextStyle(
-          color: isDark ? Colors.white : Colors.black87,
-          fontSize: 14,
-        ),
+        style: TextStyle(color: cs.onSurface, fontSize: 14),
         cursorColor: cs.primary,
         decoration: InputDecoration(
           hintText: hintText,
@@ -1111,9 +1117,7 @@ class _ProvidersSearchField extends StatelessWidget {
             minHeight: 34,
           ),
           filled: true,
-          fillColor: isDark
-              ? Colors.white.withValues(alpha: 0.12)
-              : const Color(0xFFEBEBEB),
+          fillColor: context.appColors.surfaceFill,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,
@@ -1230,9 +1234,11 @@ class _ProviderRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final statusBg = enabled
-        ? Colors.green.withValues(alpha: 0.12)
-        : Colors.orange.withValues(alpha: 0.15);
-    final statusFg = enabled ? Colors.green : Colors.orange;
+        ? context.appColors.success.withValues(alpha: 0.12)
+        : context.appColors.warning.withValues(alpha: 0.15);
+    final statusFg = enabled
+        ? context.appColors.success
+        : context.appColors.warning;
 
     final row = _TactileRow(
       onTap: () {
@@ -1418,7 +1424,7 @@ class _SelectionBar extends StatelessWidget {
                   children: [
                     _GlassCircleButton(
                       icon: Lucide.Trash2,
-                      color: const Color(0xFFFF3B30),
+                      color: cs.error,
                       semanticLabel: l10n.providersPageDeleteAction,
                       onTap: onDelete,
                     ),
@@ -1477,12 +1483,8 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassBase = isDark
-        ? Colors.black.withValues(alpha: 0.06)
-        : Colors.white.withValues(alpha: 0.06);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final glassBase = cs.surface.withValues(alpha: 0.06);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)
         : glassBase;
@@ -1550,7 +1552,7 @@ Future<void> _showMultiExportSheet(
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -1615,7 +1617,8 @@ Future<void> _showMultiExportSheet(
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color:
+                          Colors.white, // color-gate: ignore (QR scannability)
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -1862,9 +1865,9 @@ class _AnimatedPressColor extends StatelessWidget {
   final Widget Function(Color color) builder;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),

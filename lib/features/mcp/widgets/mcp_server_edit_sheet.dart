@@ -10,6 +10,8 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
+import 'package:Kelivo/shared/widgets/section_card.dart';
 
 class _HeaderEntry {
   final TextEditingController key;
@@ -25,11 +27,10 @@ Future<void> showMcpServerEditSheet(
   BuildContext context, {
   String? serverId,
 }) async {
-  final cs = Theme.of(context).colorScheme;
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     // Match provider sheet corner radius
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -115,43 +116,12 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
   }
 
   // Simple iOS-style card wrapper, same as provider sheet
-  Widget _iosCard({required List<Widget> children}) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-          width: 0.6,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          children: [
-            for (int i = 0; i < children.length; i++) ...[
-              if (i > 0)
-                Divider(
-                  height: 10,
-                  thickness: 0.6,
-                  color: cs.outlineVariant.withValues(alpha: 0.18),
-                ),
-              children[i],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _inputRow({
     required String label,
     required TextEditingController controller,
     String? hint,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +140,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
             hintText: hint,
             filled: true,
             // Match provider sheet input background
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             // Match provider sheet border styles
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -219,7 +189,9 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _iosCard(
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          dividers: true,
           children: [
             _switchRow(
               label: l10n.mcpServerEditSheetEnabledLabel,
@@ -230,7 +202,9 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
         ),
         const SizedBox(height: 10),
         if (isBuiltin)
-          _iosCard(
+          SectionCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            dividers: true,
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -311,9 +285,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
             margin: const EdgeInsets.only(bottom: 10),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white10
-                  : const Color(0xFFF7F7F9),
+              color: context.appColors.surfaceFill,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -369,7 +341,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
     // Built-in: only toggle enabled
     if (isEdit && _transport == McpTransportType.inmemory) {
       final old = mcp.getById(widget.serverId!)!;
-      await mcp.updateServer(old.copyWith(enabled: _enabled));
+      await mcp.updateServerMetadata(old.copyWith(enabled: _enabled));
       if (mounted) Navigator.of(context).pop();
       return;
     }
@@ -391,7 +363,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
     };
     if (isEdit) {
       final old = mcp.getById(widget.serverId!)!;
-      await mcp.updateServer(
+      await mcp.updateServerMetadata(
         old.copyWith(
           enabled: _enabled,
           name: name,
@@ -543,11 +515,7 @@ class _McpServerEditSheetState extends State<_McpServerEditSheet>
                                       margin: const EdgeInsets.only(bottom: 10),
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color:
-                                            Theme.of(context).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white10
-                                            : const Color(0xFFF7F7F9),
+                                        color: context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: cs.outlineVariant.withValues(
@@ -884,8 +852,8 @@ class _SegChoiceBar extends StatelessWidget {
             segWidth * labels.length + gap * (labels.length - 1);
 
         final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+            ? context.appColors.surfaceFill
+            : context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < labels.length; index++) {
@@ -905,7 +873,7 @@ class _SegChoiceBar extends StatelessWidget {
                       ? cs.primary
                       : cs.onSurface.withValues(alpha: 0.82);
                   final Color targetTextColor = pressed
-                      ? Color.lerp(baseTextColor, Colors.white, 0.22) ??
+                      ? Color.lerp(baseTextColor, cs.surface, 0.22) ??
                             baseTextColor
                       : baseTextColor;
 
@@ -1007,8 +975,8 @@ class _SegTabBar extends StatelessWidget {
             segWidth * tabs.length + gap * (tabs.length - 1);
 
         final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+            ? context.appColors.surfaceFill
+            : context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < tabs.length; index++) {
@@ -1031,7 +999,7 @@ class _SegTabBar extends StatelessWidget {
                       ? cs.primary
                       : cs.onSurface.withValues(alpha: 0.82);
                   final Color targetTextColor = pressed
-                      ? Color.lerp(baseTextColor, Colors.white, 0.22) ??
+                      ? Color.lerp(baseTextColor, cs.surface, 0.22) ??
                             baseTextColor
                       : baseTextColor;
 

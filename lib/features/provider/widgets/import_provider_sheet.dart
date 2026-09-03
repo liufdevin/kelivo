@@ -11,6 +11,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class _ImportResult {
   final String key;
@@ -269,7 +270,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -544,10 +545,7 @@ Future<void> showImportProviderSheet(BuildContext context) async {
                           decoration: InputDecoration(
                             hintText: l10n.importProviderSheetDescription,
                             filled: true,
-                            fillColor:
-                                Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : Colors.white,
+                            fillColor: ctx.appColors.surfaceCard,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide(

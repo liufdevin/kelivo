@@ -17,6 +17,17 @@ ProviderConfig _openAIConfig(String baseUrl) {
   );
 }
 
+ProviderConfig _googleConfig(String baseUrl) {
+  return ProviderConfig(
+    id: 'GoogleEncodingCompatTest',
+    enabled: true,
+    name: 'GoogleEncodingCompatTest',
+    apiKey: 'test-key',
+    baseUrl: baseUrl,
+    providerType: ProviderKind.google,
+  );
+}
+
 ProviderConfig _openAIReasoningConfig({
   required String id,
   required String baseUrl,
@@ -117,13 +128,16 @@ void main() {
     test(
       'decodes OpenAI compatible JSON as UTF-8 when content type lacks charset',
       () async {
+        late Map<String, dynamic> requestBody;
         final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
         addTearDown(() async {
           await server.close(force: true);
         });
 
         server.listen((request) async {
-          await utf8.decoder.bind(request).join();
+          requestBody =
+              (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                  .cast<String, dynamic>();
 
           request.response.statusCode = HttpStatus.ok;
           request.response.headers.set(
@@ -144,8 +158,99 @@ void main() {
         );
 
         expect(title, '问候交流');
+        expect(requestBody['stream'], isFalse);
+        expect(requestBody.containsKey('temperature'), isFalse);
       },
     );
+
+    test('requests non-streaming JSON from the Responses API', () async {
+      late Map<String, dynamic> requestBody;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestBody =
+            (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                .cast<String, dynamic>();
+        request.response.statusCode = HttpStatus.ok;
+        if (requestBody['stream'] == false) {
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'id': 'resp-title',
+              'object': 'response',
+              'status': 'completed',
+              'output_text': '标题',
+              'output': const [],
+            }),
+          );
+        } else {
+          request.response.headers.contentType = ContentType(
+            'text',
+            'event-stream',
+            charset: 'utf-8',
+          );
+          request.response.write(
+            'event:response.created\n'
+            'data: {"type":"response.created"}\n\n',
+          );
+        }
+        await request.response.close();
+      });
+
+      final baseUrl = 'http://${server.address.address}:${server.port}/v1';
+      final title = await ChatApiService.generateText(
+        config: _openAIConfig(baseUrl).copyWith(useResponseApi: true),
+        modelId: 'deepseek-v4-flash',
+        prompt: 'summarize',
+      );
+
+      expect(title, '标题');
+      expect(requestBody['stream'], isFalse);
+    });
+
+    test('omits temperature from Google utility requests', () async {
+      late Map<String, dynamic> requestBody;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() async {
+        await server.close(force: true);
+      });
+
+      server.listen((request) async {
+        requestBody =
+            (jsonDecode(await utf8.decoder.bind(request).join()) as Map)
+                .cast<String, dynamic>();
+        request.response.statusCode = HttpStatus.ok;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'candidates': [
+              {
+                'content': {
+                  'parts': [
+                    {'text': '标题'},
+                  ],
+                },
+              },
+            ],
+          }),
+        );
+        await request.response.close();
+      });
+
+      final baseUrl = 'http://${server.address.address}:${server.port}/v1beta';
+      final title = await ChatApiService.generateText(
+        config: _googleConfig(baseUrl),
+        modelId: 'gemini-test',
+        prompt: 'summarize',
+      );
+
+      expect(title, '标题');
+      expect(requestBody.containsKey('temperature'), isFalse);
+      expect(requestBody['generationConfig'], isA<Map>());
+    });
 
     test(
       'omits fixed Kimi K2.7 Code params from OpenAI compatible JSON',
@@ -195,6 +300,30 @@ void main() {
       },
     );
 
+    test('maps Kimi K3 effort and omits fixed request parameters', () async {
+      final maxBody = await _captureGenerateTextBody(
+        providerId: 'MoonshotCompatTest',
+        modelId: 'kimi-k3',
+        thinkingBudget: 128000,
+      );
+      final minimumBody = await _captureGenerateTextBody(
+        providerId: 'MoonshotCompatTest',
+        modelId: 'kimi-k3',
+        thinkingBudget: 0,
+      );
+
+      expect(maxBody['reasoning_effort'], 'max');
+      expect(minimumBody['reasoning_effort'], 'low');
+      for (final body in [maxBody, minimumBody]) {
+        expect(body.containsKey('thinking'), isFalse);
+        expect(body.containsKey('temperature'), isFalse);
+        expect(body.containsKey('top_p'), isFalse);
+        expect(body.containsKey('n'), isFalse);
+        expect(body.containsKey('presence_penalty'), isFalse);
+        expect(body.containsKey('frequency_penalty'), isFalse);
+      }
+    });
+
     test(
       'maps DeepSeek reasoning knobs for non-streaming text generation',
       () async {
@@ -210,7 +339,7 @@ void main() {
         );
 
         expect(enabledBody['thinking'], {'type': 'enabled'});
-        expect(enabledBody['reasoning_effort'], 'xhigh');
+        expect(enabledBody['reasoning_effort'], 'high');
         expect(disabledBody['thinking'], {'type': 'disabled'});
         expect(disabledBody.containsKey('reasoning_effort'), isFalse);
       },

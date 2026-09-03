@@ -4,6 +4,7 @@ import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/models/instruction_injection.dart';
 import '../../../l10n/app_localizations.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 /// Bottom sheet for editing the active instruction injection prompt.
 ///
@@ -77,9 +78,7 @@ class _LearningPromptSheetState extends State<LearningPromptSheet> {
               decoration: InputDecoration(
                 hintText: l10n.bottomToolsSheetPromptHint,
                 filled: true,
-                fillColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : const Color(0xFFF2F3F5),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
@@ -136,12 +135,11 @@ Future<void> showLearningPromptSheet(BuildContext context) async {
   final items = provider.items;
   if (items.isEmpty) return;
   final target = provider.active ?? items.first;
-  final cs = Theme.of(context).colorScheme;
 
   await showModalBottomSheet(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),

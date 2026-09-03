@@ -17,7 +17,6 @@
   "settingsPageProviders": "Providers",
   "settingsPageHotkeys": "Hotkeys",
   "settingsPageSearch": "Search",
-  "settingsPageImageGeneration": "Image Generation",
   "settingsPageTts": "TTS",
   "settingsPageMcp": "MCP",
   "settingsPageQuickPhrase": "Quick Phrase",
@@ -37,61 +36,6 @@
       }
     }
   },
-  "imageGenerationPageTitle": "Image Generation",
-  "imageGenerationProviderLabel": "Provider",
-  "imageGenerationModelLabel": "Model",
-  "imageGenerationModeLabel": "Mode",
-  "imageGenerationModeGenerate": "Generate",
-  "imageGenerationModeEdit": "Edit Image",
-  "imageGenerationPromptLabel": "Prompt",
-  "imageGenerationPromptHint": "Describe the image you want",
-  "imageGenerationSizeLabel": "Size",
-  "imageGenerationQualityLabel": "Quality",
-  "imageGenerationOutputFormatLabel": "Format",
-  "imageGenerationCountLabel": "Count",
-  "imageGenerationPickImages": "Pick Images",
-  "imageGenerationPickedImages": "{count} selected",
-  "@imageGenerationPickedImages": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "imageGenerationClearImages": "Clear",
-  "imageGenerationMaskNotSelected": "No mask selected",
-  "imageGenerationMaskSelected": "Mask selected",
-  "imageGenerationPickMask": "Pick Mask",
-  "imageGenerationClearMask": "Clear Mask",
-  "imageGenerationGenerateButton": "Generate Image",
-  "imageGenerationEditButton": "Edit Image",
-  "imageGenerationGenerating": "Generating…",
-  "imageGenerationNoProvider": "No enabled OpenAI-compatible provider",
-  "imageGenerationModelRequired": "Set an image model for this assistant first",
-  "imageGenerationModelUnsupported": "The selected image model is not an OpenAI-compatible image model",
-  "imageGenerationNoApiKey": "The selected provider has no API key",
-  "imageGenerationPromptRequired": "Enter a prompt first",
-  "imageGenerationImageRequired": "Select at least one input image",
-  "imageGenerationSuccess": "{count} image(s) generated",
-  "@imageGenerationSuccess": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "imageGenerationFailed": "Image request failed: {error}",
-  "@imageGenerationFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "imageGenerationEmptyResult": "The image API returned no image",
-  "imageGenerationInvalidResponse": "The image API returned an invalid response",
-  "imageGenerationRequestFailed": "Image request failed",
-  "imageGenerationResultTitle": "Results",
   "storageSpacePageTitle": "Storage Space",
   "storageSpaceRefreshTooltip": "Refresh",
   "storageSpaceLoadFailed": "Failed to load storage usage",
@@ -114,11 +58,25 @@
   },
   "storageSpaceCategoryImages": "Images",
   "storageSpaceCategoryFiles": "Files",
+  "storageSpaceCategoryFonts": "Fonts",
+  "storageSpaceCategoryLocalModels": "Local Models",
+  "storageSpaceOtherHint": "Fonts, downloaded local models, and other app files.",
+  "storageSpaceSubOtherApp": "App files",
   "storageSpaceCategoryChatData": "Chat Records",
+  "storageSpaceCategoryLegacyChatData": "Chat Records (Old)",
+  "storageSpaceCategoryRestoreTraces": "Restore Traces",
+  "storageSpaceCategoryDisplacedDatabases": "Set-Aside Databases",
+  "storageSpaceSubDisplacedDatabases": "Kept before an automatic rebuild",
+  "storageSpaceClearDisplacedDatabasesConfirmMessage": "Delete these set-aside databases? Kelivo kept them when it rebuilt its database, and they may be the only surviving copy of those chats and settings. This cannot be undone.",
+  "storageSpaceRestoreTracesHint": "Previous data snapshots kept after completed restores. Clearing them does not affect the current app data.",
+  "storageSpaceClearRestoreTracesButton": "Clear Restore Traces",
+  "storageSpaceClearDisplacedDatabasesButton": "Delete Set-Aside Databases",
+  "storageSpaceClearRestoreTracesConfirmMessage": "Clear completed restore snapshots? Your current database, settings, and files will not be affected.",
+  "storageSpaceSubCompletedRestoreRuns": "Completed restore snapshots",
   "storageSpaceCategoryAssistantData": "Assistants",
   "storageSpaceCategoryCache": "Cache",
   "storageSpaceCategoryLogs": "Logs",
-  "storageSpaceCategoryOther": "App",
+  "storageSpaceCategoryOther": "Other",
   "storageSpaceFilesCount": "{count} files",
   "@storageSpaceFilesCount": {
     "placeholders": {
@@ -128,16 +86,21 @@
     }
   },
   "storageSpaceSafeToClearHint": "Safe to clear. This will not affect your chat history.",
+  "storageSpaceLegacyChatDataHint": "These are retained Hive files from before the SQLite migration. Clearing them does not delete your current chat records.",
   "storageSpaceNotSafeToClearHint": "May affect your chat history. Delete with care.",
   "storageSpaceBreakdownTitle": "Breakdown",
   "storageSpaceSubChatMessages": "Messages",
   "storageSpaceSubChatConversations": "Conversations",
   "storageSpaceSubChatToolEvents": "Tool events",
+  "storageSpaceSubChatDatabase": "Chat database",
+  "storageSpaceSubChatWriteAheadLog": "Write-ahead log",
+  "storageSpaceSubChatSharedMemory": "Shared memory index",
   "storageSpaceSubAssistantAvatars": "Avatars",
   "storageSpaceSubAssistantImages": "Images",
   "storageSpaceSubCacheAvatars": "Avatar cache",
   "storageSpaceSubCacheOther": "Other cache",
   "storageSpaceSubCacheSystem": "System cache",
+  "storageSpaceSubLogsContext": "Context logs",
   "storageSpaceSubLogsFlutter": "Flutter logs",
   "storageSpaceSubLogsRequests": "Network logs",
   "storageSpaceSubLogsOther": "Other logs",
@@ -170,6 +133,11 @@
   "storageSpaceClearAvatarCacheButton": "Clear Avatar Cache",
   "storageSpaceClearCacheButton": "Clear Cache",
   "storageSpaceClearLogsButton": "Clear Logs",
+  "storageSpaceClearLegacyChatDataButton": "Clear Old Chat Records",
+  "storageSpaceExportLegacyChatFileButton": "Export",
+  "storageSpaceExportDone": "{fileName} exported",
+  "storageSpaceExportFailed": "Export failed: {error}",
+  "storageSpaceClearLegacyChatDataConfirmMessage": "Clear the retained old chat files? Your current SQLite chat records will remain available.",
   "storageSpaceViewLogsButton": "View Logs",
   "storageSpaceDeleteConfirmTitle": "Confirm deletion",
   "storageSpaceDeleteUploadsConfirmMessage": "Delete {count} items? Attachments in chat history may become unavailable.",
@@ -207,6 +175,15 @@
       }
     }
   },
+  "storageSpaceSourceLabel": "Source",
+  "storageSpaceSourceAll": "All",
+  "storageSpaceSourceUserUpload": "User uploads",
+  "storageSpaceSourceAssistant": "Assistant",
+  "storageSpaceSortLabel": "Sort",
+  "storageSpaceSortNewest": "Newest",
+  "storageSpaceSortOldest": "Oldest",
+  "storageSpaceSortLargest": "Largest",
+  "storageSpaceSortSmallest": "Smallest",
   "settingsPageAboutSection": "About",
   "settingsPageAbout": "About",
   "settingsPageStatistics": "Statistics",
@@ -295,25 +272,10 @@
   "assistantProviderDefaultAssistantName": "Default Assistant",
   "assistantProviderSampleAssistantName": "Sample Assistant",
   "assistantProviderNewAssistantName": "New Assistant",
-  "assistantProviderSampleAssistantSystemPrompt": "You are {model_name}, an AI assistant who gladly provides accurate and helpful assistance. The current time is {cur_datetime}, the device language is {locale}, timezone is {timezone}, the user is using {device_info}, version {system_version}. If the user does not explicitly specify otherwise, please use the user's device language when replying.",
+  "assistantProviderSampleAssistantSystemPrompt": "You are {model_name}, a helpful AI assistant. Answer accurately and concisely; say when you are unsure. Prefer clear structure (short paragraphs or lists) when it helps. Reply in the user's language by default.",
   "@assistantProviderSampleAssistantSystemPrompt": {
     "placeholders": {
       "model_name": {
-        "type": "String"
-      },
-      "cur_datetime": {
-        "type": "String"
-      },
-      "locale": {
-        "type": "String"
-      },
-      "timezone": {
-        "type": "String"
-      },
-      "device_info": {
-        "type": "String"
-      },
-      "system_version": {
         "type": "String"
       }
     }
@@ -355,7 +317,6 @@
   "displaySettingsPageLanguageChineseLabel": "Simplified Chinese",
   "displaySettingsPageLanguageEnglishLabel": "English",
   "homePagePleaseSelectModel": "Please select a model first",
-  "homePageImageAttachmentUnsupported": "The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.",
   "homePageAudioAttachmentUnsupported": "The current model does not support audio attachments. Switch to a model that supports audio input or remove the audio file and try again.",
   "homePagePleaseSetupTranslateModel": "Please set a translation model first",
   "homePageTranslating": "Translating...",
@@ -438,9 +399,6 @@
   "assistantEditUseAssistantNameTitle": "Use Assistant Name",
   "assistantEditChatModelTitle": "Chat Model",
   "assistantEditChatModelSubtitle": "Default chat model for this assistant (fallback to global)",
-  "assistantEditImageModelTitle": "Image Model",
-  "assistantEditImageModelSubtitle": "Used in chat when a message starts with /image, /img, 生图, or 画图",
-  "assistantEditImageModelUnset": "No image model",
   "assistantEditTemperatureDescription": "Controls randomness, range 0–2",
   "assistantEditTopPDescription": "Do not change unless you know what you are doing",
   "assistantEditParameterDisabled": "Disabled (uses provider default)",
@@ -603,6 +561,30 @@
   "assistantEditVariableRole": "Role",
   "assistantEditVariableMessage": "Message",
   "assistantEditPreviewTitle": "Preview",
+  "assistantEditPromptTimeVarWarning": "Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.",
+  "assistantEditPromptAppendTimeTitle": "Append current time",
+  "assistantEditPromptAppendTimeSubtitle": "Append the send time to the end of each user message. Time stays at the end of the request, so prompt caching is unaffected.",
+  "assistantEditPromptAppendTimeInfoTitle": "Appended time format",
+  "assistantEditPromptAppendTimeInfoBody": "When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n{example}\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.",
+  "@assistantEditPromptAppendTimeInfoBody": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptAppendTimeInfoClose": "Got it",
+  "assistantEditPromptTimeVarDialogTitle": "System prompt contains time variables",
+  "assistantEditPromptTimeVarDialogBody": "Your system prompt uses {variables}. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.",
+  "@assistantEditPromptTimeVarDialogBody": {
+    "placeholders": {
+      "variables": {
+        "type": "String"
+      }
+    }
+  },
+  "assistantEditPromptTimeVarDialogRemove": "Go remove",
+  "assistantEditPromptTimeVarDialogKeep": "Enable anyway",
   "codeBlockPreviewButton": "Preview",
   "codeBlockSaveAsButton": "Save as file",
   "codeBlockCollapseButton": "Collapse",
@@ -689,25 +671,227 @@
   "backupPageTestDone": "Test done",
   "backupPageTestConnection": "Test",
   "backupPageRestartRequired": "Restart Required",
-  "backupPageRestartContent": "Restore completed. Please restart the app.",
+  "backupPageRestartContent": "Import successful. Restart Kelivo to apply it safely.",
+  "backupPageRestartContentWithSkipped": "Import completed, but {count} conversations with invalid message ordering were skipped. Restart Kelivo to apply the imported data safely.",
+  "@backupPageRestartContentWithSkipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "restartAppFailedMessage": "Kelivo could not restart automatically. Fully close it, then open it again.",
+  "backupRestoreRolledBackTitle": "Restore was rolled back",
+  "backupRestoreRolledBackContent": "The restore could not be completed. Kelivo verified and kept your previous data.",
+  "backupRestoreFailureTitle": "Restore requires attention",
+  "backupRestoreFailureContent": "Kelivo could not verify a complete old or new data set, so chat data was not opened. Close Kelivo and try again. If this repeats, keep the diagnostic code for support.",
+  "backupRestoreBusinessLeaseUnavailableTitle": "Kelivo is already running",
+  "backupRestoreBusinessLeaseUnavailableContent": "Kelivo's data is still in use by another app process. Close any other Kelivo window, then restart. Your chat data has not been opened by this process.",
+  "restoreProgressTitle": "Restoring your backup",
+  "restoreProgressWarning": "Keep Kelivo open until this finishes. If you close it now, the next launch starts this over.",
+  "restoreProgressStageCheckingBackup": "Checking the backup",
+  "restoreProgressStagePreservingCurrentData": "Preserving your current data",
+  "restoreProgressStageInstallingBackup": "Installing the backup",
+  "restoreProgressStageVerifying": "Verifying",
+  "restoreProgressStageRollingBack": "Restoring your previous data",
+  "restoreProgressStageFinishing": "Finishing up",
+  "backupRestoreFailureRestartButton": "Restart Kelivo",
+  "backupRestoreFailureCopyButton": "Copy diagnostic code",
+  "backupRestoreFailureCopied": "Diagnostic code copied",
+  "backupRestoreFailureDiagnostic": "Diagnostic code: {code}",
+  "@backupRestoreFailureDiagnostic": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoveryMoreOptions": "More recovery options",
+  "startupRecoveryRepairButton": "Repair and restart",
+  "startupRecoveryExportButton": "Export a copy of my data",
+  "startupRecoveryResetButton": "Reset data",
+  "startupRecoveryBusy": "Working…",
+  "startupRecoveryExportSucceeded": "A copy of your data was saved.",
+  "startupRecoveryExportFailed": "Could not export a copy of your data.",
+  "startupRecoveryRepairFailed": "Repair could not fix this. Export a copy of your data, then reset.",
+  "startupRecoveryResetFailed": "Reset failed. Fully close Kelivo, then open it again.",
+  "startupRecoveryResetDialogTitle": "Reset all data?",
+  "startupRecoveryResetDialogContent": "This permanently deletes Kelivo's database on this device and starts fresh. If you might need this data, export a copy first. This cannot be undone.",
+  "startupRecoveryResetDialogConfirm": "Reset and restart",
+  "startupRecoveryResetDialogCancel": "Cancel",
+  "startupRecoveryWhatFailed": "What failed",
+  "startupRecoveryStageLabel": "Stage",
+  "startupRecoveryStageRestore": "Restore gate",
+  "startupRecoveryStageDatabase": "Database startup",
+  "startupRecoveryDiagnosticLabel": "Diagnostic code",
+  "startupRecoverySchemaLabel": "Database version",
+  "startupRecoverySchemaValue": "{installed} on disk · {expected} expected by this build",
+  "@startupRecoverySchemaValue": {
+    "placeholders": {
+      "installed": {
+        "type": "String"
+      },
+      "expected": {
+        "type": "int"
+      }
+    }
+  },
+  "startupRecoveryAppVersionLabel": "App",
+  "startupRecoveryUnknownValue": "unknown",
+  "startupRecoveryCollecting": "Collecting diagnostics…",
+  "startupRecoveryShowDetails": "Show technical details",
+  "startupRecoveryHideDetails": "Hide technical details",
+  "startupRecoveryCopyReport": "Copy full report",
+  "startupRecoveryReportCopied": "Full report copied",
+  "startupRecoveryShareReport": "Export report",
+  "startupRecoveryReportStored": "A copy of this report was saved to {path}",
+  "@startupRecoveryReportStored": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoveryReportSaved": "Report saved to {path}",
+  "@startupRecoveryReportSaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoveryReportShared": "Report exported.",
+  "startupRecoveryReportSaveFailed": "Could not export the report.",
+  "startupRecoverySectionDataTitle": "Your data",
+  "startupRecoverySectionDataBody": "Nothing has been deleted. Save a copy somewhere safe before trying anything below.",
+  "startupRecoveryExportSavedTo": "A copy of your data was saved to {path}",
+  "@startupRecoveryExportSavedTo": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoverySectionRepairTitle": "Diagnose and repair",
+  "startupRecoverySectionRepairBody": "The integrity check only reads the database. Repair clears leftover metadata from an interrupted update and retries startup; it never deletes chats.",
+  "startupRecoveryIntegrityButton": "Check database integrity",
+  "startupRecoveryIntegrityHealthy": "SQLite found no damage in the database file.",
+  "startupRecoveryIntegrityDamaged": "SQLite reported problems — {detail}",
+  "@startupRecoveryIntegrityDamaged": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoveryIntegrityMissing": "No database file was found in the data folder.",
+  "startupRecoveryIntegrityFailed": "The integrity check could not run.",
+  "startupRecoveryDangerZone": "Danger zone",
+  "startupRecoveryDangerBody": "Resetting permanently deletes Kelivo's database on this device. Export a copy of your data first — a reset also destroys the evidence needed to fix the underlying problem.",
+  "startupRecoveryResetAcknowledge": "I exported a copy, or I do not need this data.",
+  "startupDatabaseUpdateRequiredTitle": "Update Kelivo to continue",
+  "startupDatabaseUpdateRequiredContent": "The chat database on this device was created by a newer version of Kelivo and cannot be opened by this version. Your data has not been changed. Install the latest version of Kelivo, then open it again.",
+  "startupDatabaseUpdateRequiredDowngradeTitle": "If you need an older version",
+  "startupDatabaseUpdateRequiredDowngradeIntro": "This version cannot open the database on this device. If you must keep using an older version, follow the steps below. Do not delete or overwrite the data here until you have a backup.",
+  "startupDatabaseUpdateRequiredDowngradeStep1": "Install and open the latest Kelivo, then export a backup from Settings → Backup.",
+  "startupDatabaseUpdateRequiredDowngradeStep2": "Open {url} and convert that backup to the older version you want to use.",
+  "@startupDatabaseUpdateRequiredDowngradeStep2": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "startupDatabaseUpdateRequiredDowngradeStep3": "After you have confirmed the data on this device is backed up, install the older version and import the converted backup.",
+  "startupDatabaseUpdateRequiredOpenTool": "Open conversion tool",
+  "backupPageRestoreFailedMessage": "Restore failed: {error}",
+  "@backupPageRestoreFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupPageExportFailedMessage": "Export failed: {error}",
+  "@backupPageExportFailedMessage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageOK": "OK",
   "backupPageCancel": "Cancel",
   "backupPageSelectImportMode": "Select Import Mode",
-  "backupPageSelectImportModeDescription": "Choose how to import the backup data:",
+  "backupPageSelectImportModeDescription": "Choose a restore mode. The chat and file switches determine which components are included.",
   "backupPageOverwriteMode": "Complete Overwrite",
-  "backupPageOverwriteModeDescription": "Clear all local data and restore from backup",
-  "backupPageMergeMode": "Smart Merge",
-  "backupPageMergeModeDescription": "Add only non-existing data (intelligent deduplication)",
+  "backupPageOverwriteModeDescription": "Replace the selected components; keep unselected components and unrelated local settings",
+  "backupPageMergeMode": "Merge",
+  "backupPageMergeModeDescription": "Keep local data and add backup data. Identical conversations are skipped and conflicting conversations receive new IDs.",
   "backupPageRestore": "Restore",
+  "backupPageForwardCompatTitle": "Backup is from a newer version",
+  "backupPageForwardCompatBody": "This backup was created by a newer version of Kelivo (data format {backupVersion}; this version supports {currentVersion}), and it does not say whether older versions can read it.\n\nYou can continue: anything this version does not recognise will be skipped, and the backup file itself is not modified. But if the newer version changed how existing data is stored, some content may be imported incorrectly.\n\nUpdating Kelivo first is the safer choice.",
+  "@backupPageForwardCompatBody": {
+    "placeholders": {
+      "backupVersion": {
+        "type": "int"
+      },
+      "currentVersion": {
+        "type": "int"
+      }
+    }
+  },
+  "backupPageForwardCompatContinue": "Import anyway",
+  "backupPageForwardCompatCancel": "Cancel",
+  "backupPageSchemaTooNewMessage": "This backup was created by a newer version of Kelivo and cannot be read by this version. Please update Kelivo and try again.",
   "backupPageBackupUploaded": "Backup uploaded",
   "backupPageBackup": "Backup",
   "backupPageExporting": "Exporting...",
+  "backupProgressCancel": "Cancel",
+  "backupProgressCancelled": "Cancelled",
+  "backupProgressPreparing": "Preparing",
+  "backupProgressSnapshotting": "Creating database snapshot",
+  "backupProgressPacking": "Packing",
+  "backupProgressVerifying": "Verifying",
+  "backupProgressUploading": "Uploading",
+  "backupProgressDownloading": "Downloading",
+  "backupProgressExtracting": "Extracting",
+  "backupProgressValidating": "Validating",
+  "backupProgressReadingSettings": "Reading settings",
+  "backupProgressStaging": "Staging",
+  "backupProgressCommitting": "Committing",
+  "backupProgressImportingSessions": "Importing sessions",
+  "backupProgressImportingMessages": "Importing messages",
+  "backupProgressMaterializingFiles": "Writing files",
+  "backupProgressListingRemote": "Listing remote backups",
+  "backupProgressFinalizing": "Finishing",
+  "backupProgressBytes": "{done} / {total}",
+  "@backupProgressBytes": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "backupProgressItems": "{done} / {total}",
+  "@backupProgressItems": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageExportToFile": "Export to File",
   "backupPageExportToFileSubtitle": "Export app data to a file",
   "backupPageImportBackupFile": "Import Backup File",
   "backupPageImportBackupFileSubtitle": "Import a local backup file",
   "backupPageImportFromOtherApps": "Import from Other Apps",
-  "backupPageImportFromRikkaHub": "Import from RikkaHub",
   "backupPageNotSupportedYet": "Not supported yet",
   "backupPageRemoteBackups": "Remote Backups",
   "backupPageNoBackups": "No backups",
@@ -734,6 +918,14 @@
   "backupPageBackupNow": "Backup Now",
   "backupPageLocalBackup": "Local Backup",
   "backupPageImportFromCherryStudio": "Import from Cherry Studio",
+  "backupPageCherryStudioUnsupportedBackupVersion": "This backup uses Cherry Studio format version {version}, which Kelivo cannot import yet. Export from Cherry Studio v1 instead, or wait for a Kelivo update that supports Cherry Studio v2 backups.",
+  "@backupPageCherryStudioUnsupportedBackupVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "backupPageImportFromChatbox": "Import from Chatbox",
   "backupReminderSectionTitle": "Backup Reminder",
   "backupReminderEnableTitle": "Remind me to back up",
@@ -814,6 +1006,32 @@
   "compressContextMaxCharsLabel": "Characters",
   "compressContextInvalidLimit": "Enter a positive character count",
   "compressContextStartButton": "Compress",
+  "compressContextModelLabel": "Model",
+  "compressContextModelUnset": "Select a model",
+  "compressContextKeepRecentMessages": "Keep N",
+  "compressContextKeepCountLabel": "Keep recent messages",
+  "compressContextKeepAllMessages": "Keeping that many covers all messages — nothing to compress",
+  "compressContextEstimatePreview": "Summarize {summarized} chars, keep {kept} chars verbatim → about {minTokens}–{maxTokens} tokens (original about {totalTokens} tokens)",
+  "@compressContextEstimatePreview": {
+    "description": "Keep-recent compression preview: summarized/kept char counts and the estimated result token band",
+    "placeholders": {
+      "summarized": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      },
+      "minTokens": {
+        "type": "int"
+      },
+      "maxTokens": {
+        "type": "int"
+      },
+      "totalTokens": {
+        "type": "int"
+      }
+    }
+  },
   "bottomToolsSheetLearningMode": "Learning Mode",
   "bottomToolsSheetLearningModeDescription": "Help you learn step by step",
   "bottomToolsSheetConfigurePrompt": "Configure prompt",
@@ -896,6 +1114,7 @@
     }
   },
   "chatMessageWidgetOpenLinkError": "Failed to open link",
+  "chatMessageWidgetAttachmentUnavailable": "Attachment unavailable",
   "chatMessageWidgetCitationsTitle": "Citations ({count})",
   "@chatMessageWidgetCitationsTitle": {
     "placeholders": {
@@ -917,9 +1136,6 @@
   "chatMessageWidgetTranslateTooltip": "Translate",
   "chatMessageWidgetBuiltinSearchHideNote": "Hide builtin search tool cards",
   "chatMessageWidgetDeepThinking": "Deep Thinking",
-  "chatMessageWidgetCreateMemory": "Create Memory",
-  "chatMessageWidgetEditMemory": "Edit Memory",
-  "chatMessageWidgetDeleteMemory": "Delete Memory",
   "chatMessageWidgetWebSearch": "Web Search: {query}",
   "@chatMessageWidgetWebSearch": {
     "placeholders": {
@@ -940,6 +1156,14 @@
       }
     }
   },
+  "chatMessageWidgetMemoryRead": "Read Memory",
+  "chatMessageWidgetMemoryUpdate": "Update Memory",
+  "chatMessageWidgetMemorySearchProfile": "Search Memory",
+  "chatMessageWidgetMemoryEdit": "Edit Memory",
+  "chatMessageWidgetMemoryDelete": "Delete Memory",
+  "chatMessageWidgetUpdateUserProfile": "Update User Profile",
+  "chatMessageWidgetChatSearch": "Search Past Chats",
+  "chatMessageWidgetCreateMemory": "Create Memory",
   "chatMessageWidgetToolCall": "Tool Call: {name}",
   "@chatMessageWidgetToolCall": {
     "placeholders": {
@@ -960,7 +1184,6 @@
   "chatMessageWidgetArguments": "Arguments",
   "chatMessageWidgetResult": "Result",
   "chatMessageWidgetImages": "Images",
-  "chatMessageWidgetContinueImageGeneration": "Edit image",
   "chatMessageWidgetCitationsCount": "{count} citations",
   "@chatMessageWidgetCitationsCount": {
     "placeholders": {
@@ -1059,8 +1282,49 @@
   "sideDrawerMenuPin": "Pin",
   "sideDrawerMenuUnpin": "Unpin",
   "sideDrawerMenuRegenerateTitle": "Regenerate Title",
+  "sideDrawerMenuCopy": "Copy",
   "sideDrawerMenuMoveTo": "Move to",
   "sideDrawerMenuDelete": "Delete",
+  "sideDrawerMenuSelect": "Select",
+  "sideDrawerSelectionTitle": "Selected {count} items",
+  "@sideDrawerSelectionTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerSelectionSelectAll": "Select all",
+  "sideDrawerSelectionDeselectAll": "Deselect all",
+  "sideDrawerSelectionPin": "Pin",
+  "sideDrawerSelectionUnpin": "Unpin",
+  "sideDrawerSelectionMove": "Move",
+  "sideDrawerSelectionDelete": "Delete",
+  "sideDrawerSelectionDeleteConfirmTitle": "Delete conversations",
+  "sideDrawerSelectionDeleteConfirmContent": "Delete {count} conversations?",
+  "@sideDrawerSelectionDeleteConfirmContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerDeleteSelectedSnackbar": "Deleted {count} conversations",
+  "@sideDrawerDeleteSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sideDrawerMoveSelectedSnackbar": "Moved {count} conversations",
+  "@sideDrawerMoveSelectedSnackbar": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sideDrawerDeleteSnackbar": "Deleted \"{title}\"",
   "@sideDrawerDeleteSnackbar": {
     "placeholders": {
@@ -1151,11 +1415,16 @@
   "sideDrawerRename": "Rename",
   "chatInputBarHint": "Type a message for AI",
   "chatInputBarSelectModelTooltip": "Select Model",
-  "chatInputBarImageGenerationTooltip": "Image Generation",
   "chatInputBarOnlineSearchTooltip": "Online Search",
   "chatInputBarReasoningStrengthTooltip": "Reasoning Strength",
   "chatInputBarMcpServersTooltip": "MCP Servers",
   "chatInputBarMoreTooltip": "Add",
+  "chatInputBarVoiceInputTooltip": "Voice input",
+  "chatInputBarVoiceCancelTooltip": "Discard recording",
+  "chatInputBarVoiceStopTooltip": "Stop and transcribe to input",
+  "chatInputBarVoiceSendTooltip": "Transcribe and send",
+  "chatInputBarVoiceTranscribing": "Recognizing…",
+  "chatInputBarImageProcessing": "Processing image",
   "chatInputBarImageMode": "Image mode",
   "chatInputBarDisableImageModeTooltip": "Turn off image mode",
   "chatInputBarQueuedPending": "Queued to send",
@@ -1173,7 +1442,11 @@
   "mcpPageStatusConnected": "Connected",
   "mcpPageStatusConnecting": "Connecting…",
   "mcpPageStatusDisconnected": "Disconnected",
+  "mcpPageStatusAuthorizationRequired": "Authorization required",
+  "mcpPageStatusAuthorizing": "Authorizing…",
   "mcpPageStatusDisabled": "Disabled",
+  "mcpPageOAuthRequired": "OAuth sign-in is required",
+  "mcpPageOAuthSignIn": "Sign in with OAuth",
   "mcpPageToolsCount": "Tools: {enabled}/{total}",
   "@mcpPageToolsCount": {
     "placeholders": {
@@ -1236,12 +1509,12 @@
   "defaultModelPageChatModelTitle": "Chat Model",
   "defaultModelPageChatModelSubtitle": "Global default chat model",
   "defaultModelPageTitleModelTitle": "Title Summary Model",
-  "defaultModelPageTitleModelSubtitle": "Used for summarizing conversation titles; prefer fast & cheap models",
+  "defaultModelPageTitleModelSubtitle": "Summarizes conversation titles using the current chat model by default, or a selected model.",
   "titleModelThinkingTitle": "Enable Thinking",
   "defaultModelPageSummaryModelTitle": "Summary Model",
   "defaultModelPageSummaryModelSubtitle": "Used for generating conversation summaries; prefer fast and cheap models",
   "defaultModelPageSuggestionModelTitle": "Chat Suggestions Model",
-  "defaultModelPageSuggestionModelSubtitle": "Used for follow-up suggestion bubbles after assistant replies. Disabled until a model is selected.",
+  "defaultModelPageSuggestionModelSubtitle": "Generates follow-up suggestion bubbles using the current chat model or a selected model. Disabled by default.",
   "assistantEditRecentChatsSummaryFrequencyTitle": "Summary Refresh Frequency",
   "assistantEditRecentChatsSummaryFrequencyDescription": "Refresh recent-chat summaries after the selected number of new messages.",
   "assistantEditRecentChatsSummaryFrequencyOption": "Every {count}",
@@ -1261,6 +1534,17 @@
   "defaultModelPageTranslateModelTitle": "Translation Model",
   "defaultModelPageTranslateModelSubtitle": "Used for translating message content; prefer fast & accurate models",
   "defaultModelPageOcrModelTitle": "OCR Model",
+  "backgroundTaskFailed": "{task} failed: {error}",
+  "@backgroundTaskFailed": {
+    "placeholders": {
+      "task": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "defaultModelPageOcrModelSubtitle": "Used for extracting text and descriptions from images",
   "defaultModelPageOcrModelRequiresImageInput": "Select a model tagged with image input for OCR",
   "defaultModelPagePromptLabel": "Prompt",
@@ -1270,6 +1554,7 @@
   "defaultModelPageTranslatePromptHint": "Enter prompt template for translation",
   "defaultModelPageOcrPromptHint": "Enter prompt template for OCR image understanding",
   "defaultModelPageResetDefault": "Reset to default",
+  "defaultModelPageDisable": "Disable",
   "defaultModelPageSave": "Save",
   "defaultModelPageTitleVars": "Vars: content: {contentVar}, locale: {localeVar}",
   "@defaultModelPageTitleVars": {
@@ -1370,8 +1655,7 @@
   "modelFetchInvertTooltip": "Invert",
   "modelDetailSheetSaveFailedMessage": "Save failed. Please try again.",
   "modelDetailSheetAddBody": "Add Body",
-  "modelDetailSheetBuiltinToolsDescription": "Built-in tools only support official APIs.",
-  "modelDetailSheetBuiltinToolsUnsupportedHint": "Current provider does not support these built-in tools.",
+  "modelDetailSheetBuiltinToolsDescription": "Built-in tools depend on the provider and API mode.",
   "modelDetailSheetSearchTool": "Search",
   "modelDetailSheetSearchToolDescription": "Enable Google Search integration",
   "modelDetailSheetUrlContextTool": "URL Context",
@@ -1381,6 +1665,12 @@
   "modelDetailSheetYoutubeTool": "YouTube",
   "modelDetailSheetYoutubeToolDescription": "Enable YouTube URL ingestion (auto-detect links in prompts)",
   "modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint": "Requires OpenAI Responses API.",
+  "modelDetailSheetWebFetchTool": "Web Fetch",
+  "modelDetailSheetOpenrouterWebFetchToolDescription": "Enable OpenRouter web fetch server tool",
+  "modelDetailSheetClaudeWebFetchToolDescription": "Let Claude fetch pages and PDFs from URLs in the conversation",
+  "modelDetailSheetClaudeCodeExecutionToolDescription": "Let Claude run Python and Bash in Anthropic's sandbox",
+  "modelDetailSheetOpenrouterShellTool": "Shell",
+  "modelDetailSheetOpenrouterShellToolDescription": "Run Shell commands in a hosted, isolated sandbox",
   "modelDetailSheetOpenaiCodeInterpreterTool": "Code Interpreter",
   "modelDetailSheetOpenaiCodeInterpreterToolDescription": "Enable code interpreter tool (container auto, memory limit 4g)",
   "modelDetailSheetOpenaiImageGenerationTool": "Image Generation",
@@ -1396,6 +1686,7 @@
   "modelDetailSheetBodyJsonHint": "Body JSON",
   "modelSelectSheetSearchHint": "Search models or providers",
   "modelSelectSheetFavoritesSection": "Favorites",
+  "modelSelectSheetFollowAssistant": "Follow assistant",
   "modelSelectSheetFavoriteTooltip": "Favorite",
   "modelSelectSheetChatType": "Chat",
   "modelSelectSheetEmbeddingType": "Embedding",
@@ -1408,74 +1699,9 @@
   "providerDetailPageProviderDeletedSnackbar": "Provider deleted",
   "providerDetailPageConfigTab": "Config",
   "providerDetailPageModelsTab": "Models",
+  "providerDetailPageCustomRequestTitle": "Custom Request",
+  "providerDetailPageCustomRequestDescription": "Applies to every model from this provider. Model settings override these values; these values override assistant settings.",
   "providerDetailPageNetworkTab": "Network",
-  "localModelManagementEntryTitle": "Local Model Management",
-  "localModelManagementTitle": "Local Models",
-  "localModelManagementModeLabel": "Mode",
-  "localModelManagementLiteRtMode": "LiteRT-LM file",
-  "localModelManagementGgufMode": "GGUF file",
-  "localModelManagementOllamaMode": "Ollama / OpenAI-compatible",
-  "localModelManagementModelFileLabel": "Model file",
-  "localModelManagementFileStatusLabel": "File status",
-  "localModelManagementFileMissing": "File missing",
-  "localModelManagementFileSizeBytes": "{bytes} bytes",
-  "@localModelManagementFileSizeBytes": {
-    "placeholders": {
-      "bytes": {
-        "type": "int"
-      }
-    }
-  },
-  "localModelManagementBaseUrlLabel": "Base URL",
-  "localModelManagementModelIdLabel": "Model ID",
-  "localModelManagementImportButton": "Import",
-  "localModelManagementDiscoverButton": "Discover",
-  "localModelManagementTestButton": "Test",
-  "localModelManagementTesting": "Testing...",
-  "localModelManagementDiscovering": "Discovering...",
-  "localModelManagementNoModelsFound": "No local models found.",
-  "localModelManagementDiscoveredModels": "Models",
-  "localModelManagementModelsUpdated": "Updated {count} model(s)",
-  "@localModelManagementModelsUpdated": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "localModelManagementTestSuccess": "Test succeeded",
-  "localModelManagementTestFailed": "Test failed: {error}",
-  "@localModelManagementTestFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "localModelManagementDiscoverFailed": "Discovery failed: {error}",
-  "@localModelManagementDiscoverFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "localModelManagementImportSuccess": "Imported {fileName}",
-  "@localModelManagementImportSuccess": {
-    "placeholders": {
-      "fileName": {
-        "type": "String"
-      }
-    }
-  },
-  "localModelManagementImportFailed": "Import failed: {error}",
-  "@localModelManagementImportFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "providerDetailPageEnabledTitle": "Enabled",
   "providerDetailPageManageSectionTitle": "Manage",
   "providerDetailPageNameLabel": "Name",
@@ -1586,56 +1812,13 @@
   "providersPageModelsCountSuffix": " models",
   "providersPageModelsCountSingleSuffix": " models",
   "addProviderSheetTitle": "Add Provider",
-  "addProviderSheetOpenAiTab": "OpenAI",
-  "addProviderSheetGoogleTab": "Google",
-  "addProviderSheetClaudeTab": "Claude",
-  "addProviderSheetLocalTab": "Local",
   "addProviderSheetEnabledLabel": "Enabled",
   "addProviderSheetNameLabel": "Name",
-  "addProviderSheetApiKeyLabel": "API Key",
-  "addProviderSheetBaseUrlLabel": "Base URL",
   "addProviderSheetApiPathLabel": "API Path",
-  "addProviderSheetResponsesApiLabel": "Responses API",
-  "addProviderSheetVertexAiLabel": "Vertex AI",
   "addProviderSheetVertexAiLocationLabel": "Location",
   "addProviderSheetVertexAiProjectIdLabel": "Project ID",
   "addProviderSheetVertexAiServiceAccountJsonLabel": "Service Account JSON (paste or import)",
   "addProviderSheetImportJsonButton": "Import JSON",
-  "addProviderSheetLocalDefaultName": "Local Model",
-  "addProviderSheetLocalModeLiteRt": "LiteRT file",
-  "addProviderSheetLocalModeGguf": "GGUF file",
-  "addProviderSheetLocalModeOpenAICompatible": "Ollama / OpenAI-compatible",
-  "addProviderSheetLocalModelPathLabel": "LiteRT-LM model file",
-  "addProviderSheetLocalModelPathHint": "Import or paste a .litertlm model path",
-  "addProviderSheetImportLitertButton": "Import .litertlm",
-  "addProviderSheetLocalGgufModelPathLabel": "GGUF model file",
-  "addProviderSheetLocalGgufModelPathHint": "Import or paste a .gguf model path",
-  "addProviderSheetImportGgufButton": "Import .gguf",
-  "addProviderSheetLocalNoModelFile": "Choose a .litertlm model file first.",
-  "addProviderSheetLocalNoGgufModelFile": "Choose a .gguf model file first.",
-  "addProviderSheetLocalImported": "Imported {fileName}",
-  "@addProviderSheetLocalImported": {
-    "placeholders": {
-      "fileName": {
-        "type": "String"
-      }
-    }
-  },
-  "addProviderSheetLocalImporting": "Importing model...",
-  "addProviderSheetLocalImportingProgress": "Importing model... {percent}",
-  "@addProviderSheetLocalImportingProgress": {
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "addProviderSheetLocalImportNotLiteRt": "Please choose a .litertlm model file.",
-  "addProviderSheetLocalImportNotGguf": "Please choose a .gguf model file.",
-  "addProviderSheetLocalImportEmptyFile": "The selected model file is empty.",
-  "addProviderSheetLocalImportUnreadable": "Could not read the selected model file.",
-  "addProviderSheetLocalImportFailed": "Model import failed.",
-  "addProviderSheetLocalModelIdLabel": "Model ID",
   "addProviderSheetCancelButton": "Cancel",
   "addProviderSheetAddButton": "Add",
   "importProviderSheetTitle": "Import Provider",
@@ -1700,6 +1883,15 @@
   "miniMapTitle": "Minimap",
   "miniMapTooltip": "Minimap",
   "miniMapScrollToBottomTooltip": "Scroll to bottom",
+  "miniMapSearchMatchCount": "{count}",
+  "@miniMapSearchMatchCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "miniMapSearchNoResults": "No matching messages",
   "searchServicesPageApiKeyRequiredStatus": "API Key Required",
   "searchServicesPageUrlRequiredStatus": "URL Required",
   "searchServicesAddDialogTitle": "Add Search Service",
@@ -1707,12 +1899,8 @@
   "searchServicesAddDialogBingLocal": "Local",
   "searchServicesAddDialogCancel": "Cancel",
   "searchServicesAddDialogAdd": "Add",
-  "searchServicesFieldApiKey": "API Key",
   "searchServicesAddDialogApiKeyRequired": "API Key is required",
   "searchServicesFieldCustomUrlOptional": "Custom URL (optional)",
-  "searchServicesFieldSearchEngineId": "Search engine ID",
-  "searchServicesFieldModelOptional": "Model (optional)",
-  "searchServicesAddDialogSearchEngineIdRequired": "Search engine ID is required",
   "searchServicesDialogApiKey": "API Key",
   "searchServicesDialogModel": "Model",
   "searchServicesDialogSystemPrompt": "System Prompt",
@@ -1728,7 +1916,6 @@
   "searchServicesEditDialogSave": "Save",
   "searchServicesEditDialogBingLocalNoConfig": "No configuration required for Bing Local search.",
   "searchServicesEditDialogApiKeyRequired": "API Key is required",
-  "searchServicesEditDialogSearchEngineIdRequired": "Search engine ID is required",
   "searchServicesEditDialogInstanceUrl": "Instance URL",
   "searchServicesEditDialogUrlRequired": "URL is required",
   "searchServicesEditDialogEnginesOptional": "Engines (optional)",
@@ -1736,17 +1923,116 @@
   "searchServicesEditDialogUsernameOptional": "Username (optional)",
   "searchServicesEditDialogPasswordOptional": "Password (optional)",
   "searchServicesEditDialogRegionOptional": "Region (optional, default: us-en)",
+  "searchServiceEditorProviderTypeTitle": "Search provider",
+  "searchServiceEditorConfigurationTitle": "Configuration",
+  "searchServiceEditorNoConfiguration": "This provider does not require additional configuration.",
+  "searchServiceEditorMultiKeyTitle": "Multi-key rotation",
+  "searchServiceEditorMultiKeyNone": "Not configured",
+  "searchApiKeysPageDescription": "Keys rotate in the order listed; the first is the primary key. Usage is not queried to avoid provider rate limiting.",
+  "searchApiKeysPagePrimaryBadge": "Primary",
+  "searchApiKeysPageBatchHint": "Paste one or more keys — one per line or comma-separated",
+  "searchApiKeysPageBatchResult": "Added {added}, skipped {skipped} duplicate(s)",
+  "@searchApiKeysPageBatchResult": {
+    "placeholders": {
+      "added": {
+        "type": "String"
+      },
+      "skipped": {
+        "type": "String"
+      }
+    }
+  },
+  "searchApiKeysPageAdd": "Add",
+  "searchApiKeysPageEmpty": "No keys configured yet.",
+  "searchServiceEditorMultiKeyCount": "{count} keys",
+  "@searchServiceEditorMultiKeyCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorUsageTitle": "Account usage",
+  "searchServiceEditorUsageNotQueried": "Usage has not been queried yet.",
+  "searchServiceEditorUsageQuery": "Check usage",
+  "searchServiceEditorUsageQuerying": "Checking…",
+  "searchServiceEditorUsageRemaining": "{remaining} credits remaining",
+  "@searchServiceEditorUsageRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorUsageBalance": "Balance: {balance}",
+  "@searchServiceEditorUsageBalance": {
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorUsageUsed": "{used} of {limit} credits used",
+  "@searchServiceEditorUsageUsed": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorUsageFailed": "Could not query usage: {message}",
+  "@searchServiceEditorUsageFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorTestTitle": "Test search",
+  "searchServiceEditorTestQueryHint": "Enter a query",
+  "searchServiceEditorTestRun": "Run test search",
+  "searchServiceEditorTestRunning": "Searching…",
+  "searchServiceEditorTestNoResults": "The provider returned no results.",
+  "searchServiceEditorTestFailed": "Search failed: {message}",
+  "@searchServiceEditorTestFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorResultOpenTooltip": "Open result",
+  "searchServiceEditorDeleteTooltip": "Delete search service",
+  "searchServiceEditorDeleteTitle": "Delete search service?",
+  "searchServiceEditorDeleteMessage": "Delete {provider}? This cannot be undone.",
+  "@searchServiceEditorDeleteMessage": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "searchServiceEditorDeleteConfirm": "Delete",
+  "searchServiceEditorDiscardTitle": "Discard changes?",
+  "searchServiceEditorDiscardMessage": "Your unsaved search service settings will be lost.",
+  "searchServiceEditorKeepEditing": "Keep editing",
+  "searchServiceEditorDiscard": "Discard",
   "searchSettingsSheetTitle": "Search Settings",
   "searchSettingsSheetBuiltinSearchTitle": "Built-in Search",
   "searchSettingsSheetBuiltinSearchDescription": "Enable model's built-in search",
-  "searchSettingsSheetClaudeDynamicSearchTitle": "Built-in Search (New)",
-  "searchSettingsSheetClaudeDynamicSearchDescription": "Use `web_search_20260209` with dynamic filtering on supported official Claude models.",
+  "searchSettingsSheetClaudeDynamicSearchTitle": "Dynamic filtering",
+  "searchSettingsSheetClaudeDynamicSearchDescription": "Filter results to save tokens",
   "searchSettingsSheetWebSearchTitle": "Web Search",
   "searchSettingsSheetWebSearchDescription": "Enable web search in chat",
   "searchSettingsSheetOpenSearchServicesTooltip": "Open search services",
   "searchSettingsSheetNoServicesMessage": "No services. Add from Search Services.",
   "aboutPageEasterEggMessage": "Thanks for exploring! \n (No egg yet)",
   "aboutPageEasterEggButton": "Nice!",
+  "aboutPageKelivoSearchUnlocked": "An unnamed door opened a crack. You might find it in Settings.",
+  "aboutPageKelivoSearchAlreadyUnlocked": "You've already been through this door.",
   "aboutPageAppName": "Kelivo",
   "aboutPageAppDescription": "Open-source AI Assistant",
   "aboutPageNoQQGroup": "No QQ group yet",
@@ -1784,6 +2070,7 @@
   "aboutPageJoinQQGroup": "Join our QQ Group",
   "aboutPageQQGroupOne": "Kelivo Group 1",
   "aboutPageQQGroupTwo": "Kelivo Group 2",
+  "aboutPageQQGroupThree": "Kelivo Group 3",
   "aboutPageJoinDiscord": "Join us on Discord",
   "displaySettingsPageShowUserAvatarTitle": "Show User Avatar",
   "displaySettingsPageShowUserAvatarSubtitle": "Display user avatar in chat messages",
@@ -1803,6 +2090,10 @@
   "displaySettingsPageChatModelIconSubtitle": "Show model icon in chat messages",
   "displaySettingsPageShowTokenStatsTitle": "Show Token & Context Stats",
   "displaySettingsPageShowTokenStatsSubtitle": "Show token usage and message count",
+  "displaySettingsPageShowThinkingCardsTitle": "Show Thinking Cards",
+  "displaySettingsPageShowThinkingCardsSubtitle": "When off, thinking-process cards are hidden in chat.",
+  "displaySettingsPageShowToolCardsTitle": "Show Tool Cards",
+  "displaySettingsPageShowToolCardsSubtitle": "When off, tool-use cards are hidden in chat.",
   "displaySettingsPageAutoCollapseThinkingTitle": "Auto-collapse Thinking",
   "displaySettingsPageAutoCollapseThinkingSubtitle": "Collapse reasoning after finish",
   "displaySettingsPageCollapseThinkingStepsTitle": "Collapse Thinking Steps",
@@ -1810,8 +2101,12 @@
   "displaySettingsPageShowToolResultSummaryTitle": "Show Tool Result Summary",
   "displaySettingsPageInsertSuggestionOnlyTitle": "Insert suggestions without sending",
   "displaySettingsPageShowToolResultSummarySubtitle": "Display the summary text below tool steps",
+  "displaySettingsPageHideToolResultImagesTitle": "Hide images in tool results",
   "displaySettingsPageRegenerateDeleteTrailingMessagesTitle": "Delete messages below when regenerating",
   "displaySettingsPageShowRegenerateConfirmDialogTitle": "Confirm before regenerating",
+  "displaySettingsPageForkKeepMessageVersionsTitle": "Keep Message Versions When Forking",
+  "displaySettingsPageEditAssistantKeepThinkingToolCardsTitle": "Keep thinking and tool cards when editing assistant",
+  "displaySettingsPageEditAssistantKeepThinkingToolCardsSubtitle": "When off, the edited version keeps only the assistant text. Switching back still shows previous thinking and tool cards.",
   "chainOfThoughtExpandSteps": "Show {count} more steps",
   "@chainOfThoughtExpandSteps": {
     "placeholders": {
@@ -1830,6 +2125,8 @@
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "Don't collapse assistant list when closing sidebar",
   "displaySettingsPageShowUpdatesTitle": "Show Updates",
   "displaySettingsPageShowUpdatesSubtitle": "Show app update notifications",
+  "displaySettingsPageKeepScreenOnDuringGenerationTitle": "Keep Screen On While Generating",
+  "displaySettingsPageKeepScreenOnDuringGenerationSubtitle": "Prevents the lock screen from interrupting generation. Increases battery use.",
   "displaySettingsPageMessageNavButtonsTitle": "Message Navigation Buttons",
   "displaySettingsPageMessageNavButtonsSubtitle": "Choose when quick jump buttons appear",
   "displaySettingsPageMessageNavButtonsModeAlways": "Always show",
@@ -1850,6 +2147,9 @@
   "displaySettingsPageNewChatOnAssistantSwitchTitle": "New chat when switching assistants",
   "displaySettingsPageNewChatOnLaunchTitle": "New Chat on Launch",
   "displaySettingsPageEnterToSendTitle": "Enter Key to Send",
+  "displaySettingsPageLongPasteAsFileTitle": "Paste long text as file",
+  "displaySettingsPageLongPasteAsFileThresholdTitle": "Conversion threshold",
+  "displaySettingsPageLongPasteAsFileThresholdUnit": "characters",
   "displaySettingsPageSendShortcutTitle": "Send Shortcut",
   "displaySettingsPageSendShortcutEnter": "Enter",
   "displaySettingsPageSendShortcutCtrlEnter": "Ctrl/Cmd + Enter",
@@ -1880,8 +2180,6 @@
   "displaySettingsPageAppFontTitle": "App Font",
   "displaySettingsPageCodeFontTitle": "Code Font",
   "fontPickerChooseLocalFile": "Choose Local File",
-  "fontPickerGetFromGoogleFonts": "Browse Google Fonts",
-  "fontPickerFilterHint": "Filter fonts...",
   "desktopFontLoading": "Loading fonts…",
   "displaySettingsPageFontLocalFileLabel": "Local file",
   "displaySettingsPageFontResetLabel": "Reset font settings",
@@ -1891,11 +2189,103 @@
   "themeSettingsPageUseDynamicColorSubtitle": "Match system palette (Android 12+)",
   "themeSettingsPageUsePureBackgroundTitle": "Pure Background",
   "themeSettingsPageUsePureBackgroundSubtitle": "Bubbles and accents follow theme.",
+  "themeAdvancedSettingsPageTitle": "Theme Advanced",
+  "themeAdvancedSettingsPageUseLayeredSurfacesTitle": "Layered surfaces (experimental)",
+  "themeAdvancedSettingsPageUseLayeredSurfacesSubtitle": "Darker page, brighter cards; both keep theme hue. Turn off to restore the previous look.",
+  "themeAdvancedSettingsPageUseLayeredSheetTilesTitle": "Layered sheet tiles",
+  "themeAdvancedSettingsPageUseLayeredSheetTilesSubtitle": "By default, tiles match the sheet background.",
   "themeSettingsPageColorPalettesSection": "Color Palettes",
+  "themeSettingsPageCustomPaletteName": "Custom",
+  "themeSettingsPageCustomColorReset": "Reset",
+  "themeSettingsPageCustomThemesSection": "Custom Themes",
+  "customThemeNewTheme": "New Theme",
+  "customThemeEditTheme": "Edit Theme",
+  "customThemeImportTheme": "Import Theme",
+  "customThemeNameLabel": "Theme name",
+  "customThemePrimaryColor": "Primary",
+  "customThemeSecondaryColor": "Secondary",
+  "customThemeTertiaryColor": "Tertiary",
+  "customThemeColorAuto": "Auto",
+  "customThemeSave": "Save",
+  "customThemeCancel": "Cancel",
+  "customThemeDelete": "Delete",
+  "customThemeDeleteConfirm": "Delete this theme?",
+  "customThemeCopied": "Theme JSON copied to clipboard",
+  "customThemeCopyAction": "Copy",
+  "customThemeImportHint": "Paste the theme JSON here",
+  "customThemeImportInvalid": "Invalid theme JSON",
+  "customThemeHexLabel": "Hex",
   "ttsServicesPageBackButton": "Back",
-  "ttsServicesPageTitle": "Text-to-Speech",
+  "ttsServicesPageTitle": "Voice Services",
+  "ttsServicesSectionTitle": "Text-to-Speech",
   "ttsServicesPageSettingsTooltip": "TTS settings",
   "ttsServicesPageAddTooltip": "Add",
+  "asrServicesSectionTitle": "Speech Recognition",
+  "asrServicesSectionDescription": "Turn speech into text with an on-device, system, or cloud service.",
+  "asrServicesAddTooltip": "Add speech recognition service",
+  "asrServicesEmptyTitle": "No speech recognition service",
+  "asrServicesEmptySubtitle": "Add one to show the microphone in the chat input.",
+  "asrServicesOnDeviceGroup": "On-device",
+  "asrServicesCloudGroup": "Cloud",
+  "asrServicesSystemTitle": "System",
+  "asrServicesSystemSubtitle": "Uses the device's built-in recognizer",
+  "asrServicesLocalTitle": "Offline Model",
+  "asrServicesLocalSubtitle": "Runs offline on this device after download",
+  "asrServicesOpenAiTitle": "OpenAI Realtime",
+  "asrServicesOpenAiSubtitle": "Low-latency streaming transcription",
+  "asrServicesDashScopeTitle": "DashScope",
+  "asrServicesDashScopeSubtitle": "Qwen real-time transcription",
+  "asrServicesVolcengineTitle": "Volcengine",
+  "asrServicesVolcengineSubtitle": "Doubao streaming transcription",
+  "asrServicesMimoTitle": "MiMo",
+  "asrServicesMimoSubtitle": "Segmented cloud transcription",
+  "asrServicesStepTitle": "Step",
+  "asrServicesStepSubtitle": "Step Audio segmented transcription",
+  "asrServicesAddTitle": "Add Speech Recognition",
+  "asrServicesEditTitle": "Edit Speech Recognition",
+  "asrServicesSelectedLabel": "Selected",
+  "asrServicesUnavailableLabel": "Unavailable",
+  "asrServicesEditAction": "Edit",
+  "asrServicesDeleteAction": "Delete",
+  "asrServicesCancelAction": "Cancel",
+  "asrServicesAddAction": "Add",
+  "asrServicesSaveAction": "Save",
+  "asrServicesNameLabel": "Name",
+  "asrServicesApiKeyLabel": "API Key",
+  "asrServicesEndpointLabel": "Endpoint",
+  "asrServicesModelLabel": "Model",
+  "asrServicesResourceIdLabel": "Resource ID",
+  "asrServicesLanguageLabel": "Language",
+  "asrServicesAutomaticLabel": "Automatic",
+  "asrServicesApiKeyRequired": "Enter an API key to use this service.",
+  "asrServicesChooseModelTitle": "Model",
+  "asrServicesModelDownloadAction": "Download",
+  "asrServicesModelUseAction": "Use model",
+  "asrServicesModelDeleteAction": "Remove download",
+  "asrServicesModelDownloadedLabel": "Downloaded",
+  "asrServicesModelDownloadingLabel": "Downloading…",
+  "asrServicesModelNotDownloadedLabel": "Not downloaded",
+  "asrServicesDownloadFailed": "Model download failed: {error}",
+  "@asrServicesDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "asrServicesSystemChecking": "Checking…",
+  "asrServicesSystemAvailable": "Available",
+  "asrServicesSystemCheckFailed": "System speech recognition is unavailable on this device.",
+  "asrServicesMicrophonePermissionDenied": "Microphone permission was not granted.",
+  "asrServicesNoSpeechDetected": "No speech was detected.",
+  "asrServicesRecognitionFailed": "Speech recognition failed: {error}",
+  "@asrServicesRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "ttsServicesPageAddNotImplemented": "Add TTS service not implemented",
   "ttsServicesPageSystemTtsTitle": "System TTS",
   "ttsServicesPageSystemTtsAvailableSubtitle": "Use system built-in TTS",
@@ -1939,7 +2329,41 @@
   "ttsServicesFieldSpeedLabel": "Speed",
   "ttsServicesFieldLanguageTypeLabel": "Language type",
   "ttsServicesFieldLanguageLabel": "Language",
+  "ttsServicesFieldWorkspaceIdLabel": "Workspace ID",
+  "ttsServicesFieldRegionLabel": "Region",
+  "ttsServicesFieldFormatLabel": "Audio format",
+  "ttsServicesFieldOutputFormatLabel": "Output format",
+  "ttsServicesFieldSampleRateLabel": "Sample rate",
+  "ttsServicesFieldVolumeLabel": "Volume",
+  "ttsServicesFieldPitchLabel": "Pitch",
+  "ttsServicesFieldLanguageBoostLabel": "Language boost",
+  "ttsServicesFieldBitrateLabel": "Bitrate",
+  "ttsServicesFieldChannelLabel": "Channels",
+  "ttsServicesFieldSubtitlesLabel": "Generate subtitles",
+  "ttsServicesFieldPronunciationDictionaryLabel": "Pronunciation dictionary (one entry per line)",
+  "ttsServicesFieldInstructionLabel": "Style / voice description",
+  "ttsServicesFieldStreamingLabel": "Streaming",
+  "ttsServicesFieldOptimizeTextPreviewLabel": "Optimize text preview",
+  "ttsServicesFieldReferenceAudioLabel": "Reference audio (WAV/MP3 data URI)",
+  "ttsServicesFieldChooseReferenceAudioButton": "Choose reference audio",
+  "ttsServicesFieldTemperatureLabel": "Temperature",
+  "ttsServicesFieldTopPLabel": "Top P",
+  "ttsServicesFieldLatencyLabel": "Latency",
+  "ttsServicesEmotionAutoLabel": "Auto match",
   "ttsServicesValidationApiKeyRequired": "API Key is required",
+  "ttsServicesValidationReferenceIdRequired": "Voice/reference ID is required",
+  "ttsServicesValidationInstructionRequired": "A voice description is required",
+  "ttsServicesValidationSampleRate": "{format} requires {rates} Hz.",
+  "@ttsServicesValidationSampleRate": {
+    "placeholders": {
+      "format": {
+        "type": "String"
+      },
+      "rates": {
+        "type": "String"
+      }
+    }
+  },
   "ttsServicesViewDetailsButton": "View details",
   "ttsServicesDialogErrorTitle": "Error Details",
   "ttsServicesCloseButton": "Close",
@@ -1947,6 +2371,8 @@
   "ttsSettingsPlaybackSection": "Playback",
   "ttsSettingsAutoPlayTitle": "Auto-play Assistant Replies",
   "ttsSettingsAutoPlayDescription": "Start TTS automatically after an assistant reply finishes.",
+  "ttsSettingsCacheReplayTitle": "Reuse Audio for Replay",
+  "ttsSettingsCacheReplayDescription": "Replay generated network audio without requesting the TTS service again.",
   "ttsSettingsTextSelectionSection": "Text Selection",
   "ttsSettingsTextSelectionFallbackDescription": "If no matching text is found, the full reply is played.",
   "ttsSettingsTextSelectionFullTextTitle": "Full text",
@@ -1969,6 +2395,18 @@
   "ttsFloatingCloseTooltip": "Close player",
   "ttsFloatingExpandTooltip": "Expand playback controls",
   "ttsFloatingCollapseTooltip": "Collapse playback controls",
+  "ttsFloatingSaveTooltip": "Save audio",
+  "ttsSaveDialogTitle": "Save TTS audio",
+  "ttsSaveSuccess": "Audio saved successfully.",
+  "ttsSaveNothing": "No audio is available to save.",
+  "ttsSaveFailed": "Failed to save audio: {message}",
+  "@ttsSaveFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "imageViewerPageShareFailedOpenFile": "Unable to share, tried to open file: {message}",
   "@imageViewerPageShareFailedOpenFile": {
     "placeholders": {
@@ -2034,8 +2472,6 @@
   "searchProviderBingLocalDescription": "Uses web scraping to fetch Bing results. No API key required; may be unstable.",
   "searchProviderDuckDuckGoDescription": "Privacy-focused DuckDuckGo search via DDGS. No API key required; supports region selection.",
   "searchProviderBraveDescription": "Independent search engine by Brave. Privacy-focused with no tracking or profiling.",
-  "searchProviderGoogleDescription": "Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.",
-  "searchProviderGrokDescription": "xAI Grok live search via Chat Completions. Requires an xAI API key and a search-capable Grok model.",
   "searchProviderExaDescription": "Neural search with semantic understanding. Great for research and finding specific content.",
   "searchProviderLinkUpDescription": "Search API with sourced answers. Provides both results and AI-generated summaries.",
   "searchProviderMetasoDescription": "Chinese search by Metaso. Optimized for Chinese content with AI capabilities.",
@@ -2052,8 +2488,6 @@
   "searchServiceNameSearXNG": "SearXNG",
   "searchServiceNameLinkUp": "LinkUp",
   "searchServiceNameBrave": "Brave Search",
-  "searchServiceNameGoogle": "Google",
-  "searchServiceNameGrok": "Grok",
   "searchServiceNameMetaso": "Metaso",
   "searchServiceNameOllama": "Ollama",
   "searchServiceNameJina": "Jina",
@@ -2061,12 +2495,35 @@
   "searchProviderPerplexityDescription": "Perplexity Search API. Ranked web results with region and domain filters.",
   "searchServiceNameBocha": "Bocha",
   "searchProviderBochaDescription": "Bocha web search API. Accurate web results with optional summaries.",
+  "searchServiceNameDoubao": "Doubao",
+  "searchProviderDoubaoDescription": "Doubao web search API by Volcano Engine.",
   "searchServiceNameSerper": "Serper",
   "searchProviderSerperDescription": "Serper Google Search API. Fast web results with optional country, language, time, and page filters.",
   "searchServiceNameQuerit": "Querit",
   "searchProviderQueritDescription": "Querit Search API for LLM applications. Returns real-time web results with site, time, country, and language filters.",
   "searchServiceNameGrok": "Grok",
   "searchProviderGrokDescription": "Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.",
+  "searchServiceNameStepFun": "StepFun",
+  "searchProviderStepFunDescription": "StepFun web search via POST /v1/search.",
+  "searchServiceNameFirecrawl": "Firecrawl",
+  "searchProviderFirecrawlDescription": "Firecrawl Search API v2. API key is optional. Scrape is not supported here.",
+  "searchServiceNameTinyFish": "TinyFish",
+  "searchProviderTinyFishDescription": "TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.",
+  "searchServiceNameAnySearch": "AnySearch",
+  "searchProviderAnySearchDescription": "Unified search for AI agents with automatic routing across web and specialist data sources. API key is optional.",
+  "searchServiceNameParallel": "Parallel",
+  "searchProviderParallelDescription": "Parallel Search API. Returns LLM-optimized web excerpts with turbo, fast, basic, and advanced modes.",
+  "searchServicesDialogSearchMode": "Search mode",
+  "searchServiceNameYou": "You.com",
+  "searchProviderYouDescription": "You.com Search API. Returns web and news results with highlights or snippets.",
+  "searchServicesDialogContentMode": "Content mode",
+  "searchServicesDialogHighlights": "Highlights",
+  "searchServicesDialogSnippets": "Snippets",
+  "searchServicesDialogWebSearch": "Web Search",
+  "searchServicesDialogLlmContext": "LLM Context",
+  "searchServicesDialogMaximumTokens": "Maximum tokens",
+  "searchServicesDialogMaximumTokensInvalid": "Maximum tokens must be between 1024 and 32768.",
+  "searchServiceNameKelivo": "Kelivo",
   "searchServicesDialogCountryOptional": "Country/region (optional)",
   "searchServicesDialogLanguageOptional": "Language (optional)",
   "searchServicesDialogTimeFilterOptional": "Time filter (optional)",
@@ -2082,7 +2539,6 @@
   "searchServicesDialogCountriesHint": "united states, japan",
   "searchServicesDialogLanguagesHint": "english, japanese",
   "generationInterrupted": "Generation interrupted",
-  "localLiteRtModelTooLargeForDevice": "This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.",
   "titleForLocale": "New Chat",
   "temporaryChatTitle": "Temporary Chat",
   "temporaryChatEmptyMessage": "Temporary chats do not appear in history and will be deleted completely after you leave.",
@@ -2145,11 +2601,96 @@
   "assistantEditLocalToolAskUserSubtitle": "Let the assistant ask short questions and continue after you answer.",
   "assistantEditLocalToolCalculateTitle": "Calculator",
   "assistantEditLocalToolCalculateSubtitle": "Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.",
-  "assistantEditMemorySwitchTitle": "Memory",
+  "assistantEditLocalToolScreenTimeTitle": "Screen Time",
+  "assistantEditLocalToolScreenTimeSubtitle": "Query app screen usage on this device, requires the Usage access permission.",
+  "chatMessageWidgetScreenTimeTotal": "Total screen time",
+  "chatMessageWidgetScreenTimePermissionRequired": "Usage access permission is not granted. Please enable it in system settings and try again.",
+  "assistantEditLocalToolCalendarQueryTitle": "Query Calendar",
+  "assistantEditLocalToolCalendarQuerySubtitle": "Read calendar events on this device, requires the calendar permission.",
+  "assistantEditLocalToolCalendarCreateTitle": "Create Event",
+  "assistantEditLocalToolCalendarCreateSubtitle": "Create calendar events on this device with your confirmation, requires the calendar permission.",
+  "assistantEditLocalToolLocationTitle": "Current Location",
+  "assistantEditLocalToolLocationSubtitle": "Read a one-shot location from this device, requires the location permission.",
+  "assistantEditLocalToolWeatherTitle": "Weather",
+  "assistantEditLocalToolWeatherSubtitle": "Get Apple Weather for the current or a specified location. WeatherKit attribution is shown in the result.",
+  "assistantEditLocalToolHealthTitle": "Health Summary",
+  "assistantEditLocalToolHealthSubtitle": "Read a privacy-preserving activity summary from Apple Health, requires Health access.",
+  "assistantEditLocalToolHealthSelectedCount": "{selected}/{total} selected",
+  "@assistantEditLocalToolHealthSelectedCount": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "healthDataSettingsTitle": "Health Data",
+  "healthDataSettingsDescription": "HealthKit signals available to the current assistant in daily conversation. Switches control what Kelivo may try to read; iOS still manages actual Health access.",
+  "healthDataSettingsBadge": "{selected}/{total} on",
+  "@healthDataSettingsBadge": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "healthDataSettingsIosReadTitle": "iOS Health Read",
+  "healthDataSettingsIosReadSubtitle": "Device available, read range managed by iOS",
+  "healthDataSettingsOpenSystemSettings": "Open system settings",
+  "healthDataSettingsEnableAll": "Enable all",
+  "healthDataSettingsDisableAll": "Disable all",
+  "healthDataSettingsCategoryActivity": "Activity",
+  "healthDataSettingsCategoryRest": "Rest",
+  "healthDataSettingsCategoryHeart": "Heart",
+  "healthDataSettingsCategoryBody": "Body",
+  "healthDataSettingsTypeStepsTitle": "Steps",
+  "healthDataSettingsTypeStepsSubtitle": "Walking steps summary",
+  "healthDataSettingsTypeDaylightTitle": "Sunlight",
+  "healthDataSettingsTypeDaylightSubtitle": "Outdoor daylight time",
+  "healthDataSettingsTypeActiveEnergyTitle": "Energy",
+  "healthDataSettingsTypeActiveEnergySubtitle": "Active energy burned",
+  "healthDataSettingsTypeExerciseMinutesTitle": "Exercise",
+  "healthDataSettingsTypeExerciseMinutesSubtitle": "Apple exercise minutes",
+  "healthDataSettingsTypeStandTimeTitle": "Stand",
+  "healthDataSettingsTypeStandTimeSubtitle": "Stand time",
+  "healthDataSettingsTypeDistanceTitle": "Distance",
+  "healthDataSettingsTypeDistanceSubtitle": "Walking and running distance",
+  "healthDataSettingsTypeWorkoutsTitle": "Workouts",
+  "healthDataSettingsTypeWorkoutsSubtitle": "Workout records: type, duration, distance, and energy",
+  "healthDataSettingsTypeSleepTitle": "Sleep",
+  "healthDataSettingsTypeSleepSubtitle": "Sleep duration last night",
+  "healthDataSettingsTypeMindfulnessTitle": "Resting",
+  "healthDataSettingsTypeMindfulnessSubtitle": "Mindfulness or resting periods",
+  "healthDataSettingsTypeHeartRateTitle": "Heart Rate",
+  "healthDataSettingsTypeHeartRateSubtitle": "Latest heart rate sample",
+  "healthDataSettingsTypeRestingHeartRateTitle": "Resting Heart Rate",
+  "healthDataSettingsTypeRestingHeartRateSubtitle": "Resting heart rate sample",
+  "healthDataSettingsTypeBloodOxygenTitle": "Blood Oxygen",
+  "healthDataSettingsTypeBloodOxygenSubtitle": "Blood oxygen saturation",
+  "healthDataSettingsTypeDietaryEnergyTitle": "Dietary Energy",
+  "healthDataSettingsTypeDietaryEnergySubtitle": "Dietary calorie record",
+  "healthDataSettingsTypeWaterTitle": "Water",
+  "healthDataSettingsTypeWaterSubtitle": "Water intake record",
+  "healthDataSettingsTypeWeightTitle": "Weight",
+  "healthDataSettingsTypeWeightSubtitle": "Body weight sample",
+  "healthDataSettingsTypeBmiTitle": "BMI",
+  "healthDataSettingsTypeBmiSubtitle": "Body mass index",
+  "healthDataSettingsTypeBloodGlucoseTitle": "Blood Glucose",
+  "healthDataSettingsTypeBloodGlucoseSubtitle": "Blood glucose sample",
+  "assistantEditLocalToolRemindersQueryTitle": "Query Reminders",
+  "assistantEditLocalToolRemindersQuerySubtitle": "Read reminders on this device, requires full reminders access.",
+  "assistantEditLocalToolRemindersCreateTitle": "Create Reminder",
+  "assistantEditLocalToolRemindersCreateSubtitle": "Create a reminder on this device with your confirmation, requires full reminders access.",
+  "assistantEditLocalToolRemindersCompleteTitle": "Complete Reminder",
+  "assistantEditLocalToolRemindersCompleteSubtitle": "Mark a reminder as done with your confirmation, requires full reminders access.",
   "assistantEditMemorySwitchDescription": "Allow the assistant to create and use memories across chats.",
   "assistantEditRecentChatsSwitchTitle": "Recent Chats Reference",
   "assistantEditRecentChatsSwitchDescription": "Include recent conversation titles to help with context.",
-  "assistantEditManageMemoryTitle": "Manage Memories",
   "assistantEditAddMemoryButton": "Add Memory",
   "assistantEditMemoryEmpty": "No memories yet",
   "assistantEditMemoryDialogTitle": "Memory",
@@ -2230,6 +2771,35 @@
   },
   "networkProxyNoUrl": "Please enter a URL",
   "networkProxyPriorityNote": "When both global and provider proxies are enabled, provider-level proxy takes priority.",
+  "settingsPageAutoRetry": "Auto Retry",
+  "autoRetryEnableLabel": "Enable auto-retry",
+  "autoRetryMaxRetries": "Max retries",
+  "autoRetryInitialDelay": "Initial delay (ms)",
+  "autoRetryMultiplier": "Backoff multiplier",
+  "autoRetryMaxDelay": "Max delay (ms)",
+  "autoRetryJitter": "Jitter",
+  "autoRetryJitterSubtitle": "Randomize each wait by ±20%",
+  "autoRetryOnNetworkError": "Retry on network errors",
+  "autoRetryStatusCodes": "Retry status codes",
+  "autoRetryKeywords": "Retry keywords",
+  "autoRetryStopKeywords": "Stop keywords",
+  "autoRetryAddHint": "Add",
+  "autoRetryRestoreDefaults": "Restore defaults",
+  "autoRetryFooter": "Auto-retry only runs if this request has not produced any output yet.",
+  "autoRetryCountdown": "{seconds}s until retry ({attempt}/{maxRetries})",
+  "@autoRetryCountdown": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      },
+      "attempt": {
+        "type": "int"
+      },
+      "maxRetries": {
+        "type": "int"
+      }
+    }
+  },
   "desktopShowProviderInModelCapsule": "Show provider in model capsule",
   "messageWebViewOpenInBrowser": "Open in Browser",
   "messageWebViewConsoleLogs": "Console Logs",
@@ -2277,6 +2847,50 @@
   "requestLogSettingSubtitle": "When enabled, request/response details are written to logs/logs.txt (rotated daily).",
   "flutterLogSettingTitle": "Flutter Logging",
   "flutterLogSettingSubtitle": "When enabled, Flutter errors and print output are written to logs/flutter_logs.txt (rotated daily).",
+  "contextLogSettingTitle": "Context Logging",
+  "contextLogSettingSubtitle": "When enabled, the exact messages sent to the model are written to logs/context_logs.txt (rotated daily).",
+  "contextLogViewerTitle": "Context",
+  "contextLogSnapshotMessages": "{count} messages",
+  "@contextLogSnapshotMessages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSnapshotTokens": "{count} tokens",
+  "@contextLogSnapshotTokens": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSourceSystemPrompt": "System prompt",
+  "contextLogSourceMemoryRules": "Memory rules",
+  "contextLogSourceSearchPrompt": "Search prompt",
+  "contextLogSourceInstructionInjection": "Instruction",
+  "contextLogSourceWorldBook": "World book",
+  "contextLogSourceMemorySnapshot": "Memory snapshot",
+  "contextLogSourceChatHistory": "Chat history",
+  "contextLogSourceToolCall": "Tool call",
+  "contextLogSourceToolResult": "Tool result",
+  "contextLogTokensEstimateHint": "Token counts are estimates only; use the model's actual usage as the source of truth.",
+  "contextLogSnapshotsCount": "{count} snapshots",
+  "@contextLogSnapshotsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextLogSnapshotFallbackTitle": "Snapshot",
+  "contextLogKindFull": "Full snapshot",
+  "contextLogKindUpdate": "Incremental update",
+  "contextLogSectionComposition": "Composition",
+  "contextLogLoadOlder": "Load earlier logs",
+  "contextLogLoading": "Loading...",
+  "contextLogAllLoaded": "All logs loaded",
   "logViewerTitle": "Request Logs",
   "logViewerEmpty": "No logs yet",
   "logViewerCurrentLog": "Current Log",
@@ -2312,9 +2926,14 @@
       }
     }
   },
+  "logViewerSectionAttachments": "Attachments",
+  "logViewerPayloadOmitted": "omitted",
+  "logViewerShowMore": "Show more",
   "logSettingsTitle": "Log Settings",
   "logSettingsSaveOutput": "Save Response Output",
-  "logSettingsSaveOutputSubtitle": "Log response body content (may use significant storage)",
+  "logSettingsSaveOutputSubtitle": "Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.",
+  "logSettingsElidePayloads": "Omit Large Payloads",
+  "logSettingsElidePayloadsSubtitle": "Replace inline base64 images and files with a placeholder. Keeps logs small and the viewer fast.",
   "logSettingsAutoDelete": "Auto-delete",
   "logSettingsAutoDeleteSubtitle": "Delete logs older than specified days",
   "logSettingsAutoDeleteDisabled": "Disabled",
@@ -2336,18 +2955,431 @@
   "assistantEditDeleteSummaryTitle": "Clear Summary",
   "assistantEditDeleteSummaryContent": "Are you sure you want to clear this summary?",
   "homePageProcessingFiles": "Processing files...",
-  "fileUploadDuplicateTitle": "File already exists",
-  "fileUploadDuplicateContent": "A file named {fileName} already exists. Use the existing file?",
-  "@fileUploadDuplicateContent": {
+  "settingsPageWorldBook": "World Book",
+  "settingsPageMemory": "Memory",
+  "memorySettingsPageTitle": "Memory",
+  "memorySettingsGlobalSubtitle": "Memory mode, model, and prompts",
+  "memorySettingsModeSection": "Memory mode",
+  "memorySettingsModelSection": "Memory model",
+  "memorySettingsModelTitle": "Processing model",
+  "memorySettingsModelUnset": "Not selected",
+  "memorySettingsModelTip": "After Auto-organize memory is enabled, this model is called frequently in the background. Prefer a cheap, fast model.",
+  "memorySettingsAboutTitle": "About memory",
+  "memorySettingsAboutSubtitle": "How memory works and when it runs",
+  "memoryAboutQuickstartTitle": "Get started",
+  "memoryAboutQuickstartBody": "1. In Settings → Memory, choose a processing model.\n2. On the assistant Memory tab, turn on long-term memory and Auto-organize.\n3. Chat for a few turns or tap Organize, then open All memories to see what was saved.",
+  "memoryAboutTypesTitle": "Memory types",
+  "memoryAboutTypesBody": "Identity: stable facts about the user, such as how to address them, role, language, and long-term preferences. Write complete third-person statements.\n\nWorkflow: how they like to get work done — tools, formats, and review habits.\n\nVoice: how they want the assistant to sound — tone, length, and language style.\n\nInstruction: standing rules the assistant should follow, not one-off tasks from this chat.",
+  "memoryAboutScopeTitle": "Global vs assistant",
+  "memoryAboutScopeBody": "Global memories are injected for every assistant. Assistant-scope memories are only visible to that assistant. Use global for facts that should follow the user everywhere; use assistant scope for rules or context that belong to one persona.",
+  "memoryAboutInjectionTitle": "How memories are injected",
+  "memoryAboutInjectionBody": "At the start of a chat, the newest items of each type are placed in the model context. If a type exceeds the injection limit, the block is marked mode=\"summary\" with total and shown counts; the rest can be fetched with memory_search_profile. Raise the limit in Settings → Memory for more completeness at a higher token cost.",
+  "memoryAboutPipelineTitle": "Background pipeline",
+  "memoryAboutPipelineBody": "Auto-organize runs after chats: decide whether anything is worth remembering, extract candidates, dedupe and merge, then distill identity items into the user profile when needed. You can also tap Organize on the assistant Memory tab. That is why the processing model is called often.",
+  "memoryAboutCacheTitle": "Keep caching healthy",
+  "memoryAboutCacheBody": "The injected memory prefix is kept stable so unchanged chats can reuse the prompt cache, lowering cost and latency. Avoid pointless bulk edits or reshuffles. Day-to-day single-entry edits usually have limited impact.",
+  "memoryAboutFaqTitle": "FAQ",
+  "memoryAboutFaqWhyNotRememberedTitle": "Why wasn't this remembered?",
+  "memoryAboutFaqWhyNotRememberedBody": "Organize is skipped when there are not enough new messages to organize, no new messages to organize, or no memory processing model selected. Temporary chats are not saved to memory. You can also turn memory or Auto-organize off per assistant.",
+  "memorySettingsThinkingTitle": "Enable thinking",
+  "memorySettingsThinkingSubtitle": "Allow the memory model to use reasoning when supported",
+  "memorySettingsInjectionSection": "Memory injection",
+  "memorySettingsInjectionMaxItemsTitle": "Items injected per type",
+  "memorySettingsInjectionMaxItemsSubtitle": "When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.",
+  "memorySettingsInjectionMaxItemsOption": "{n}",
+  "@memorySettingsInjectionMaxItemsOption": {
     "placeholders": {
-      "fileName": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "memorySettingsInjectionMaxItemsCustomButton": "Custom",
+  "memorySettingsInjectionMaxItemsCustomTitle": "Custom injection count",
+  "memorySettingsInjectionMaxItemsCustomDescription": "Enter a number between 1 and 100.",
+  "memorySettingsInjectionMaxItemsCustomLabel": "Count",
+  "memorySettingsInjectionMaxItemsCustomHint": "1–100",
+  "memorySettingsInjectionMaxItemsCustomInvalid": "Enter a number between 1 and 100",
+  "memorySettingsPromptLangSection": "Prompt language",
+  "memorySettingsPromptLangAuto": "Auto",
+  "memorySettingsPromptLangAutoSubtitle": "Follow the UI language (Chinese → zh, otherwise en)",
+  "memorySettingsPromptLangZh": "Chinese",
+  "memorySettingsPromptLangZhSubtitle": "Always use Chinese memory prompts and tool descriptions",
+  "memorySettingsPromptLangEn": "English",
+  "memorySettingsPromptLangEnSubtitle": "Always use English memory prompts and tool descriptions",
+  "memorySettingsPromptsSection": "Prompt templates",
+  "memorySettingsLegacyPromptTitle": "Legacy memory rules",
+  "memoryPromptEditRulesTitle": "Memory rules",
+  "memoryPromptEditRulesSubtitle": "Injected into the main chat system prompt",
+  "memoryPromptEditGateTitle": "Gatekeeper",
+  "memoryPromptEditGateSubtitle": "Decides whether a turn is worth remembering",
+  "memoryPromptEditExtractTitle": "Extract",
+  "memoryPromptEditExtractSubtitle": "Extracts candidate memory items from a conversation",
+  "memoryPromptEditSmartAddTitle": "Smart Add",
+  "memoryPromptEditSmartAddSubtitle": "NEW / MERGE / CONFLICT / SKIP dedupe judge",
+  "memoryPromptEditDistillTitle": "Profile Distiller",
+  "memoryPromptEditDistillSubtitle": "Distills identity memories into profile fields",
+  "memoryPromptEditMigrateTitle": "Legacy migration",
+  "memoryPromptEditMigrateSubtitle": "Used when migration rewrites memory wording",
+  "memoryPromptEditReset": "Reset to default",
+  "memoryPromptEditSave": "Save",
+  "memoryPromptEditSectionPerItem": "Per-item prompt",
+  "memoryPromptEditSectionBatch": "Batched prompt",
+  "memorySettingsEntriesSection": "All memories",
+  "memorySettingsLegacySection": "Legacy memory",
+  "memorySettingsEntriesTitle": "Memory list",
+  "memorySettingsEntriesSubtitle": "Browse, edit, archive, and delete memories",
+  "memorySettingsProfileTitle": "User profile",
+  "memorySettingsProfileSubtitle": "Structured identity fields for the model",
+  "memorySettingsLegacyTitle": "Legacy memories (read-only)",
+  "memorySettingsLegacySubtitle": "Old memories from previous versions",
+  "memoryEntryTypeIdentity": "Identity",
+  "memoryEntryTypeWorkflow": "Workflow",
+  "memoryEntryTypeVoice": "Voice",
+  "memoryEntryTypeInstruction": "Instruction",
+  "memoryEntryScopeGlobal": "Global",
+  "memoryEntryScopeAssistant": "This assistant",
+  "memoryEntryScopeAssistantNamed": "{name}",
+  "@memoryEntryScopeAssistantNamed": {
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }
   },
-  "fileUploadDuplicateUseExisting": "Use existing",
-  "fileUploadDuplicateUploadNew": "Upload new",
-  "settingsPageWorldBook": "World Book",
+  "memoryEntrySourceManual": "Manual",
+  "memoryEntrySourceTool": "Tool",
+  "memoryEntrySourceExtracted": "Extracted",
+  "memoryEntrySourceDistilled": "Distilled",
+  "memoryEntryStatusActive": "Active",
+  "memoryEntryStatusArchived": "Archived",
+  "memoryEntryUpdatedAt": "Updated {date}",
+  "@memoryEntryUpdatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryEntryActionEdit": "Edit",
+  "memoryEntryActionDelete": "Delete",
+  "memoryEntryActionArchive": "Archive",
+  "memoryEntryActionRestore": "Restore",
+  "memoryEntryActionSwitchScope": "Change scope",
+  "memoryEntryActionBatchDelete": "Delete selected",
+  "memoryEntryActionAdd": "Add memory",
+  "memoryEntryDeleteConfirmTitle": "Delete memory?",
+  "memoryEntryDeleteConfirmContent": "This permanently deletes the memory. This cannot be undone.",
+  "memoryEntryBatchDeleteConfirmTitle": "Delete {count} memories?",
+  "@memoryEntryBatchDeleteConfirmTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryEntryBatchDeleteConfirmContent": "Selected memories will be permanently deleted.",
+  "memoryEntrySwitchScopeConfirmTitle": "Change memory scope?",
+  "memoryEntrySwitchScopeToGlobal": "Make this memory global (shared across assistants)?",
+  "memoryEntrySwitchScopeToAssistant": "Limit this memory to the current assistant?",
+  "memoryEntryArchivedSection": "Archived",
+  "memoryEntryEmpty": "No memories yet",
+  "memoryEntryEmptyDisabled": "Long-term memory is off for this assistant",
+  "memoryEntryEditTitle": "Edit memory",
+  "memoryEntryCreateTitle": "New memory",
+  "memoryEntryContentHint": "Enter memory content",
+  "memoryEntryTypeLabel": "Type",
+  "memoryEntryScopeLabel": "Scope",
+  "memoryFilterScopeAll": "All scopes",
+  "memoryFilterScopeGlobal": "Global only",
+  "memoryFilterScopeAssistant": "Assistant",
+  "memoryFilterTypeAll": "All types",
+  "memoryFilterStatusAll": "All statuses",
+  "memoryFilterStatusActive": "Active",
+  "memoryFilterStatusArchived": "Archived",
+  "memorySearchHint": "Search memories",
+  "memorySearchEmpty": "No matching memories",
+  "memoryOrphanBanner": "{count} orphaned assistant memories (assistant deleted)",
+  "@memoryOrphanBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryOrphanCleanupButton": "Clean up",
+  "memoryOrphanConfirmTitle": "Clean up orphaned memories?",
+  "memoryOrphanConfirmContent": "Permanently delete {count} memories whose assistant no longer exists.",
+  "@memoryOrphanConfirmContent": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryOrganizeButton": "Organize",
+  "memoryOrganizeNeedsConversation": "Open a chat with this assistant to organize memories",
+  "memoryOrganizeNeedsModel": "Select a memory model in Settings → Memory first",
+  "memoryOrganizeStatusNever": "Not organized yet",
+  "memoryOrganizeStatusLast": "Last organized: {when}",
+  "@memoryOrganizeStatusLast": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryOrganizeStatusExtracted": "extracted {count}",
+  "@memoryOrganizeStatusExtracted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryOrganizeStatusSkipped": "nothing to remember",
+  "memoryOrganizeStatusFailed": "Failed: {reason}",
+  "@memoryOrganizeStatusFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryOrganizeStatusSkippedReason": "skipped: {reason}",
+  "@memoryOrganizeStatusSkippedReason": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryOutcomeTemporaryConversation": "Temporary chats are not saved to memory",
+  "memoryOutcomeMemoryDisabled": "Memory is off for this assistant",
+  "memoryOutcomeAutoOrganizeOff": "Auto-organize is off",
+  "memoryOutcomeStreaming": "Skipped while a reply is still streaming",
+  "memoryOutcomeBelowThreshold": "Not enough new messages to organize",
+  "memoryOutcomeEmptyWindow": "No new messages to organize",
+  "memoryOutcomeMemoryModelUnset": "No memory processing model selected",
+  "memoryOutcomeMemoryModelMissing": "The selected memory model is no longer available",
+  "memoryOutcomeAssistantMissing": "Assistant not found",
+  "memoryOutcomeConversationMissing": "Conversation not found",
+  "memoryOutcomeQueueOverflow": "The organize queue was full, so this run was dropped",
+  "memoryOutcomeGateRequestFailed": "Could not reach the memory model for the remember/skip check",
+  "memoryOutcomeGateParseFailed": "The remember/skip check returned an unreadable reply",
+  "memoryOutcomeExtractRequestFailed": "Could not reach the memory model to extract memories",
+  "memoryOutcomeExtractParseFailed": "The memory extract reply could not be parsed",
+  "memoryOutcomeDistillFailed": "Could not distill the user profile",
+  "memoryOutcomeMemoryExecutionError": "A memory tool failed to run",
+  "memoryOutcomeUnsupportedTool": "Unsupported memory tool",
+  "memoryOutcomeInvalidMemoryType": "Invalid memory type",
+  "memoryOutcomeInvalidMemoryContent": "Invalid memory content",
+  "memoryOutcomeInvalidQuery": "Invalid search query",
+  "memoryOutcomeInvalidMemoryId": "Invalid memory id",
+  "memoryOutcomeMemoryNotFound": "Memory not found",
+  "memoryOutcomeInvalidProfileFields": "Invalid profile fields",
+  "memoryOutcomeChatSearchUnavailable": "Chat search is unavailable",
+  "memoryOrganizeJustNow": "just now",
+  "memoryOrganizeMinutesAgo": "{n} min ago",
+  "@memoryOrganizeMinutesAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryOrganizeHoursAgo": "{n} h ago",
+  "@memoryOrganizeHoursAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryOrganizeDaysAgo": "{n} d ago",
+  "@memoryOrganizeDaysAgo": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryModelMissingNotice": "Select a memory processing model in Settings → Memory first.",
+  "memoryModelMissingGoSelect": "Choose model",
+  "memoryEntriesPageTitle": "All memories",
+  "userProfilePageTitle": "User profile",
+  "userProfilePreferredName": "Preferred name",
+  "userProfilePreferredNameHint": "How the model should address you — unrelated to the sidebar display name",
+  "userProfileGender": "Gender",
+  "userProfilePronouns": "Pronouns",
+  "userProfilePreferredLanguage": "Preferred language",
+  "userProfileTimezone": "Timezone",
+  "userProfileOccupation": "Occupation",
+  "userProfileLocation": "Location",
+  "userProfileCustomSection": "Custom fields",
+  "userProfileAddCustom": "Add custom field",
+  "userProfileCustomKeyHint": "Key (custom.name)",
+  "userProfileCustomValueHint": "Value",
+  "userProfileInvalidKey": "Key must be custom. followed by 1–32 letters, digits, _ or -",
+  "userProfileClear": "Clear",
+  "userProfileSave": "Save",
+  "userProfileEmptyValue": "Not set",
+  "legacyMemoryPageTitle": "Legacy memories",
+  "legacyMemoryBanner": "These memories came from an older version and are not used in chats. You can migrate them into the current memory system.",
+  "legacyMemoryEmpty": "No legacy memories",
+  "legacyMemoryCopy": "Copy",
+  "legacyMemoryCopied": "Copied",
+  "legacyMemoryExport": "Export",
+  "legacyMemoryExportTitle": "Kelivo legacy memory export",
+  "legacyMemoryAssistantHeader": "Assistant: {name}",
+  "@legacyMemoryAssistantHeader": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "legacyMemorySearchHint": "Search legacy memories",
+  "legacyMemoryMigrate": "Migrate",
+  "legacyMemoryMigrationTitle": "Migrate legacy memories",
+  "legacyMemoryMigrationSubtitle": "Use a model to classify and clean up {count} legacy memories. The originals stay unchanged.",
+  "@legacyMemoryMigrationSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "legacyMemoryMigrationModel": "Migration model",
+  "legacyMemoryMigrationChooseModel": "Choose a model",
+  "legacyMemoryMigrationTarget": "Save to",
+  "legacyMemoryMigrationTargetGlobal": "Global",
+  "legacyMemoryMigrationTargetAssistant": "Current assistant",
+  "legacyMemoryMigrationTargetOriginalAssistants": "Original assistants",
+  "legacyMemoryMigrationTargetGlobalDescription": "Available to every assistant",
+  "legacyMemoryMigrationTargetAssistantDescription": "Only available to this assistant",
+  "legacyMemoryMigrationTargetOriginalDescription": "Keep each memory with its original assistant",
+  "legacyMemoryMigrationStart": "Start migration",
+  "legacyMemoryMigrationAnalyzing": "Analyzing with model",
+  "legacyMemoryMigrationWriting": "Saving memories",
+  "legacyMemoryMigrationProgress": "{current} of {total}",
+  "@legacyMemoryMigrationProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "legacyMemoryMigrationComplete": "Migration complete",
+  "legacyMemoryMigrationResult": "{created} migrated · {skipped} already existed",
+  "@legacyMemoryMigrationResult": {
+    "placeholders": {
+      "created": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "legacyMemoryMigrationFailed": "Migration stopped. You can retry; memories already saved will be skipped.",
+  "legacyMemoryMigrationRetry": "Retry",
+  "legacyMemoryMigrationClose": "Done",
+  "legacyMemoryMigrationContentMode": "Content",
+  "legacyMemoryMigrationContentPreserve": "Keep original",
+  "legacyMemoryMigrationContentOrganize": "Rewrite with model",
+  "legacyMemoryMigrationContentPreserveDescription": "The model only assigns a type. The original wording is saved as-is.",
+  "legacyMemoryMigrationContentOrganizeDescription": "The model classifies and rewrites each memory using the editable migrate prompt.",
+  "legacyMemoryMigrationBatchSize": "Batch size",
+  "legacyMemoryMigrationPartial": "{created} migrated · {skipped} skipped · {failed} failed",
+  "@legacyMemoryMigrationPartial": {
+    "placeholders": {
+      "created": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "legacyMemoryMigrationContinue": "Continue migration",
+  "legacyMemoryMigrationErrorNetwork": "Network error. Check the connection and try again.",
+  "legacyMemoryMigrationErrorFormat": "The model returned an invalid response.",
+  "legacyMemoryMigrationErrorAuth": "Authentication failed. Check the API key.",
+  "legacyMemoryMigrationErrorOther": "Migration failed: {message}",
+  "@legacyMemoryMigrationErrorOther": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "legacyMemoryModeTitle": "Use legacy memory",
+  "legacyMemoryModeSubtitle": "Global setting for all assistants",
+  "legacyMemoryModeCacheWarning": "The default template injects the current time via {token}, which affects cache hit rate. Remove it if you do not need it.",
+  "@legacyMemoryModeCacheWarning": {
+    "placeholders": {
+      "token": {
+        "type": "String"
+      }
+    }
+  },
+  "memoryUiContentLabel": "Content",
+  "memoryUiValueLabel": "Value",
+  "memoryUiCustomKeyLabel": "Key",
+  "memoryUiStatusLabel": "Status",
+  "memoryUiAssistantLabel": "Assistant",
+  "memoryUiAssistantAll": "All assistants",
+  "memoryUiSearchClear": "Clear search",
+  "memoryUiAssistantLegacyTitle": "Legacy memories (read-only)",
+  "memoryUiAssistantLegacySubtitle": "Old memories of this assistant from previous versions",
+  "assistantEditMemorySwitchTitle": "Use long-term memory",
+  "assistantEditMemorySwitchSubtitle": "Inject saved memories into chats and let this assistant write new ones",
+  "assistantEditAutoOrganizeTitle": "Auto-organize memory",
+  "assistantEditAutoOrganizeSubtitle": "Run the memory pipeline after chats",
+  "assistantEditAllowPastRecallTitle": "Allow recalling past chats",
+  "assistantEditAllowPastRecallSubtitle": "Enable chat search across past conversations",
+  "assistantEditGenerateSummaryTitle": "Generate conversation summaries",
+  "assistantEditGenerateSummarySubtitle": "Summaries are only used by chat search",
+  "assistantEditManageMemoryTitle": "Memories visible to this assistant",
+  "assistantEditWriteScopeTitle": "Memory write scope",
+  "assistantEditWriteScopeSubtitle": "Where new memories are stored by default",
+  "assistantEditWriteScopeAlwaysGlobal": "Always global",
+  "assistantEditWriteScopeAlwaysGlobalSubtitle": "New memories are shared with every assistant",
+  "assistantEditWriteScopeAlwaysAssistant": "Always this assistant",
+  "assistantEditWriteScopeAlwaysAssistantSubtitle": "New memories stay private to this assistant",
+  "assistantEditWriteScopeToolDefaultGlobal": "Model chooses (default global)",
+  "assistantEditWriteScopeToolDefaultGlobalSubtitle": "The model may pick global or this assistant; default is global",
+  "assistantEditWriteScopeToolDefaultAssistant": "Model chooses (default assistant)",
+  "assistantEditWriteScopeToolDefaultAssistantSubtitle": "The model may pick global or this assistant; default is this assistant",
+  "assistantEditDedupeModeTitle": "Dedupe mode",
+  "assistantEditDedupeModeSubtitle": "How candidates are judged against existing memories",
+  "assistantEditDedupeModeBatched": "Batched",
+  "assistantEditDedupeModeBatchedSubtitle": "Judge all new candidates in one request. Faster and cheaper; less precise when many items arrive at once.",
+  "assistantEditDedupeModePerItem": "Per item",
+  "assistantEditDedupeModePerItemSubtitle": "Judge each candidate in its own request. More accurate; uses more model calls.",
+  "assistantEditOrganizeFrequencyTitle": "Organize every N turns",
+  "assistantEditOrganizeFrequencySubtitle": "Run auto-organize after this many assistant replies",
+  "assistantEditOrganizeFrequencyOption": "Every {n}",
+  "@assistantEditOrganizeFrequencyOption": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "assistantEditOrganizeFrequencyCustomButton": "Custom",
+  "assistantEditOrganizeFrequencyCustomTitle": "Custom frequency",
+  "assistantEditOrganizeFrequencyCustomDescription": "Enter a number between 1 and 20.",
+  "assistantEditOrganizeFrequencyCustomLabel": "Turns",
+  "assistantEditOrganizeFrequencyCustomHint": "1–20",
+  "assistantEditOrganizeFrequencyCustomInvalid": "Enter a number between 1 and 20",
   "worldBookTitle": "World Book",
   "worldBookAdd": "Add World Book",
   "worldBookEmptyMessage": "No world books yet",
@@ -2561,6 +3593,604 @@
       }
     }
   },
+  "migrationIntroTitle": "Upgrade Chat Storage",
+  "migrationIntroSubtitle": "Kelivo is moving chat history to a faster SQLite database. The upgrade runs before the app opens so your data stays consistent.",
+  "migrationBackupNote": "Before migration starts, Kelivo exports a ZIP backup with settings, chat history, and local files.",
+  "migrationPerformanceNote": "After migration, startup, history loading, and search use SQLite indexes for smoother long-chat performance.",
+  "migrationSourceDatabaseLabel": "Hive",
+  "migrationTargetDatabaseLabel": "SQLite",
+  "migrationChooseFolderButton": "Choose Folder and Back Up",
+  "migrationSaveBackupButton": "Save Backup ZIP",
+  "migrationStartWithoutBackupButton": "Migrate Without Backing Up",
+  "migrationSkipChatsJsonOption": "Skip chats.json",
+  "migrationSkipChatsJsonDescription": "Still backs up the original Hive files, settings, and local files. Recommended for very large histories.",
+  "migrationSkipBackupOption": "Skip this backup",
+  "migrationSkipBackupDescription": "Only select this if you already have a verified backup. Migration will start immediately.",
+  "migrationBackingUpTitle": "Backing Up",
+  "migrationBackingUpSubtitle": "Exporting settings, chat history, uploaded files, images, and fonts. Keep Kelivo open until this finishes.",
+  "migrationMigratingTitle": "Migrating to SQLite",
+  "migrationMigratingSubtitle": "Writing conversations and messages in batches so large histories do not overload memory. Keep Kelivo in the foreground until migration finishes.",
+  "migrationBackingUpDetail": "Backing up {fileName}",
+  "@migrationBackingUpDetail": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "migrationMigratingDetail": "Migrated {count} messages",
+  "@migrationMigratingDetail": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "migrationMigratingPrepareDetail": "Preparing SQLite database",
+  "migrationMigratingToolEventsDetail": "Migrating tool records",
+  "migrationMigratingValidateDetail": "Validating migrated data",
+  "migrationBackupReadyDetail": "Backup ZIP is ready",
+  "migrationSavingBackupZipDetail": "Saving backup ZIP",
+  "migrationBackupFileSavedTitle": "Backup ZIP saved",
+  "migrationChecklistBackupFiles": "Export Hive backup ZIP",
+  "migrationChecklistPrepareSqlite": "Prepare SQLite database",
+  "migrationChecklistMigrateMessages": "Migrate conversations and messages",
+  "migrationChecklistMigrateToolEvents": "Migrate tool records",
+  "migrationChecklistValidate": "Validate migrated data",
+  "migrationStepBackup": "Backup",
+  "migrationStepMigrate": "Migrate",
+  "migrationStepComplete": "Done",
+  "migrationCompleteTitle": "Upgrade Complete",
+  "migrationCompleteSubtitle": "Your chat history is now stored in SQLite. Restart Kelivo to enter the upgraded app.",
+  "migrationConversationCount": "Conversations",
+  "migrationMessageCount": "Messages",
+  "migrationConvertedCount": "Converted",
+  "migrationMalformedCount": "Malformed",
+  "migrationMissingFilesCount": "Missing files",
+  "migrationRestartButton": "Restart Kelivo",
+  "migrationFailedTitle": "Migration Failed",
+  "migrationFailedSubtitle": "The original Hive data is still intact. Any backup that finished earlier is unchanged. Review the reason below, then retry.",
+  "migrationUnknownError": "Unknown migration error.",
+  "migrationFailureLogTitle": "Failure log",
+  "migrationRetryButton": "Retry Migration",
+  "migrationSkipButton": "Skip Migration and Start Fresh",
+  "migrationSkipDialogTitle": "Skip migration?",
+  "migrationSkipDialogMessage": "Kelivo will start with an empty chat database. Your old chat history stays on disk (renamed with a .retired suffix) but will NOT be migrated and will not appear in the app. Use your backup ZIP if you need to recover it later.",
+  "migrationSkipDialogCancel": "Cancel",
+  "migrationSkipDialogConfirm": "Skip and Start Fresh",
+  "migrationChatsExportDegradedNote": "The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.",
+  "timelineJumpToLatest": "Jump to latest",
+  "largeContentShowMore": "Show {count} more",
+  "@largeContentShowMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "largeContentCollapse": "Collapse",
+  "imageSettingsPageTitle": "Image Processing",
+  "imageSettingsPageEditSectionTitle": "Editing",
+  "imageSettingsPageQualitySectionTitle": "Upload Image Quality",
+  "imageSettingsPageQualityOriginal": "Original",
+  "imageSettingsPageQualityOriginalSubtitle": "Don't compress; upload as-is",
+  "imageSettingsPageQualityHigh": "High Quality",
+  "imageSettingsPageQualityHighSubtitle": "Long edge 2048 px · quality 90",
+  "imageSettingsPageQualityBalanced": "Balanced",
+  "imageSettingsPageQualityBalancedSubtitle": "Long edge 1568 px · quality 85",
+  "imageSettingsPageQualitySaver": "Data Saver",
+  "imageSettingsPageQualitySaverSubtitle": "Long edge 1024 px · quality 70",
+  "imageSettingsPageQualityCustom": "Custom",
+  "imageSettingsPageQualityCustomSubtitle": "Choose the compression quality",
+  "imageSettingsPageCustomQualityTitle": "Compression Quality",
+  "imageSettingsPageCompressTransparentTitle": "Compress Transparent & Animated Images",
+  "imageSettingsPageCompressTransparentSubtitle": "When enabled, transparent PNG, GIF, and similar formats are compressed; transparent areas become white and animations keep only the first frame.",
+  "imageSettingsPageFooter": "Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.",
+  "imageSettingsPageSendSectionTitle": "Sending",
+  "imageSettingsPageMarkdownImageLinksTitle": "Send Markdown image links as images",
+  "imageSettingsPageMarkdownImageLinksSubtitle": "When enabled, an ![alt](url) link in your message text is sent to vision models as an image. When off it stays plain text. Images you attach yourself are always sent as images.",
+  "memoryTraceSettingsTitle": "Pipeline Traces",
+  "memoryTraceSettingsSubtitle": "Inspect every background memory run step by step",
+  "memoryTracePageTitle": "Memory Pipeline Traces",
+  "memoryTraceRecordingSection": "Recording",
+  "memoryTraceToggleTitle": "Record pipeline traces",
+  "memoryTraceToggleSubtitle": "Keeps prompts, responses and changes of recent background runs in memory only",
+  "memoryTraceRunsSection": "Recent runs",
+  "memoryTraceEmptyTitle": "No traces yet",
+  "memoryTraceEmptySubtitle": "Traces appear here after the background memory pipeline runs.",
+  "memoryTraceDisabledTitle": "Recording is off",
+  "memoryTraceDisabledSubtitle": "Turn recording on to capture the next background memory run.",
+  "memoryTraceClearAction": "Clear",
+  "memoryTraceClearSheetTitle": "Clear traces",
+  "memoryTraceClearSheetMessage": "This removes every recorded trace. Traces are never written to disk, so nothing else is affected.",
+  "memoryTraceClearConfirm": "Clear traces",
+  "memoryTraceCancel": "Cancel",
+  "memoryTraceClearedToast": "Traces cleared",
+  "memoryTraceCopyAction": "Copy",
+  "memoryTraceCopiedToast": "Copied to clipboard",
+  "memoryTraceTriggerAuto": "Auto",
+  "memoryTraceTriggerManual": "Manual",
+  "memoryTraceTriggerTool": "Tool call",
+  "memoryTraceTriggerSummary": "Summary",
+  "memoryTraceScopeAssistant": "Assistant",
+  "memoryTraceScopeGlobal": "Global",
+  "memoryTraceStepGatekeeper": "Gatekeeper",
+  "memoryTraceStepExtract": "Extract",
+  "memoryTraceStepSmartAdd": "Smart Add",
+  "memoryTraceStepDistiller": "Profile Distiller",
+  "memoryTraceStepSummary": "Conversation Summary",
+  "memoryTraceStepChatSearch": "Past Conversation Recall",
+  "memoryTraceStepTool": "Memory Tool",
+  "memoryTraceStatusSuccess": "Success",
+  "memoryTraceStatusFailed": "Failed",
+  "memoryTraceStatusSkipped": "Skipped",
+  "memoryTraceStatusRunning": "Running",
+  "memoryTraceOutcomeAdvanced": "Watermark advanced",
+  "memoryTraceOutcomeHeld": "Watermark held",
+  "memoryTraceOutcomeForced": "Forced advance",
+  "memoryTraceDetailTitle": "Trace detail",
+  "memoryTraceSectionOverview": "Overview",
+  "memoryTraceSectionPrompt": "Prompt",
+  "memoryTraceSectionResponse": "Raw response",
+  "memoryTraceSectionParsed": "Parsed result",
+  "memoryTraceSectionMutations": "Changes applied",
+  "memoryTraceFieldTime": "Started",
+  "memoryTraceFieldDuration": "Duration",
+  "memoryTraceFieldTrigger": "Trigger",
+  "memoryTraceFieldScope": "Scope",
+  "memoryTraceFieldConversation": "Chat",
+  "memoryTraceFieldAssistant": "Assistant",
+  "memoryTraceFieldWindow": "Window",
+  "memoryTraceFieldWatermark": "Watermark",
+  "memoryTraceFieldOutcome": "Outcome",
+  "memoryTraceFieldError": "Error",
+  "memoryTraceMutationCreated": "Created",
+  "memoryTraceMutationMerged": "Merged",
+  "memoryTraceMutationEdited": "Edited",
+  "memoryTraceMutationArchived": "Archived",
+  "memoryTraceMutationLinked": "Linked",
+  "memoryTraceMutationProfileWritten": "Profile field written",
+  "memoryTraceMutationProfileCleared": "Profile field cleared",
+  "memoryTraceMutationSummary": "Chat summary written",
+  "memoryTraceBefore": "Before",
+  "memoryTraceAfter": "After",
+  "memoryTraceEmptyValue": "(empty)",
+  "memoryTraceStepsCount": "{count} steps",
+  "@memoryTraceStepsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceMutationsCount": "{count} changes",
+  "@memoryTraceMutationsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceRepeatCount": "repeated {count}×",
+  "@memoryTraceRepeatCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceWindowValue": "{size} messages · #{start}–#{end}",
+  "@memoryTraceWindowValue": {
+    "placeholders": {
+      "size": {
+        "type": "int"
+      },
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "memoryTraceShowMore": "Show full text",
+  "memoryTraceShowLess": "Collapse",
+  "messageStyleSettingsPageTitle": "Message Style",
+  "messageStyleSettingsPageReset": "Reset",
+  "messageStyleSettingsPageResetConfirm": "Reset all message style customizations?",
+  "messageStyleSettingsPageCancel": "Cancel",
+  "messageStyleSettingsPageLight": "Light",
+  "messageStyleSettingsPageDark": "Dark",
+  "messageStyleSettingsPageDefaultHint": "Default style follows the current theme and has no extra controls.",
+  "messageStyleSettingsPageStyleDefaultSubtitle": "Follows the theme; not customizable",
+  "messageStyleSettingsPageAssistantFitContent": "Fit assistant bubble to content",
+  "messageStyleSettingsPageAssistantFitContentSubtitle": "Assistant bubbles hug their text instead of filling the row",
+  "messageStyleSettingsPageAssistantSplitParagraphs": "Split paragraphs into bubbles",
+  "messageStyleSettingsPageAssistantSplitParagraphsSubtitle": "Blank lines break an assistant reply into one bubble per paragraph",
+  "messageStyleSettingsPageStyleFrostedSubtitle": "Translucent frosted glass",
+  "messageStyleSettingsPageStyleSolidSubtitle": "Opaque solid fill",
+  "messageStyleSettingsPageBlur": "Blur",
+  "messageStyleSettingsPageBlurHint": "Blur applies to content behind the bubble. It is barely visible without a chat wallpaper.",
+  "messageStyleSettingsPageBackgroundColor": "Background",
+  "messageStyleSettingsPageBackgroundOpacity": "Background Opacity",
+  "messageStyleSettingsPageBorderColor": "Border",
+  "messageStyleSettingsPageBorderOpacity": "Border Opacity",
+  "messageStyleSettingsPageBorderWidth": "Border Width",
+  "messageStyleSettingsPageTextColor": "Text",
+  "messageStyleSettingsPageCornerRadius": "Corner Radius",
+  "messageStyleSettingsPagePreviewUser": "This is a user message",
+  "messageStyleSettingsPagePreviewAssistant": "This is an assistant reply.",
+  "messageStyleSettingsPagePreviewThinking": "Thinking",
+  "messageStyleSettingsPageRoleUser": "User",
+  "messageStyleSettingsPageRoleAssistant": "Assistant",
+  "messageStyleSettingsPageRoleAssistantHint": "Assistant settings also apply to thinking, tool-call, and translation cards.",
+  "localSnapshotSectionTitle": "Local Copies",
+  "localSnapshotEnabledTitle": "Keep local copies",
+  "localSnapshotEnabledSubtitle": "Kelivo periodically saves a copy of its database on this device, so it is never the only one.",
+  "localSnapshotIntervalTitle": "How often",
+  "localSnapshotIntervalAutomatic": "Automatic",
+  "localSnapshotIntervalAutomaticDetail": "Daily, less often as the database grows",
+  "localSnapshotIntervalDays": "{days, plural, =1{Every day} other{Every {days} days}}",
+  "@localSnapshotIntervalDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "localSnapshotKeepTitle": "Copies to keep",
+  "localSnapshotKeepValue": "{count, plural, =1{1 copy} other{{count} copies}}",
+  "@localSnapshotKeepValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localSnapshotKeepSubtitle": "Plus one from last week and one from last month, so a problem that went unnoticed is still recoverable.",
+  "localSnapshotKeepWeekly": "Keep one from last week",
+  "localSnapshotKeepMonthly": "Keep one from last month",
+  "localSnapshotKeepProtectedNote": "The most recent copy that still contains data is never removed automatically, whatever this is set to.",
+  "localSnapshotMaximumTitle": "Space limit",
+  "localSnapshotMaximumUnlimited": "No limit",
+  "localSnapshotAnnounceTitle": "Notify when a copy is saved",
+  "localSnapshotAnnounceSubtitle": "Failures are always reported. This only adds a brief message on success.",
+  "localSnapshotTakeNow": "Save a copy now",
+  "localSnapshotManageCopies": "Manage copies",
+  "localSnapshotUsage": "{count, plural, =0{No copies} =1{1 copy} other{{count} copies}} · {size}",
+  "@localSnapshotUsage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotStatusNever": "No copy saved yet",
+  "localSnapshotStatusSuccess": "Last copy {when}",
+  "@localSnapshotStatusSuccess": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotStatusFailure": "Last attempt failed {when}: {reason}",
+  "@localSnapshotStatusFailure": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotStatusSkippedSpace": "Skipped: not enough free space on this device",
+  "localSnapshotStatusUnchanged": "Nothing has changed since the last copy",
+  "localSnapshotCopiesTitle": "Local Copies",
+  "localSnapshotCopiesEmpty": "No local copies yet",
+  "localSnapshotCopiesEmptyHint": "A copy is saved automatically as your data changes, and one is always saved before a restore.",
+  "localSnapshotCopiesScopeNote": "Local copies live on this device only. They protect against damage to your data inside the app, not against losing the device or uninstalling Kelivo — use WebDAV or S3 backup for that.",
+  "localSnapshotOriginAutomatic": "Automatic",
+  "localSnapshotOriginManual": "Saved by you",
+  "localSnapshotOriginBeforeRestore": "Before a restore",
+  "localSnapshotKindRecovered": "Set aside by recovery",
+  "localSnapshotCopyContents": "{conversations, plural, =1{1 chat} other{{conversations} chats}} · {messages, plural, =1{1 message} other{{messages} messages}}",
+  "@localSnapshotCopyContents": {
+    "placeholders": {
+      "conversations": {
+        "type": "int"
+      },
+      "messages": {
+        "type": "int"
+      }
+    }
+  },
+  "localSnapshotCopyContentsUnknown": "Contents unknown until restored",
+  "localSnapshotCopyPinned": "Kept",
+  "localSnapshotActionRestore": "Restore",
+  "localSnapshotActionExport": "Export",
+  "localSnapshotActionDelete": "Delete",
+  "localSnapshotActionPin": "Keep this copy",
+  "localSnapshotActionUnpin": "Stop keeping",
+  "localSnapshotRestoreTitle": "Restore this copy?",
+  "localSnapshotRestoreMessage": "Your current chats and settings will be replaced by this copy from {when}. A copy of what you have now is saved first, so this can be undone.",
+  "@localSnapshotRestoreMessage": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotRestorePreparing": "Preparing copy",
+  "localSnapshotDeleteTitle": "Delete this copy?",
+  "localSnapshotDeleteMessage": "This copy will be removed from the device permanently. Any data it holds that is not in your current database will be gone.",
+  "localSnapshotDeleteLastWarning": "This is the only copy that still contains data.",
+  "localSnapshotExportPreparing": "Preparing export",
+  "localSnapshotExportDone": "Copy exported",
+  "localSnapshotExportFailed": "Could not export the copy: {reason}",
+  "@localSnapshotExportFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotTakeDone": "Copy saved",
+  "localSnapshotTakeFailed": "Could not save a copy: {reason}",
+  "@localSnapshotTakeFailed": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "localSnapshotDeleteDone": "Copy deleted",
+  "localSnapshotBusyMessage": "Another backup task is already running",
+  "localSnapshotRunInBackground": "Continue in background",
+  "localSnapshotRunningInBackground": "Saving a copy in the background",
+  "startupRecoveryLocalCopiesAvailable": "This device still holds {count, plural, =1{1 local copy} other{{count} local copies}}, the most recent from {when}. Resetting does not delete them — after restarting you can restore one from Settings › Backup › Local Copies.",
+  "@startupRecoveryLocalCopiesAvailable": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRecoveryRecoveredCopiesDeleted": "It also holds {count, plural, =1{1 database copy} other{{count} database copies}} set aside by an earlier repair, and resetting DOES delete {count, plural, =1{it} other{those}} permanently. Export your data first if you want to keep {count, plural, =1{it} other{them}}.",
+  "@startupRecoveryRecoveredCopiesDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolSchemaSettingsPageTitle": "Tool Descriptions",
+  "toolSchemaSettingsGroupSearch": "Search",
+  "toolSchemaSettingsGroupMemory": "Memory",
+  "toolSchemaSettingsGroupLocal": "Device tools",
+  "toolSchemaSettingsModified": "Modified",
+  "toolSchemaSettingsResetDefault": "Restore default",
+  "toolSchemaSettingsResetAll": "Restore all defaults",
+  "toolSchemaSettingsResetAllTitle": "Restore all defaults?",
+  "toolSchemaSettingsResetAllMessage": "This restores every built-in tool description to the app default. Your custom wording will be lost.",
+  "toolSchemaSettingsResetAllConfirm": "Restore",
+  "toolSchemaSettingsParamDescriptions": "Parameter descriptions ({count})",
+  "@toolSchemaSettingsParamDescriptions": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolSchemaSettingsMemoryLangNote": "Memory tool defaults follow the memory prompt language. A custom description is stored once per tool and will not switch when you change that language.",
+  "toolSchemaSettingsDescriptionLabel": "Description",
+  "toolSchemaSettingsToolName": "Tool name",
+  "toolSchemaEditorPageTitle": "Edit description",
+  "toolSchemaSettingsCancel": "Cancel",
+  "settingsPageImageGeneration": "Image Generation",
+  "imageGenerationPageTitle": "Image Generation",
+  "imageGenerationProviderLabel": "Provider",
+  "imageGenerationModelLabel": "Model",
+  "imageGenerationModeLabel": "Mode",
+  "imageGenerationModeGenerate": "Generate",
+  "imageGenerationModeEdit": "Edit Image",
+  "imageGenerationPromptLabel": "Prompt",
+  "imageGenerationPromptHint": "Describe the image you want",
+  "imageGenerationSizeLabel": "Size",
+  "imageGenerationQualityLabel": "Quality",
+  "imageGenerationOutputFormatLabel": "Format",
+  "imageGenerationCountLabel": "Count",
+  "imageGenerationPickImages": "Pick Images",
+  "imageGenerationPickedImages": "{count} selected",
+  "@imageGenerationPickedImages": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageGenerationClearImages": "Clear",
+  "imageGenerationMaskNotSelected": "No mask selected",
+  "imageGenerationMaskSelected": "Mask selected",
+  "imageGenerationPickMask": "Pick Mask",
+  "imageGenerationClearMask": "Clear Mask",
+  "imageGenerationGenerateButton": "Generate Image",
+  "imageGenerationEditButton": "Edit Image",
+  "imageGenerationGenerating": "Generating…",
+  "imageGenerationNoProvider": "No enabled OpenAI-compatible provider",
+  "imageGenerationModelRequired": "Set an image model for this assistant first",
+  "imageGenerationModelUnsupported": "The selected image model is not an OpenAI-compatible image model",
+  "imageGenerationNoApiKey": "The selected provider has no API key",
+  "imageGenerationPromptRequired": "Enter a prompt first",
+  "imageGenerationImageRequired": "Select at least one input image",
+  "imageGenerationSuccess": "{count} image(s) generated",
+  "@imageGenerationSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "imageGenerationFailed": "Image request failed: {error}",
+  "@imageGenerationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "imageGenerationEmptyResult": "The image API returned no image",
+  "imageGenerationInvalidResponse": "The image API returned an invalid response",
+  "imageGenerationRequestFailed": "Image request failed",
+  "imageGenerationResultTitle": "Results",
+  "homePageImageAttachmentUnsupported": "The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.",
+  "assistantEditImageModelTitle": "Image Model",
+  "assistantEditImageModelSubtitle": "Used in chat when a message starts with /image, /img, 生图, or 画图",
+  "assistantEditImageModelUnset": "No image model",
+  "backupPageImportFromRikkaHub": "Import from RikkaHub",
+  "chatMessageWidgetEditMemory": "Edit Memory",
+  "chatMessageWidgetDeleteMemory": "Delete Memory",
+  "chatMessageWidgetContinueImageGeneration": "Edit image",
+  "chatInputBarImageGenerationTooltip": "Image Generation",
+  "modelDetailSheetBuiltinToolsUnsupportedHint": "Current provider does not support these built-in tools.",
+  "localModelManagementEntryTitle": "Local Model Management",
+  "localModelManagementTitle": "Local Models",
+  "localModelManagementModeLabel": "Mode",
+  "localModelManagementLiteRtMode": "LiteRT-LM file",
+  "localModelManagementGgufMode": "GGUF file",
+  "localModelManagementOllamaMode": "Ollama / OpenAI-compatible",
+  "localModelManagementModelFileLabel": "Model file",
+  "localModelManagementFileStatusLabel": "File status",
+  "localModelManagementFileMissing": "File missing",
+  "localModelManagementFileSizeBytes": "{bytes} bytes",
+  "@localModelManagementFileSizeBytes": {
+    "placeholders": {
+      "bytes": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementBaseUrlLabel": "Base URL",
+  "localModelManagementModelIdLabel": "Model ID",
+  "localModelManagementImportButton": "Import",
+  "localModelManagementDiscoverButton": "Discover",
+  "localModelManagementTestButton": "Test",
+  "localModelManagementTesting": "Testing...",
+  "localModelManagementDiscovering": "Discovering...",
+  "localModelManagementNoModelsFound": "No local models found.",
+  "localModelManagementDiscoveredModels": "Models",
+  "localModelManagementModelsUpdated": "Updated {count} model(s)",
+  "@localModelManagementModelsUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localModelManagementTestSuccess": "Test succeeded",
+  "localModelManagementTestFailed": "Test failed: {error}",
+  "@localModelManagementTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementDiscoverFailed": "Discovery failed: {error}",
+  "@localModelManagementDiscoverFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportSuccess": "Imported {fileName}",
+  "@localModelManagementImportSuccess": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "localModelManagementImportFailed": "Import failed: {error}",
+  "@localModelManagementImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetOpenAiTab": "OpenAI",
+  "addProviderSheetGoogleTab": "Google",
+  "addProviderSheetClaudeTab": "Claude",
+  "addProviderSheetLocalTab": "Local",
+  "addProviderSheetApiKeyLabel": "API Key",
+  "addProviderSheetBaseUrlLabel": "Base URL",
+  "addProviderSheetResponsesApiLabel": "Responses API",
+  "addProviderSheetVertexAiLabel": "Vertex AI",
+  "addProviderSheetLocalDefaultName": "Local Model",
+  "addProviderSheetLocalModeLiteRt": "LiteRT file",
+  "addProviderSheetLocalModeGguf": "GGUF file",
+  "addProviderSheetLocalModeOpenAICompatible": "Ollama / OpenAI-compatible",
+  "addProviderSheetLocalModelPathLabel": "LiteRT-LM model file",
+  "addProviderSheetLocalModelPathHint": "Import or paste a .litertlm model path",
+  "addProviderSheetImportLitertButton": "Import .litertlm",
+  "addProviderSheetLocalGgufModelPathLabel": "GGUF model file",
+  "addProviderSheetLocalGgufModelPathHint": "Import or paste a .gguf model path",
+  "addProviderSheetImportGgufButton": "Import .gguf",
+  "addProviderSheetLocalNoModelFile": "Choose a .litertlm model file first.",
+  "addProviderSheetLocalNoGgufModelFile": "Choose a .gguf model file first.",
+  "addProviderSheetLocalImported": "Imported {fileName}",
+  "@addProviderSheetLocalImported": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImporting": "Importing model...",
+  "addProviderSheetLocalImportingProgress": "Importing model... {percent}",
+  "@addProviderSheetLocalImportingProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "addProviderSheetLocalImportNotLiteRt": "Please choose a .litertlm model file.",
+  "addProviderSheetLocalImportNotGguf": "Please choose a .gguf model file.",
+  "addProviderSheetLocalImportEmptyFile": "The selected model file is empty.",
+  "addProviderSheetLocalImportUnreadable": "Could not read the selected model file.",
+  "addProviderSheetLocalImportFailed": "Model import failed.",
+  "addProviderSheetLocalModelIdLabel": "Model ID",
+  "searchServicesFieldApiKey": "API Key",
+  "searchServicesFieldSearchEngineId": "Search engine ID",
+  "searchServicesFieldModelOptional": "Model (optional)",
+  "searchServicesAddDialogSearchEngineIdRequired": "Search engine ID is required",
+  "searchServicesEditDialogSearchEngineIdRequired": "Search engine ID is required",
+  "fontPickerGetFromGoogleFonts": "Browse Google Fonts",
+  "fontPickerFilterHint": "Filter fonts...",
+  "searchProviderGoogleDescription": "Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.",
+  "searchServiceNameGoogle": "Google",
+  "localLiteRtModelTooLargeForDevice": "This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.",
+  "fileUploadDuplicateTitle": "File already exists",
+  "fileUploadDuplicateContent": "A file named {fileName} already exists. Use the existing file?",
+  "@fileUploadDuplicateContent": {
+    "placeholders": {
+      "fileName": {
+        "type": "String"
+      }
+    }
+  },
+  "fileUploadDuplicateUseExisting": "Use existing",
+  "fileUploadDuplicateUploadNew": "Upload new",
   "settingsPageMusic": "Music",
   "musicPageTitle": "LF Music",
   "musicPageSubtitle": "Search, play, and download music",

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../core/providers/mcp_provider.dart';
 import '../core/providers/assistant_provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import '../theme/design_tokens.dart';
 
 Future<void> showDesktopMcpServersPopover(
   BuildContext context, {
@@ -169,26 +170,25 @@ class _GlassPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     return ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.circular(14),
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: (isDark ? Colors.black : Colors.white).withValues(
-              alpha: isDark ? 0.28 : 0.56,
-            ),
+            color: AppOverlayColors.desktopPopoverSurface(cs),
             border: Border(
               top: BorderSide(
-                color: Colors.white.withValues(alpha: isDark ? 0.06 : 0.18),
+                color: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.18),
                 width: 0.7,
               ),
               left: BorderSide(
-                color: Colors.white.withValues(alpha: isDark ? 0.04 : 0.12),
+                color: cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.12),
                 width: 0.6,
               ),
               right: BorderSide(
-                color: Colors.white.withValues(alpha: isDark ? 0.04 : 0.12),
+                color: cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.12),
                 width: 0.6,
               ),
             ),
@@ -309,9 +309,7 @@ class _RowItemState extends State<_RowItem> {
     final isDark = theme.brightness == Brightness.dark;
     final onColor = widget.selected ? cs.primary : cs.onSurface;
     final baseBg = Colors.transparent;
-    final hoverBg = (isDark ? Colors.white : Colors.black).withValues(
-      alpha: isDark ? 0.12 : 0.10,
-    );
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.10);
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),

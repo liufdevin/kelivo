@@ -1,14 +1,10 @@
+import "support/business_test_harness.dart";
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:Kelivo/core/providers/model_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-
-Future<void> _waitForSettingsLoad() async {
-  for (var i = 0; i < 25; i++) {
-    await Future<void>.delayed(const Duration(milliseconds: 10));
-  }
-}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -41,12 +37,18 @@ void main() {
     });
 
     test('built-in provider order does not add Kimi preset', () async {
-      SharedPreferences.setMockInitialValues({
-        'providers_order_v1': <String>['OpenAI', 'Zhipu AI', 'Grok'],
-      });
-      final settings = SettingsProvider();
+      final harness = await createBusinessTestHarness(
+        initial: {
+          'providers_order_v1': <String>['OpenAI', 'Zhipu AI', 'Grok'],
+          'provider_configs_v1': jsonEncode({
+            for (final id in const ['OpenAI', 'Zhipu AI', 'Grok'])
+              id: ProviderConfig.defaultsFor(id).toJson(),
+          }),
+        },
+      );
+      final settings = SettingsProvider(harness.preferences);
 
-      await _waitForSettingsLoad();
+      await settings.loaded;
 
       const requestedOrder = ['OpenAI', 'Zhipu AI', 'Grok'];
       expect(settings.providersOrder, isNot(contains('Kimi')));
@@ -56,12 +58,18 @@ void main() {
       );
     });
 
-    test('latest GLM and Kimi model ids infer expected capabilities', () {
+    test('latest model ids infer only their documented capabilities', () {
       final glm = ModelRegistry.infer(
         ModelInfo(id: 'glm-5.2', displayName: 'glm-5.2'),
       );
-      final kimi = ModelRegistry.infer(
+      final kimiK2 = ModelRegistry.infer(
         ModelInfo(id: 'kimi-k2.7-code', displayName: 'kimi-k2.7-code'),
+      );
+      final kimiK3 = ModelRegistry.infer(
+        ModelInfo(id: 'kimi-k3', displayName: 'kimi-k3'),
+      );
+      final muse = ModelRegistry.infer(
+        ModelInfo(id: 'muse-spark-1.1', displayName: 'muse-spark-1.1'),
       );
 
       expect(glm.input, const [Modality.text]);
@@ -70,13 +78,62 @@ void main() {
         glm.abilities,
         containsAll([ModelAbility.tool, ModelAbility.reasoning]),
       );
-      expect(kimi.input, contains(Modality.image));
-      expect(kimi.output, const [Modality.text]);
-      expect(
-        kimi.abilities,
-        containsAll([ModelAbility.tool, ModelAbility.reasoning]),
-      );
+      for (final model in [kimiK2, kimiK3, muse]) {
+        expect(model.input, contains(Modality.image));
+        expect(model.output, const [Modality.text]);
+        expect(
+          model.abilities,
+          containsAll([ModelAbility.tool, ModelAbility.reasoning]),
+        );
+      }
+      expect(kimiK2.id, 'kimi-k2.7-code');
+      expect(kimiK3.id, 'kimi-k3');
+      expect(muse.id, 'muse-spark-1.1');
     });
+
+    test(
+      'OpenAI-compatible latest models expose documented effort caps',
+      () async {
+        final harness = await createBusinessTestHarness(initial: {});
+        final settings = SettingsProvider(harness.preferences);
+
+        await settings.loaded;
+
+        expect(
+          settings.supportsXhighReasoning('OpenAI', 'gpt-5.6-sol'),
+          isTrue,
+        );
+        expect(settings.supportsMaxReasoning('OpenAI', 'gpt-5.6-sol'), isTrue);
+        expect(
+          settings.supportsXhighReasoning('OpenRouter', 'openai/gpt-5.6-sol'),
+          isTrue,
+        );
+        expect(
+          settings.supportsMaxReasoning('OpenRouter', 'openai/gpt-5.6-sol'),
+          isTrue,
+        );
+        expect(settings.supportsMaxReasoning('OpenAI', 'kimi-k3'), isTrue);
+        expect(
+          settings.supportsMaxReasoning('OpenRouter', 'moonshotai/kimi-k3'),
+          isTrue,
+        );
+        expect(settings.supportsMaxReasoning('OpenAI', 'grok-4.5'), isFalse);
+        expect(settings.supportsXhighReasoning('OpenAI', 'grok-4.6'), isTrue);
+        expect(settings.supportsMaxReasoning('OpenAI', 'grok-4.6'), isFalse);
+        expect(
+          settings.supportsXhighReasoning('OpenAI', 'deepseek-v4-pro'),
+          isFalse,
+        );
+        expect(
+          settings.supportsMaxReasoning('OpenAI', 'deepseek-v4-pro'),
+          isTrue,
+        );
+        expect(
+          settings.supportsMaxReasoning('OpenAI', 'muse-spark-1.1'),
+          isFalse,
+        );
+      },
+    );
 
     test('OpenRouter can be routed through Anthropic format explicitly', () {
       final cfg = ProviderConfig(
@@ -96,12 +153,12 @@ void main() {
     });
 
     test(
-      'Claude provider resolves apiModelId before DeepSeek xhigh check',
+      'Claude provider resolves apiModelId before DeepSeek max check',
       () async {
-        SharedPreferences.setMockInitialValues({});
-        final settings = SettingsProvider();
+        final harness = await createBusinessTestHarness(initial: {});
+        final settings = SettingsProvider(harness.preferences);
 
-        await _waitForSettingsLoad();
+        await settings.loaded;
         await settings.setProviderConfig(
           'ClaudeProxy',
           ProviderConfig(
@@ -126,41 +183,45 @@ void main() {
 
         expect(
           settings.supportsXhighReasoning('ClaudeProxy', 'pro-alias'),
+          isFalse,
+        );
+        expect(
+          settings.supportsMaxReasoning('ClaudeProxy', 'pro-alias'),
           isTrue,
         );
       },
     );
 
     group('title generation thinking', () {
-      test(
-        'defaults to enabled and preserves existing budget fallback',
-        () async {
-          SharedPreferences.setMockInitialValues({'thinking_budget_v1': 16000});
-          final settings = SettingsProvider();
+      test('defaults to disabled', () async {
+        final harness = await createBusinessTestHarness(
+          initial: {'thinking_budget_v1': 16000},
+        );
+        final settings = SettingsProvider(harness.preferences);
 
-          await _waitForSettingsLoad();
+        await settings.loaded;
 
-          expect(settings.titleGenerationThinkingEnabled, isTrue);
-          expect(settings.titleGenerationThinkingBudgetFor(null), 16000);
-          expect(settings.titleGenerationThinkingBudgetFor(1024), 1024);
-        },
-      );
+        expect(settings.titleGenerationThinkingEnabled, isFalse);
+        expect(settings.titleGenerationThinkingBudgetFor(null), 0);
+        expect(settings.titleGenerationThinkingBudgetFor(1024), 0);
+      });
 
       test(
         'disabled title generation thinking resolves to off budget',
         () async {
-          SharedPreferences.setMockInitialValues({});
-          final settings = SettingsProvider();
+          final harness = await createBusinessTestHarness(initial: {});
+          final settings = SettingsProvider(harness.preferences);
 
-          await _waitForSettingsLoad();
+          await settings.loaded;
           await settings.setThinkingBudget(16000);
+          await settings.setTitleGenerationThinkingEnabled(true);
           await settings.setTitleGenerationThinkingEnabled(false);
 
           expect(settings.titleGenerationThinkingEnabled, isFalse);
           expect(settings.titleGenerationThinkingBudgetFor(null), 0);
           expect(settings.titleGenerationThinkingBudgetFor(1024), 0);
 
-          final prefs = await SharedPreferences.getInstance();
+          final prefs = harness.preferences;
           expect(
             prefs.getBool('title_generation_thinking_enabled_v1'),
             isFalse,
@@ -169,42 +230,102 @@ void main() {
       );
 
       test('loads persisted disabled state', () async {
-        SharedPreferences.setMockInitialValues({
-          'title_generation_thinking_enabled_v1': false,
-        });
-        final settings = SettingsProvider();
+        final harness = await createBusinessTestHarness(
+          initial: {'title_generation_thinking_enabled_v1': false},
+        );
+        final settings = SettingsProvider(harness.preferences);
 
-        await _waitForSettingsLoad();
+        await settings.loaded;
 
         expect(settings.titleGenerationThinkingEnabled, isFalse);
         expect(settings.titleGenerationThinkingBudgetFor(32000), 0);
       });
 
-      test('reset restores enabled fallback behavior', () async {
-        SharedPreferences.setMockInitialValues({
-          'title_generation_thinking_enabled_v1': false,
-          'thinking_budget_v1': 64000,
-        });
-        final settings = SettingsProvider();
+      test('reset restores disabled default', () async {
+        final harness = await createBusinessTestHarness(
+          initial: {
+            'title_generation_thinking_enabled_v1': true,
+            'thinking_budget_v1': 64000,
+          },
+        );
+        final settings = SettingsProvider(harness.preferences);
 
-        await _waitForSettingsLoad();
+        await settings.loaded;
         await settings.resetTitleGenerationThinkingEnabled();
 
-        expect(settings.titleGenerationThinkingEnabled, isTrue);
-        expect(settings.titleGenerationThinkingBudgetFor(null), 64000);
+        expect(settings.titleGenerationThinkingEnabled, isFalse);
+        expect(settings.titleGenerationThinkingBudgetFor(null), 0);
 
-        final prefs = await SharedPreferences.getInstance();
-        expect(prefs.getBool('title_generation_thinking_enabled_v1'), isTrue);
+        final prefs = harness.preferences;
+        expect(prefs.getBool('title_generation_thinking_enabled_v1'), isFalse);
       });
+
+      test(
+        'all utility model thinking toggles default off and persist',
+        () async {
+          final harness = await createBusinessTestHarness(
+            initial: {'thinking_budget_v1': 16000},
+          );
+          final settings = SettingsProvider(harness.preferences);
+
+          await settings.loaded;
+
+          expect(settings.summaryGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.suggestionGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.compressGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.translateGenerationThinkingBudgetFor(1024), 0);
+          expect(settings.ocrGenerationThinkingBudgetFor(1024), 0);
+
+          await settings.setSummaryGenerationThinkingEnabled(true);
+          await settings.setSuggestionGenerationThinkingEnabled(true);
+          await settings.setCompressGenerationThinkingEnabled(true);
+          await settings.setTranslateGenerationThinkingEnabled(true);
+          await settings.setOcrGenerationThinkingEnabled(true);
+
+          expect(settings.summaryGenerationThinkingBudgetFor(null), 16000);
+          expect(settings.suggestionGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.compressGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.translateGenerationThinkingBudgetFor(1024), 1024);
+          expect(settings.ocrGenerationThinkingBudgetFor(1024), 1024);
+          expect(
+            harness.preferences.getBool(
+              'summary_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'suggestion_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'compress_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool(
+              'translate_generation_thinking_enabled_v1',
+            ),
+            isTrue,
+          );
+          expect(
+            harness.preferences.getBool('ocr_generation_thinking_enabled_v1'),
+            isTrue,
+          );
+        },
+      );
     });
 
     test(
       'Claude latest models expose xhigh and max reasoning without presets',
       () async {
-        SharedPreferences.setMockInitialValues({});
-        final settings = SettingsProvider();
+        final harness = await createBusinessTestHarness(initial: {});
+        final settings = SettingsProvider(harness.preferences);
 
-        await _waitForSettingsLoad();
+        await settings.loaded;
         await settings.setProviderConfig(
           'Claude',
           ProviderConfig(
@@ -214,26 +335,41 @@ void main() {
             apiKey: 'test-key',
             baseUrl: 'https://api.anthropic.com/v1',
             providerType: ProviderKind.claude,
-            models: const ['claude-fable-5', 'claude-opus-4-8'],
+            models: const [
+              'claude-fable-5',
+              'claude-mythos-5',
+              'claude-opus-4-8',
+              'claude-opus-5',
+              'claude-sonnet-5',
+            ],
           ),
         );
 
-        for (final model in const ['claude-fable-5', 'claude-opus-4-8']) {
+        for (final model in const [
+          'claude-fable-5',
+          'claude-mythos-5',
+          'claude-opus-4-8',
+          'claude-opus-5',
+          'claude-sonnet-5',
+        ]) {
           expect(settings.supportsXhighReasoning('Claude', model), isTrue);
           expect(settings.supportsMaxReasoning('Claude', model), isTrue);
         }
         expect(settings.getProviderConfig('Claude').models, [
           'claude-fable-5',
+          'claude-mythos-5',
           'claude-opus-4-8',
+          'claude-opus-5',
+          'claude-sonnet-5',
         ]);
       },
     );
 
     test('OpenRouter Anthropic format exposes Claude max reasoning', () async {
-      SharedPreferences.setMockInitialValues({});
-      final settings = SettingsProvider();
+      final harness = await createBusinessTestHarness(initial: {});
+      final settings = SettingsProvider(harness.preferences);
 
-      await _waitForSettingsLoad();
+      await settings.loaded;
       await settings.setProviderConfig(
         'OpenRouterAnthropic',
         ProviderConfig(
@@ -264,10 +400,10 @@ void main() {
     });
 
     test('Dify does not expose reasoning levels', () async {
-      SharedPreferences.setMockInitialValues({});
-      final settings = SettingsProvider();
+      final harness = await createBusinessTestHarness(initial: {});
+      final settings = SettingsProvider(harness.preferences);
 
-      await _waitForSettingsLoad();
+      await settings.loaded;
       await settings.setProviderConfig(
         'Dify',
         ProviderConfig(

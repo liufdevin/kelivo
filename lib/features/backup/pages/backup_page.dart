@@ -5,25 +5,37 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
-import '../../../shared/widgets/loading_dialog_card.dart';
 import 'package:provider/provider.dart';
 
 import '../../../icons/lucide_adapter.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../core/services/haptics.dart';
+import '../../../core/database/business_preferences.dart';
+import '../../../core/database/business_repository.dart';
 import '../../../core/models/backup.dart';
 import '../../../core/providers/backup_provider.dart';
+import '../../../core/providers/local_snapshot_provider.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/providers/s3_backup_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/backup/backup_cancel_token.dart';
 import '../../../core/services/backup/data_sync.dart';
+import '../backup_task_runner.dart';
+import 'local_snapshots_page.dart';
+import '../widgets/backup_progress_dialog.dart';
 import '../../../core/services/native_file_save.dart';
 import '../../../shared/widgets/ios_switch.dart';
+import '../../../shared/widgets/loading_dialog_card.dart';
 import '../../../core/services/backup/cherry_importer.dart';
 import '../../../core/services/backup/chatbox_importer.dart';
-import '../../../utils/platform_utils.dart';
+import '../backup_restore_error_message.dart';
+import '../forward_compat_consent_dialog.dart';
+import '../backup_restart_dialog.dart';
 import '../widgets/backup_reminder_helpers.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
+import 'package:Kelivo/shared/widgets/section_card.dart';
+import '../../../core/database/startup_failure_report.dart' show formatBytes;
 
 // File size formatter (B, KB, MB, GB)
 String _fmtBytes(int bytes) {
@@ -37,7 +49,16 @@ String _fmtBytes(int bytes) {
 }
 
 class BackupPage extends StatefulWidget {
-  const BackupPage({super.key});
+  const BackupPage({
+    super.key,
+    this.debugBackupProvider,
+    this.debugS3BackupProvider,
+  });
+
+  @visibleForTesting
+  final BackupProvider? debugBackupProvider;
+  @visibleForTesting
+  final S3BackupProvider? debugS3BackupProvider;
 
   @override
   State<BackupPage> createState() => _BackupPageState();
@@ -59,7 +80,7 @@ class _BackupPageState extends State<BackupPage> {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: cs.surface,
+      backgroundColor: context.overlaySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -143,8 +164,7 @@ class _BackupPageState extends State<BackupPage> {
 
   Future<RestoreMode?> _chooseImportModeDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardColor = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final cardColor = context.appColors.surfaceFill;
 
     return showDialog<RestoreMode>(
       context: context,
@@ -180,42 +200,33 @@ class _BackupPageState extends State<BackupPage> {
     );
   }
 
-  Future<T> _runWithExportingOverlay<T>(
-    BuildContext context,
-    Future<T> Function() task,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-    return _runWithLoadingOverlay(
-      context,
-      task,
-      label: l10n.backupPageExporting,
-    );
-  }
-
   Future<T> _runWithLoadingOverlay<T>(
     BuildContext context,
-    Future<T> Function() task, {
+    Future<T> Function(BackupTaskHandle handle) task, {
     String? label,
   }) async {
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => LoadingDialogCard(label: label),
+    late T value;
+    final result = await showBackupProgressDialog<T>(
+      context,
+      title: label ?? AppLocalizations.of(context)!.backupProgressPreparing,
+      task: (handle) async {
+        value = await task(handle);
+        return value;
+      },
     );
-    try {
-      final res = await task();
-      return res;
-    } finally {
-      if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
-      }
-    }
+    if (result.cancelled) throw const BackupCancelledException();
+    if (result.error != null) throw result.error!;
+    return result.value as T;
   }
 
   Future<T> _runWithImportingOverlay<T>(
     BuildContext context,
-    Future<T> Function() task,
-  ) => _runWithLoadingOverlay(context, task);
+    Future<T> Function(BackupTaskHandle handle) task,
+  ) => _runWithLoadingOverlay(
+    context,
+    task,
+    label: AppLocalizations.of(context)!.backupPageImportBackupFile,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -225,18 +236,32 @@ class _BackupPageState extends State<BackupPage> {
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => BackupProvider(
-            chatService: context.read<ChatService>(),
-            initialConfig: settings.webDavConfig,
+        if (widget.debugBackupProvider != null)
+          ChangeNotifierProvider<BackupProvider>.value(
+            value: widget.debugBackupProvider!,
+          )
+        else
+          ChangeNotifierProvider(
+            create: (_) => BackupProvider(
+              chatService: context.read<ChatService>(),
+              businessRepository: context.read<BusinessRepository>(),
+              businessPreferences: context.read<BusinessPreferences>(),
+              initialConfig: settings.webDavConfig,
+            ),
           ),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => S3BackupProvider(
-            chatService: context.read<ChatService>(),
-            initialConfig: settings.s3Config,
+        if (widget.debugS3BackupProvider != null)
+          ChangeNotifierProvider<S3BackupProvider>.value(
+            value: widget.debugS3BackupProvider!,
+          )
+        else
+          ChangeNotifierProvider(
+            create: (_) => S3BackupProvider(
+              chatService: context.read<ChatService>(),
+              businessRepository: context.read<BusinessRepository>(),
+              businessPreferences: context.read<BusinessPreferences>(),
+              initialConfig: settings.s3Config,
+            ),
           ),
-        ),
       ],
       child: Builder(
         builder: (context) {
@@ -277,7 +302,7 @@ class _BackupPageState extends State<BackupPage> {
               children: [
                 // Section 1: 备份管理
                 header(l10n.backupPageBackupManagement, first: true),
-                _iosSectionCard(
+                SectionCard(
                   children: [
                     _iosSwitchRow(
                       context,
@@ -316,12 +341,15 @@ class _BackupPageState extends State<BackupPage> {
                 header(l10n.backupReminderSectionTitle),
                 const _BackupReminderMobileSection(),
 
+                header(l10n.localSnapshotSectionTitle),
+                const _LocalSnapshotMobileSection(),
+
                 // Section 2: 本地备份
                 ..._buildMobileLocalBackupSection(context, l10n, vm, header),
 
                 // Section 3: WebDAV备份
                 header(l10n.backupPageWebDavBackup),
-                _iosSectionCard(
+                SectionCard(
                   children: [
                     _iosNavRow(
                       context,
@@ -360,10 +388,21 @@ class _BackupPageState extends State<BackupPage> {
                       onTap: vm.busy
                           ? null
                           : () async {
-                              final list = await _runWithImportingOverlay(
-                                context,
-                                () => vm.listRemote(),
-                              );
+                              final List<BackupFileItem> list;
+                              try {
+                                list = await _runWithImportingOverlay(
+                                  context,
+                                  (handle) => vm.listRemote(
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                  ),
+                                );
+                              } on BackupCancelledException {
+                                return;
+                              } catch (_) {
+                                return;
+                              }
+                              if (!mounted) return;
                               // 按时间倒序排列（最新的在前）
                               list.sort((a, b) {
                                 // 优先使用 lastModified
@@ -388,7 +427,7 @@ class _BackupPageState extends State<BackupPage> {
                               await showModalBottomSheet(
                                 context: context,
                                 isScrollControlled: true,
-                                backgroundColor: cs.surface,
+                                backgroundColor: context.overlaySurface,
                                 shape: const RoundedRectangleBorder(
                                   borderRadius: BorderRadius.vertical(
                                     top: Radius.circular(16),
@@ -487,7 +526,7 @@ class _BackupPageState extends State<BackupPage> {
                                       await showModalBottomSheet(
                                         context: context,
                                         isScrollControlled: true,
-                                        backgroundColor: cs.surface,
+                                        backgroundColor: context.overlaySurface,
                                         shape: const RoundedRectangleBorder(
                                           borderRadius: BorderRadius.vertical(
                                             top: Radius.circular(16),
@@ -602,16 +641,33 @@ class _BackupPageState extends State<BackupPage> {
                                             try {
                                               await _runWithImportingOverlay(
                                                 context,
-                                                () => vm.restoreFromItem(
+                                                (handle) => vm.restoreFromItem(
                                                   item,
                                                   mode: mode,
+                                                  onProgress: handle.report,
+                                                  cancelToken:
+                                                      handle.cancelToken,
+                                                  onForwardCompatibility:
+                                                      forwardCompatibilityPrompt(
+                                                        context,
+                                                      ),
                                                 ),
                                               );
                                             } catch (e) {
+                                              if (e
+                                                  is BackupCancelledException) {
+                                                return;
+                                              }
                                               if (!context.mounted) return;
                                               showAppSnackBar(
                                                 context,
-                                                message: e.toString(),
+                                                message: l10n
+                                                    .backupPageRestoreFailedMessage(
+                                                      backupRestoreErrorMessage(
+                                                        l10n,
+                                                        e,
+                                                      ),
+                                                    ),
                                                 type: NotificationType.error,
                                               );
                                               return;
@@ -627,41 +683,16 @@ class _BackupPageState extends State<BackupPage> {
                                               );
                                               return;
                                             }
-                                            await showDialog(
-                                              context: context,
-                                              barrierDismissible: false,
-                                              builder: (dctx) => AlertDialog(
-                                                title: Text(
-                                                  l10n.backupPageRestartRequired,
-                                                ),
-                                                content: Text(
-                                                  l10n.backupPageRestartContent,
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () async {
-                                                      Navigator.of(dctx).pop();
-                                                      PlatformUtils.restartApp();
-                                                    },
-                                                    child: Text(
-                                                      l10n.backupPageOK,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                            await showBackupRestartRequiredDialog(
+                                              context,
+                                              skippedConversations:
+                                                  vm.skippedConversations,
                                             );
                                           },
                                         ),
                                       );
                                     } catch (e) {
-                                      // If error, ensure loading dialog is closed
-                                      if (context.mounted &&
-                                          Navigator.canPop(context)) {
-                                        Navigator.of(
-                                          context,
-                                          rootNavigator: true,
-                                        ).pop();
-                                      }
+                                      if (e is BackupCancelledException) return;
                                       if (context.mounted) {
                                         showAppSnackBar(
                                           context,
@@ -685,16 +716,26 @@ class _BackupPageState extends State<BackupPage> {
                                     try {
                                       await _runWithImportingOverlay(
                                         context,
-                                        () => vm.restoreFromItem(
+                                        (handle) => vm.restoreFromItem(
                                           item,
                                           mode: mode,
+                                          onProgress: handle.report,
+                                          cancelToken: handle.cancelToken,
+                                          onForwardCompatibility:
+                                              forwardCompatibilityPrompt(
+                                                context,
+                                              ),
                                         ),
                                       );
                                     } catch (e) {
+                                      if (e is BackupCancelledException) return;
                                       if (!context.mounted) return;
                                       showAppSnackBar(
                                         context,
-                                        message: e.toString(),
+                                        message: backupRestoreErrorMessage(
+                                          l10n,
+                                          e,
+                                        ),
                                         type: NotificationType.error,
                                       );
                                       return;
@@ -709,26 +750,10 @@ class _BackupPageState extends State<BackupPage> {
                                       );
                                       return;
                                     }
-                                    await showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (dctx) => AlertDialog(
-                                        title: Text(
-                                          l10n.backupPageRestartRequired,
-                                        ),
-                                        content: Text(
-                                          l10n.backupPageRestartContent,
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () async {
-                                              Navigator.of(dctx).pop();
-                                              PlatformUtils.restartApp();
-                                            },
-                                            child: Text(l10n.backupPageOK),
-                                          ),
-                                        ],
-                                      ),
+                                    await showBackupRestartRequiredDialog(
+                                      context,
+                                      skippedConversations:
+                                          vm.skippedConversations,
                                     );
                                   },
                                 ),
@@ -745,21 +770,28 @@ class _BackupPageState extends State<BackupPage> {
                           : () async {
                               final reminderProvider = context
                                   .read<BackupReminderProvider>();
-                              final success = await _runWithExportingOverlay(
+                              final success = await runBackupTask(
                                 context,
-                                () => vm.backup(),
+                                title: l10n.backupPageBackupNow,
+                                task: (handle) async {
+                                  final ok = await vm.backup(
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                  );
+                                  if (!ok) {
+                                    throw Exception(
+                                      vm.message ?? 'Backup failed',
+                                    );
+                                  }
+                                },
                               );
+                              if (!success || !context.mounted) return;
+                              await reminderProvider.recordBackupCompleted();
                               if (!context.mounted) return;
-                              final rawMessage = vm.message;
-                              if (success) {
-                                await reminderProvider.recordBackupCompleted();
-                                if (!context.mounted) return;
-                              }
-                              final message =
-                                  rawMessage ?? l10n.backupPageBackupUploaded;
                               showAppSnackBar(
                                 context,
-                                message: message,
+                                message:
+                                    vm.message ?? l10n.backupPageBackupUploaded,
                                 type: NotificationType.info,
                               );
                             },
@@ -769,7 +801,7 @@ class _BackupPageState extends State<BackupPage> {
 
                 // Section 3: S3 备份
                 header(l10n.backupPageS3Backup),
-                _iosSectionCard(
+                SectionCard(
                   children: [
                     _iosNavRow(
                       context,
@@ -808,10 +840,21 @@ class _BackupPageState extends State<BackupPage> {
                       onTap: s3Vm.busy
                           ? null
                           : () async {
-                              final list = await _runWithImportingOverlay(
-                                context,
-                                () => s3Vm.listRemote(),
-                              );
+                              final List<BackupFileItem> list;
+                              try {
+                                list = await _runWithImportingOverlay(
+                                  context,
+                                  (handle) => s3Vm.listRemote(
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                  ),
+                                );
+                              } on BackupCancelledException {
+                                return;
+                              } catch (_) {
+                                return;
+                              }
+                              if (!mounted) return;
                               list.sort((a, b) {
                                 if (a.lastModified != null &&
                                     b.lastModified != null) {
@@ -832,7 +875,7 @@ class _BackupPageState extends State<BackupPage> {
                               await showModalBottomSheet(
                                 context: context,
                                 isScrollControlled: true,
-                                backgroundColor: cs.surface,
+                                backgroundColor: context.overlaySurface,
                                 shape: const RoundedRectangleBorder(
                                   borderRadius: BorderRadius.vertical(
                                     top: Radius.circular(16),
@@ -920,7 +963,7 @@ class _BackupPageState extends State<BackupPage> {
                                       await showModalBottomSheet(
                                         context: context,
                                         isScrollControlled: true,
-                                        backgroundColor: cs.surface,
+                                        backgroundColor: context.overlaySurface,
                                         shape: const RoundedRectangleBorder(
                                           borderRadius: BorderRadius.vertical(
                                             top: Radius.circular(16),
@@ -1034,16 +1077,35 @@ class _BackupPageState extends State<BackupPage> {
                                             try {
                                               await _runWithImportingOverlay(
                                                 context,
-                                                () => s3Vm.restoreFromItem(
+                                                (
+                                                  handle,
+                                                ) => s3Vm.restoreFromItem(
                                                   item,
                                                   mode: mode,
+                                                  onProgress: handle.report,
+                                                  cancelToken:
+                                                      handle.cancelToken,
+                                                  onForwardCompatibility:
+                                                      forwardCompatibilityPrompt(
+                                                        context,
+                                                      ),
                                                 ),
                                               );
                                             } catch (e) {
+                                              if (e
+                                                  is BackupCancelledException) {
+                                                return;
+                                              }
                                               if (!context.mounted) return;
                                               showAppSnackBar(
                                                 context,
-                                                message: e.toString(),
+                                                message: l10n
+                                                    .backupPageRestoreFailedMessage(
+                                                      backupRestoreErrorMessage(
+                                                        l10n,
+                                                        e,
+                                                      ),
+                                                    ),
                                                 type: NotificationType.error,
                                               );
                                               return;
@@ -1059,40 +1121,16 @@ class _BackupPageState extends State<BackupPage> {
                                               );
                                               return;
                                             }
-                                            await showDialog(
-                                              context: context,
-                                              barrierDismissible: false,
-                                              builder: (dctx) => AlertDialog(
-                                                title: Text(
-                                                  l10n.backupPageRestartRequired,
-                                                ),
-                                                content: Text(
-                                                  l10n.backupPageRestartContent,
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () async {
-                                                      Navigator.of(dctx).pop();
-                                                      PlatformUtils.restartApp();
-                                                    },
-                                                    child: Text(
-                                                      l10n.backupPageOK,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                            await showBackupRestartRequiredDialog(
+                                              context,
+                                              skippedConversations:
+                                                  s3Vm.skippedConversations,
                                             );
                                           },
                                         ),
                                       );
                                     } catch (e) {
-                                      if (context.mounted &&
-                                          Navigator.canPop(context)) {
-                                        Navigator.of(
-                                          context,
-                                          rootNavigator: true,
-                                        ).pop();
-                                      }
+                                      if (e is BackupCancelledException) return;
                                       if (context.mounted) {
                                         showAppSnackBar(
                                           context,
@@ -1115,16 +1153,26 @@ class _BackupPageState extends State<BackupPage> {
                                     try {
                                       await _runWithImportingOverlay(
                                         context,
-                                        () => s3Vm.restoreFromItem(
+                                        (handle) => s3Vm.restoreFromItem(
                                           item,
                                           mode: mode,
+                                          onProgress: handle.report,
+                                          cancelToken: handle.cancelToken,
+                                          onForwardCompatibility:
+                                              forwardCompatibilityPrompt(
+                                                context,
+                                              ),
                                         ),
                                       );
                                     } catch (e) {
+                                      if (e is BackupCancelledException) return;
                                       if (!context.mounted) return;
                                       showAppSnackBar(
                                         context,
-                                        message: e.toString(),
+                                        message: backupRestoreErrorMessage(
+                                          l10n,
+                                          e,
+                                        ),
                                         type: NotificationType.error,
                                       );
                                       return;
@@ -1139,26 +1187,10 @@ class _BackupPageState extends State<BackupPage> {
                                       );
                                       return;
                                     }
-                                    await showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (dctx) => AlertDialog(
-                                        title: Text(
-                                          l10n.backupPageRestartRequired,
-                                        ),
-                                        content: Text(
-                                          l10n.backupPageRestartContent,
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () async {
-                                              Navigator.of(dctx).pop();
-                                              PlatformUtils.restartApp();
-                                            },
-                                            child: Text(l10n.backupPageOK),
-                                          ),
-                                        ],
-                                      ),
+                                    await showBackupRestartRequiredDialog(
+                                      context,
+                                      skippedConversations:
+                                          s3Vm.skippedConversations,
                                     );
                                   },
                                 ),
@@ -1175,21 +1207,29 @@ class _BackupPageState extends State<BackupPage> {
                           : () async {
                               final reminderProvider = context
                                   .read<BackupReminderProvider>();
-                              final success = await _runWithExportingOverlay(
+                              final success = await runBackupTask(
                                 context,
-                                () => s3Vm.backup(),
+                                title: l10n.backupPageBackupNow,
+                                task: (handle) async {
+                                  final ok = await s3Vm.backup(
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                  );
+                                  if (!ok) {
+                                    throw Exception(
+                                      s3Vm.message ?? 'Backup failed',
+                                    );
+                                  }
+                                },
                               );
+                              if (!success || !context.mounted) return;
+                              await reminderProvider.recordBackupCompleted();
                               if (!context.mounted) return;
-                              final rawMessage = s3Vm.message;
-                              if (success) {
-                                await reminderProvider.recordBackupCompleted();
-                                if (!context.mounted) return;
-                              }
-                              final message =
-                                  rawMessage ?? l10n.backupPageBackupUploaded;
                               showAppSnackBar(
                                 context,
-                                message: message,
+                                message:
+                                    s3Vm.message ??
+                                    l10n.backupPageBackupUploaded,
                                 type: NotificationType.info,
                               );
                             },
@@ -1212,7 +1252,7 @@ class _BackupPageState extends State<BackupPage> {
   ) {
     return [
       header(l10n.backupPageLocalBackup),
-      _iosSectionCard(
+      SectionCard(
         children: [
           _iosNavRow(
             context,
@@ -1232,149 +1272,139 @@ class _BackupPageState extends State<BackupPage> {
             context,
             icon: Lucide.Box,
             label: l10n.backupPageImportFromCherryStudio,
-            onTap: () async {
-              // 1) Warn user that Cherry import is experimental
-              final acknowledged = await _confirmCherryImport(context);
-              if (acknowledged != true) return;
-
-              if (!context.mounted) return;
-              // Pick Cherry Studio backup (.zip or .bak)
-              final result = await FilePicker.platform.pickFiles(
-                type: FileType.custom,
-                allowedExtensions: ['zip', 'bak'],
-              );
-              final path = result?.files.single.path;
-              if (path == null) return;
-              if (!context.mounted) return;
-
-              final mode = await _chooseImportModeDialog(context);
-              if (mode == null) return;
-              if (!context.mounted) return;
-
-              await _runWithImportingOverlay(context, () async {
-                try {
-                  final settings = context.read<SettingsProvider>();
-                  final cs = context.read<ChatService>();
-                  final file = File(path);
-                  // Defer import to service
-                  final res = await CherryImporter.importFromCherryStudio(
-                    file: file,
-                    mode: mode,
-                    settings: settings,
-                    chatService: cs,
-                  );
-                  if (!context.mounted) return;
-                  await showDialog(
-                    context: context,
-                    builder: (dctx) => AlertDialog(
-                      title: Text(l10n.backupPageRestartRequired),
-                      content: Text(
-                        '${l10n.backupPageImportFromCherryStudio}:\n'
-                        ' • Providers: ${res.providers}\n'
-                        ' • Assistants: ${res.assistants}\n'
-                        ' • Conversations: ${res.conversations}\n'
-                        ' • Messages: ${res.messages}\n'
-                        ' • Files: ${res.files}\n\n'
-                        '${l10n.backupPageRestartContent}',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.of(dctx).pop();
-                            PlatformUtils.restartApp();
-                          },
-                          child: Text(l10n.backupPageOK),
-                        ),
-                      ],
-                    ),
-                  );
-                } catch (e) {
-                  if (!context.mounted) return;
-                  showAppSnackBar(
-                    context,
-                    message: e.toString(),
-                    type: NotificationType.error,
-                  );
-                }
-              });
-            },
+            onTap: () => _doImportCherry(context),
           ),
           _iosDivider(context),
           _iosNavRow(
             context,
             icon: Lucide.Box,
             label: l10n.backupPageImportFromChatbox,
-            onTap: () async {
-              // Pick Chatbox exported json
-              final result = await FilePicker.platform.pickFiles(
-                type: FileType.custom,
-                allowedExtensions: ['json'],
-              );
-              final path = result?.files.single.path;
-              if (path == null) return;
-              if (!context.mounted) return;
-
-              final mode = await _chooseImportModeDialog(context);
-              if (mode == null) return;
-              if (!context.mounted) return;
-
-              await _runWithImportingOverlay(context, () async {
-                try {
-                  final cs = context.read<ChatService>();
-                  final settings = context.read<SettingsProvider>();
-                  final file = File(path);
-                  final res = await ChatboxImporter.importFromChatbox(
-                    file: file,
-                    mode: mode,
-                    settings: settings,
-                    chatService: cs,
-                  );
-                  if (!context.mounted) return;
-                  await showDialog(
-                    context: context,
-                    builder: (dctx) => AlertDialog(
-                      title: Text(l10n.backupPageRestartRequired),
-                      content: Text(
-                        '${l10n.backupPageImportFromChatbox}:\n'
-                        ' • Providers: ${res.providers}\n'
-                        ' • Assistants: ${res.assistants}\n'
-                        ' • Conversations: ${res.conversations}\n'
-                        ' • Messages: ${res.messages}\n\n'
-                        '${l10n.backupPageRestartContent}',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () async {
-                            Navigator.of(dctx).pop();
-                            PlatformUtils.restartApp();
-                          },
-                          child: Text(l10n.backupPageOK),
-                        ),
-                      ],
-                    ),
-                  );
-                } catch (e) {
-                  if (!context.mounted) return;
-                  showAppSnackBar(
-                    context,
-                    message: e.toString(),
-                    type: NotificationType.error,
-                  );
-                }
-              });
-            },
+            onTap: () => _doImportChatbox(context),
           ),
         ],
       ),
     ];
   }
 
+  Future<void> _doImportCherry(BuildContext context) async {
+    final acknowledged = await _confirmCherryImport(context);
+    if (acknowledged != true) return;
+
+    if (!context.mounted) return;
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip', 'bak'],
+    );
+    final path = result?.files.single.path;
+    if (path == null) return;
+    if (!context.mounted) return;
+
+    final mode = await _chooseImportModeDialog(context);
+    if (mode == null) return;
+    if (!context.mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final cs = context.read<ChatService>();
+    final businessRepository = context.read<BusinessRepository>();
+    CherryImportResult? imported;
+    final ok = await runBackupTask(
+      context,
+      title: l10n.backupPageImportFromCherryStudio,
+      errorMessage: (error) {
+        if (error is CherryUnsupportedBackupVersionException) {
+          return l10n.backupPageCherryStudioUnsupportedBackupVersion(
+            '${error.version}',
+          );
+        }
+        return error.toString();
+      },
+      task: (handle) async {
+        imported = await CherryImporter.importFromCherryStudio(
+          file: File(path),
+          mode: mode,
+          businessRepository: businessRepository,
+          chatService: cs,
+          onProgress: handle.report,
+          cancelToken: handle.cancelToken,
+        );
+      },
+    );
+    if (!ok || imported == null || !context.mounted) return;
+    final res = imported!;
+    await showBackupRestartRequiredDialog(
+      context,
+      details:
+          '${l10n.backupPageImportFromCherryStudio}:\n'
+          ' • Providers: ${res.providers}\n'
+          ' • Assistants: ${res.assistants}\n'
+          ' • Conversations: ${res.conversations}\n'
+          ' • Messages: ${res.messages}\n'
+          ' • Files: ${res.files}',
+    );
+  }
+
+  Future<void> _doImportChatbox(BuildContext context) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json', 'zip'],
+    );
+    final path = result?.files.single.path;
+    if (path == null) return;
+    if (!context.mounted) return;
+
+    final mode = await _chooseImportModeDialog(context);
+    if (mode == null) return;
+    if (!context.mounted) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final cs = context.read<ChatService>();
+    final businessRepository = context.read<BusinessRepository>();
+    ChatboxImportResult? imported;
+    final ok = await runBackupTask(
+      context,
+      title: l10n.backupPageImportFromChatbox,
+      task: (handle) async {
+        imported = await ChatboxImporter.importFromChatbox(
+          file: File(path),
+          mode: mode,
+          businessRepository: businessRepository,
+          chatService: cs,
+          onProgress: handle.report,
+          cancelToken: handle.cancelToken,
+        );
+      },
+    );
+    if (!ok || imported == null || !context.mounted) return;
+    final res = imported!;
+    await showBackupRestartRequiredDialog(
+      context,
+      details:
+          '${l10n.backupPageImportFromChatbox}:\n'
+          ' • Providers: ${res.providers}\n'
+          ' • Assistants: ${res.assistants}\n'
+          ' • Conversations: ${res.conversations}\n'
+          ' • Messages: ${res.messages}',
+    );
+  }
+
   Future<void> _doExport(BuildContext context, BackupProvider vm) async {
     final l10n = AppLocalizations.of(context)!;
-    final file = await _runWithExportingOverlay(
+    File? file;
+    final ok = await runBackupTask(
       context,
-      () => vm.exportToFile(),
+      title: l10n.backupPageExportToFile,
+      errorMessage: (error) => l10n.backupPageExportFailedMessage(
+        backupRestoreErrorMessage(l10n, error),
+      ),
+      task: (handle) async {
+        file = await vm.exportToFile(
+          onProgress: handle.report,
+          cancelToken: handle.cancelToken,
+        );
+      },
     );
+    if (!ok || file == null) return;
+    final exported = file!;
 
     try {
       if (!context.mounted) return;
@@ -1382,8 +1412,8 @@ class _BackupPageState extends State<BackupPage> {
       if (isMobile) {
         try {
           final saved = await NativeFileSave.saveFileFromPath(
-            sourcePath: file.path,
-            fileName: file.uri.pathSegments.last,
+            sourcePath: exported.path,
+            fileName: exported.uri.pathSegments.last,
           );
           if (saved && context.mounted) {
             await context
@@ -1401,20 +1431,29 @@ class _BackupPageState extends State<BackupPage> {
       } else {
         final savePath = await FilePicker.platform.saveFile(
           dialogTitle: l10n.backupPageExportToFile,
-          fileName: file.uri.pathSegments.last,
+          fileName: exported.uri.pathSegments.last,
           type: FileType.custom,
           allowedExtensions: ['zip'],
         );
         if (savePath != null) {
           try {
             await File(savePath).parent.create(recursive: true);
-            await file.copy(savePath);
+            await exported.copy(savePath);
             if (context.mounted) {
               await context
                   .read<BackupReminderProvider>()
                   .recordBackupCompleted();
             }
-          } catch (_) {}
+          } catch (e) {
+            // A full disk or unwritable target must not look like a
+            // successful export.
+            if (!context.mounted) return;
+            showAppSnackBar(
+              context,
+              message: e.toString(),
+              type: NotificationType.error,
+            );
+          }
         }
       }
     } finally {
@@ -1436,26 +1475,43 @@ class _BackupPageState extends State<BackupPage> {
     if (mode == null) return;
     if (!context.mounted) return;
 
-    await _runWithImportingOverlay(
-      context,
-      () => vm.restoreFromLocalFile(File(path), mode: mode),
-    );
+    // Settle the schema question before the progress dialog goes up.
+    final decision = await resolveForwardCompatibility(context, File(path));
     if (!context.mounted) return;
-    await showDialog(
-      context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text(l10n.backupPageRestartRequired),
-        content: Text(l10n.backupPageRestartContent),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.of(dctx).pop();
-              PlatformUtils.restartApp();
-            },
-            child: Text(l10n.backupPageOK),
-          ),
-        ],
-      ),
+    if (decision == ForwardCompatDecision.cancelled) return;
+    if (decision == ForwardCompatDecision.unreadable) {
+      showAppSnackBar(context, message: l10n.backupPageSchemaTooNewMessage);
+      return;
+    }
+
+    try {
+      await _runWithImportingOverlay(
+        context,
+        (handle) => vm.restoreFromLocalFile(
+          File(path),
+          mode: mode,
+          onProgress: handle.report,
+          cancelToken: handle.cancelToken,
+          allowUnverifiedForwardCompatible:
+              decision == ForwardCompatDecision.proceedUnverified,
+        ),
+      );
+    } catch (error) {
+      if (error is BackupCancelledException) return;
+      if (!context.mounted) return;
+      showAppSnackBar(
+        context,
+        message: l10n.backupPageRestoreFailedMessage(
+          backupRestoreErrorMessage(l10n, error),
+        ),
+        type: NotificationType.error,
+      );
+      return;
+    }
+    if (!context.mounted) return;
+    await showBackupRestartRequiredDialog(
+      context,
+      skippedConversations: vm.skippedConversations,
     );
   }
 
@@ -1487,6 +1543,62 @@ class _BackupPageState extends State<BackupPage> {
   }
 }
 
+class _LocalSnapshotMobileSection extends StatelessWidget {
+  const _LocalSnapshotMobileSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final vm = context.watch<LocalSnapshotProvider>();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionCard(
+          children: [
+            _iosSwitchRow(
+              context,
+              icon: Lucide.Shield,
+              label: l10n.localSnapshotEnabledTitle,
+              value: vm.settings.enabled,
+              onChanged: (value) => context
+                  .read<LocalSnapshotProvider>()
+                  .updateSettings(vm.settings.copyWith(enabled: value)),
+            ),
+            _iosDivider(context),
+            _iosNavRow(
+              context,
+              icon: Lucide.Database,
+              label: l10n.localSnapshotManageCopies,
+              detailText: l10n.localSnapshotUsage(
+                vm.copies.length,
+                formatBytes(vm.totalBytes),
+              ),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(builder: (_) => const LocalSnapshotsPage()),
+              ),
+            ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Text(
+            vm.settings.enabled
+                ? l10n.localSnapshotEnabledSubtitle
+                : l10n.localSnapshotCopiesScopeNote,
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.45,
+              color: cs.onSurface.withValues(alpha: 0.55),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _BackupReminderMobileSection extends StatelessWidget {
   const _BackupReminderMobileSection();
 
@@ -1495,7 +1607,7 @@ class _BackupReminderMobileSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final reminder = context.watch<BackupReminderProvider>();
 
-    return _iosSectionCard(
+    return SectionCard(
       children: [
         _iosSwitchRow(
           context,
@@ -1586,7 +1698,7 @@ Future<void> _showBackupReminderFrequencySheet(BuildContext context) async {
   final provider = context.read<BackupReminderProvider>();
   final selected = await showModalBottomSheet<int>(
     context: context,
-    backgroundColor: Theme.of(context).colorScheme.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -1717,9 +1829,8 @@ class _InputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
-    final fieldBg = isDark ? Colors.white12 : const Color(0xFFF2F3F5);
+    final fieldBg = context.appColors.surfaceFill;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1896,34 +2007,6 @@ class _SmallTactileIconState extends State<_SmallTactileIcon> {
   }
 }
 
-Widget _iosSectionCard({required List<Widget> children}) {
-  return Builder(
-    builder: (context) {
-      final theme = Theme.of(context);
-      final cs = theme.colorScheme;
-      final isDark = theme.brightness == Brightness.dark;
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
-      return Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-            width: 0.6,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: children),
-        ),
-      );
-    },
-  );
-}
-
 Widget _iosDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   return Divider(
@@ -1946,9 +2029,9 @@ class _AnimatedPressColor extends StatelessWidget {
   final Widget Function(Color color) builder;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),
@@ -2233,11 +2316,7 @@ class _RemoteListSheet extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 6),
                             child: Container(
                               decoration: BoxDecoration(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white10
-                                    : const Color(0xFFF7F7F9),
+                                color: context.appColors.surfaceFill,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: cs.outlineVariant.withValues(
@@ -2325,9 +2404,7 @@ class _ActionCard extends StatelessWidget {
       builder: (pressed) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final overlay = pressed
-            ? (isDark
-                  ? Colors.black.withValues(alpha: 0.06)
-                  : Colors.white.withValues(alpha: 0.05))
+            ? cs.surface.withValues(alpha: isDark ? 0.06 : 0.05)
             : Colors.transparent;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 160),
@@ -2464,7 +2541,7 @@ class _WebDavSettingsPageState extends State<_WebDavSettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  _iosSectionCard(
+                  SectionCard(
                     children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -2608,7 +2685,6 @@ class _S3SettingsPageState extends State<_S3SettingsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: cs.surface,
@@ -2643,7 +2719,7 @@ class _S3SettingsPageState extends State<_S3SettingsPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 children: [
-                  _iosSectionCard(
+                  SectionCard(
                     children: [
                       Padding(
                         padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -2707,9 +2783,7 @@ class _S3SettingsPageState extends State<_S3SettingsPage> {
                             const SizedBox(height: 12),
                             Container(
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.white10
-                                    : const Color(0xFFF2F3F5),
+                                color: context.appColors.surfaceFill,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: cs.outlineVariant.withValues(

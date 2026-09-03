@@ -13,13 +13,14 @@ import '../../../l10n/app_localizations.dart';
 import '../../../core/services/haptics.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
+import 'package:Kelivo/shared/widgets/section_card.dart';
 
 Future<String?> showAddProviderSheet(BuildContext context) async {
-  final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<String?>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -154,7 +155,6 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     bool obscure = false,
     bool enabled = true,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +174,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
@@ -219,42 +219,13 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     );
   }
 
-  Widget _iosCard({required List<Widget> children}) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-          width: 0.6,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          children: [
-            for (int i = 0; i < children.length; i++) ...[
-              if (i > 0)
-                Divider(
-                  height: 10,
-                  thickness: 0.6,
-                  color: cs.outlineVariant.withValues(alpha: 0.18),
-                ),
-              children[i],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _openaiForm(AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _iosCard(
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          dividers: true,
           children: [
             _switchRow(
               label: l10n.addProviderSheetEnabledLabel,
@@ -298,7 +269,9 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _iosCard(
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          dividers: true,
           children: [
             _switchRow(
               label: l10n.addProviderSheetEnabledLabel,
@@ -349,7 +322,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
             actions: [
               TextButton.icon(
                 onPressed: _importGoogleServiceAccount,
-                icon: const Icon(Icons.upload_file, size: 16),
+                icon: const Icon(Lucide.Upload, size: 16),
                 label: Text(l10n.addProviderSheetImportJsonButton),
               ),
             ],
@@ -363,7 +336,9 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _iosCard(
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          dividers: true,
           children: [
             _switchRow(
               label: l10n.addProviderSheetEnabledLabel,
@@ -395,7 +370,9 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _iosCard(
+        SectionCard(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          dividers: true,
           children: [
             _switchRow(
               label: l10n.addProviderSheetEnabledLabel,
@@ -1018,7 +995,6 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     String? hint,
     List<Widget>? actions,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,7 +1021,7 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: isDark ? Colors.white10 : Colors.white,
+            fillColor: context.appColors.surfaceCard,
             border: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
               borderSide: BorderSide(color: Colors.transparent),
@@ -1127,8 +1103,8 @@ class _SegTabBar extends StatelessWidget {
             segWidth * tabs.length + gap * (tabs.length - 1);
 
         final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+            ? context.appColors.surfaceFill
+            : context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < tabs.length; index++) {
@@ -1151,7 +1127,7 @@ class _SegTabBar extends StatelessWidget {
                       ? cs.primary
                       : cs.onSurface.withValues(alpha: 0.82);
                   final Color targetTextColor = pressed
-                      ? Color.lerp(baseTextColor, Colors.white, 0.22) ??
+                      ? Color.lerp(baseTextColor, cs.surface, 0.22) ??
                             baseTextColor
                       : baseTextColor;
 

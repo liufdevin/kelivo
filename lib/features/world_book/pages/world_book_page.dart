@@ -16,7 +16,9 @@ import '../../../shared/widgets/ios_form_text_field.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/snackbar.dart';
+import '../../../shared/widgets/section_card.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class WorldBookPage extends StatefulWidget {
   const WorldBookPage({super.key});
@@ -36,11 +38,10 @@ class _WorldBookPageState extends State<WorldBookPage> {
   }
 
   Future<WorldBook?> _showBookConfigSheet({WorldBook? book}) async {
-    final cs = Theme.of(context).colorScheme;
     return showModalBottomSheet<WorldBook>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: cs.surface,
+      backgroundColor: context.overlaySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -55,11 +56,10 @@ class _WorldBookPageState extends State<WorldBookPage> {
   }
 
   Future<WorldBookEntry?> _showEntryEditSheet({WorldBookEntry? entry}) async {
-    final cs = Theme.of(context).colorScheme;
     return showModalBottomSheet<WorldBookEntry>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: cs.surface,
+      backgroundColor: context.overlaySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -313,7 +313,7 @@ class _WorldBookPageState extends State<WorldBookPage> {
               onPressed: () => Navigator.of(ctx).pop(true),
               child: Text(
                 l10n.worldBookDelete,
-                style: TextStyle(color: Colors.red),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ],
@@ -553,7 +553,7 @@ class _WorldBookSection extends StatelessWidget {
     Future<void> showEntryActions(WorldBookEntry entry) async {
       final result = await showModalBottomSheet<_EntryAction>(
         context: context,
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -964,25 +964,7 @@ class _IosSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
-    return Container(
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-          width: 0.6,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(children: children),
-      ),
-    );
+    return SectionCard(children: children);
   }
 }
 
@@ -1515,7 +1497,7 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
     Future<void> pickPosition() async {
       final selected = await showModalBottomSheet<WorldBookInjectionPosition>(
         context: context,
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -1610,7 +1592,7 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
     Future<void> pickRole() async {
       final selected = await showModalBottomSheet<WorldBookInjectionRole>(
         context: context,
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -1808,9 +1790,7 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
                                       height: 40,
                                       child: Container(
                                         decoration: BoxDecoration(
-                                          color: isDark
-                                              ? Colors.white12
-                                              : const Color(0xFFF2F3F5),
+                                          color: context.appColors.surfaceFill,
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
@@ -1864,9 +1844,8 @@ class _WorldBookEntryEditSheetState extends State<_WorldBookEntryEditSheet> {
                                       message:
                                           l10n.worldBookEntryKeywordAddTooltip,
                                       child: IosCardPress(
-                                        baseColor: isDark
-                                            ? Colors.white12
-                                            : const Color(0xFFF2F3F5),
+                                        baseColor:
+                                            context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(12),
                                         pressedScale: 0.98,
                                         haptics: false,
@@ -2032,13 +2011,9 @@ class _IosOutlineButtonState extends State<_IosOutlineButton> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bg = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white10
-        : const Color(0xFFF2F3F5);
+    final bg = context.appColors.surfaceFill;
     final overlay = _pressed
-        ? (Theme.of(context).brightness == Brightness.dark
-              ? Colors.white12
-              : Colors.black12)
+        ? cs.onSurface.withValues(alpha: 0.12)
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -2094,7 +2069,7 @@ class _IosFilledButtonState extends State<_IosFilledButton> {
     final cs = Theme.of(context).colorScheme;
     final bg = widget.enabled ? cs.primary : cs.primary.withValues(alpha: 0.4);
     final overlay = _pressed
-        ? Colors.black.withValues(alpha: 0.12)
+        ? cs.onPrimary.withValues(alpha: 0.12)
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

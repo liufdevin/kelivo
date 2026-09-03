@@ -5,11 +5,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
+import 'support/business_test_harness.dart';
 
 Future<void> _waitForSettingsLoad() async {
   for (var i = 0; i < 25; i++) {
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
+}
+
+BusinessTestHarness? _latestHarness;
+
+Future<SettingsProvider> _createSettings() async {
+  final localPreferences = await SharedPreferences.getInstance();
+  final initial = <String, Object>{};
+  for (final key in localPreferences.getKeys()) {
+    final value = localPreferences.get(key);
+    if (value != null) initial[key] = value;
+  }
+  final harness = await createBusinessTestHarness(
+    initial: initial,
+    localInitial: initial,
+  );
+  _latestHarness = harness;
+  final settings = SettingsProvider(harness.preferences);
+  await settings.loaded;
+  return settings;
+}
+
+Future<SettingsProvider> _reloadSettings() async {
+  final harness = _latestHarness;
+  if (harness == null) throw StateError('No settings harness to reload');
+  final settings = SettingsProvider(harness.preferences);
+  await settings.loaded;
+  return settings;
 }
 
 Future<void> _withCurrentDirectory(
@@ -72,7 +100,7 @@ void main() {
 
       await _withCurrentDirectory(temp, () async {
         SharedPreferences.setMockInitialValues({});
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 
@@ -102,7 +130,7 @@ void main() {
 
       await _withCurrentDirectory(temp, () async {
         SharedPreferences.setMockInitialValues({});
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 
@@ -158,7 +186,7 @@ void main() {
             }),
             'selected_model_v1': 'OldAI::old-chat',
           });
-          final settings = SettingsProvider();
+          final settings = await _createSettings();
 
           await _waitForSettingsLoad();
 
@@ -228,7 +256,7 @@ void main() {
               },
             }),
           });
-          final settings = SettingsProvider();
+          final settings = await _createSettings();
 
           await _waitForSettingsLoad();
 
@@ -277,7 +305,7 @@ void main() {
 
       await _withCurrentDirectory(temp, () async {
         SharedPreferences.setMockInitialValues({});
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 
@@ -314,7 +342,7 @@ void main() {
             },
           }),
         });
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 
@@ -335,7 +363,7 @@ void main() {
 
         await _withCurrentDirectory(temp, () async {
           SharedPreferences.setMockInitialValues({});
-          final settings = SettingsProvider();
+          final settings = await _createSettings();
 
           await _waitForSettingsLoad();
 
@@ -347,7 +375,7 @@ void main() {
             ),
           );
 
-          final reloaded = SettingsProvider();
+          final reloaded = await _reloadSettings();
           await _waitForSettingsLoad();
 
           final cfg = reloaded.getProviderConfig('CachedAI');
@@ -399,7 +427,7 @@ void main() {
             },
           }),
         });
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 
@@ -439,7 +467,7 @@ void main() {
             },
           }),
         });
-        final settings = SettingsProvider();
+        final settings = await _createSettings();
 
         await _waitForSettingsLoad();
 

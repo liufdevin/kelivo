@@ -1,9 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:Kelivo/core/models/chat_input_data.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/features/home/controllers/chat_actions.dart';
+import 'support/business_test_harness.dart';
 
 ProviderConfig _providerConfig({Map<String, dynamic> overrides = const {}}) {
   return ProviderConfig(
@@ -22,9 +21,10 @@ void main() {
   group('ChatActions image input capability', () {
     late SettingsProvider settings;
 
-    setUp(() {
-      SharedPreferences.setMockInitialValues(const {});
-      settings = SettingsProvider();
+    setUp(() async {
+      final harness = await createBusinessTestHarness();
+      settings = SettingsProvider(harness.preferences);
+      await settings.loaded;
     });
 
     test('rejects image input when the chat model is text-only', () async {

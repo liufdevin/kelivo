@@ -10,7 +10,6 @@ plugins {
 android {
     namespace = "com.psyche.kelivo"
     compileSdk = flutter.compileSdkVersion
-//    ndkVersion = flutter.ndkVersion
     ndkVersion = "28.2.13676358"
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -78,6 +77,7 @@ flutter {
 }
 
 dependencies {
+    implementation("androidx.browser:browser:1.9.0")
     // Required for core library desugaring (used by flutter_local_notifications)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.0")

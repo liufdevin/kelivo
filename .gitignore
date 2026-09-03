@@ -65,3 +65,5 @@ local_config/provider_configs.local.json
 /.agent/
 /.agents/
 /skills-lock.json
+/.scratch/
+/.grok/

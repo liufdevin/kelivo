@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'support/collect_generation.dart';
 
 const _conversationHeaderName = 'X-Conversation-Id';
 
@@ -82,10 +83,10 @@ void main() {
         extraHeaders: const {_conversationHeaderName: 'local-conv-1'},
       ).toList();
 
-      expect(first.map((chunk) => chunk.content).join(), 'hello');
-      expect(first.last.isDone, isTrue);
-      expect(first.last.usage?.totalTokens, 5);
-      expect(second.map((chunk) => chunk.content).join(), 'again');
+      expect(first.joinedContent, 'hello');
+      expect(first.isGenerationDone, isTrue);
+      expect(first.lastTotalTokens, 5);
+      expect(second.joinedContent, 'again');
       expect(receivedBodies.first['response_mode'], 'streaming');
       expect(receivedBodies.first.containsKey('conversation_id'), isFalse);
       expect(receivedBodies.last['conversation_id'], 'dify-conv-1');
@@ -135,8 +136,8 @@ void main() {
 
       expect(receivedBody?['response_mode'], 'blocking');
       expect(receivedBody?['query'], contains('system: be concise'));
-      expect(chunks.single.content, 'blocking ok');
-      expect(chunks.single.usage?.totalTokens, 10);
+      expect(chunks.joinedContent, 'blocking ok');
+      expect(chunks.lastTotalTokens, 10);
     });
 
     test('throws on HTTP error', () async {

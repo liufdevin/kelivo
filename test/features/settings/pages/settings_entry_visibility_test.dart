@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../support/business_test_harness.dart';
 
 Widget _buildApp(Widget child, {List<SingleChildWidget> providers = const []}) {
   final app = MaterialApp(
@@ -41,7 +42,7 @@ void main() {
         const SettingsPage(),
         providers: [
           ChangeNotifierProvider<SettingsProvider>(
-            create: (_) => SettingsProvider(),
+            create: (_) => SettingsProvider(createBusinessTestPreferences()),
           ),
         ],
       ),
@@ -58,7 +59,7 @@ void main() {
         const AboutPage(),
         providers: [
           ChangeNotifierProvider<SettingsProvider>(
-            create: (_) => SettingsProvider(),
+            create: (_) => SettingsProvider(createBusinessTestPreferences()),
           ),
         ],
       ),

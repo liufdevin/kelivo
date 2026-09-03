@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../network/dio_http_client.dart';
+import 'search_api_key_rotator.dart';
 // Import statements for service implementations
 import 'providers/bing_search_service.dart';
 import 'providers/tavily_search_service.dart';
@@ -17,9 +21,21 @@ import 'providers/perplexity_search_service.dart';
 import 'providers/duckduckgo_search_service.dart';
 import 'providers/serper_search_service.dart';
 import 'providers/querit_search_service.dart';
+import 'providers/stepfun_search_service.dart';
+import 'providers/firecrawl_search_service.dart';
+import 'providers/tinyfish_search_service.dart';
+import 'providers/anysearch_search_service.dart';
+import 'providers/doubao_search_service.dart';
+import 'providers/kelivo_search_service.dart';
+import 'providers/parallel_search_service.dart';
+import 'providers/you_search_service.dart';
 
 // Base interface for all search services
 abstract class SearchService<T extends SearchServiceOptions> {
+  SearchService({this.client});
+
+  final http.Client? client;
+
   String get name;
 
   Widget description(BuildContext context);
@@ -29,6 +45,20 @@ abstract class SearchService<T extends SearchServiceOptions> {
     required SearchCommonOptions commonOptions,
     required T serviceOptions,
   });
+
+  /// Runs search traffic through the app's logged HTTP client by default.
+  /// Tests can inject a client without transferring ownership to the service.
+  Future<R> withHttpClient<R>(
+    Future<R> Function(http.Client client) request,
+  ) async {
+    final ownsClient = client == null;
+    final effectiveClient = client ?? DioHttpClient();
+    try {
+      return await request(effectiveClient);
+    } finally {
+      if (ownsClient) effectiveClient.close();
+    }
+  }
 
   // Factory method to get service instance based on options type
   static SearchService getService(SearchServiceOptions options) {
@@ -67,6 +97,22 @@ abstract class SearchService<T extends SearchServiceOptions> {
         return GrokSearchService() as SearchService;
       case QueritOptions _:
         return QueritSearchService() as SearchService;
+      case StepFunOptions _:
+        return StepFunSearchService() as SearchService;
+      case FirecrawlOptions _:
+        return FirecrawlSearchService() as SearchService;
+      case TinyFishOptions _:
+        return TinyFishSearchService() as SearchService;
+      case AnySearchOptions _:
+        return AnySearchSearchService() as SearchService;
+      case DoubaoOptions _:
+        return DoubaoSearchService() as SearchService;
+      case KelivoOptions _:
+        return KelivoSearchService() as SearchService;
+      case ParallelOptions _:
+        return ParallelSearchService() as SearchService;
+      case YouSearchOptions _:
+        return YouSearchService() as SearchService;
       default:
         return BingSearchService() as SearchService;
     }
@@ -149,9 +195,29 @@ class SearchCommonOptions {
 abstract class SearchServiceOptions {
   final String id;
 
-  const SearchServiceOptions({required this.id});
+  /// Additional API keys that join [apiKey] in the round-robin rotation
+  /// pool. Only meaningful for key-based services; stays empty otherwise.
+  final List<String> extraApiKeys;
+
+  const SearchServiceOptions({required this.id, this.extraApiKeys = const []});
 
   Map<String, dynamic> toJson();
+
+  /// Reads the optional `apiKeys` list persisted alongside the primary key.
+  static List<String> parseExtraApiKeys(Map<String, dynamic> json) =>
+      (json['apiKeys'] as List?)
+          ?.map((e) => e.toString().trim())
+          .where((e) => e.isNotEmpty)
+          .toList() ??
+      const [];
+
+  /// Resolves the API key for the next request, rotating through
+  /// [extraApiKeys] (round-robin) when any are configured.
+  String effectiveApiKey(String primary) =>
+      SearchApiKeyRotator.instance.select(id, primary, extraApiKeys);
+
+  /// The primary API key for key-based services; empty for the rest.
+  String get primaryApiKey => (toJson()['apiKey'] as String?) ?? '';
 
   static SearchServiceOptions fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;
@@ -190,6 +256,23 @@ abstract class SearchServiceOptions {
         return GrokOptions.fromJson(json);
       case 'querit':
         return QueritOptions.fromJson(json);
+      case 'stepfun':
+      case 'step':
+        return StepFunOptions.fromJson(json);
+      case 'firecrawl':
+        return FirecrawlOptions.fromJson(json);
+      case 'tinyfish':
+        return TinyFishOptions.fromJson(json);
+      case 'anysearch':
+        return AnySearchOptions.fromJson(json);
+      case 'doubao':
+        return DoubaoOptions.fromJson(json);
+      case 'kelivo':
+        return KelivoOptions.fromJson(json);
+      case 'parallel':
+        return ParallelOptions.fromJson(json);
+      case 'you':
+        return YouSearchOptions.fromJson(json);
       default:
         return BingLocalOptions(id: json['id']);
     }
@@ -226,7 +309,12 @@ class TavilyOptions extends SearchServiceOptions {
   final String apiKey;
   final String url;
 
-  TavilyOptions({required super.id, required this.apiKey, this.url = ''});
+  TavilyOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    super.extraApiKeys,
+  });
 
   String get resolvedUrl {
     final trimmed = url.trim();
@@ -239,12 +327,14 @@ class TavilyOptions extends SearchServiceOptions {
     'id': id,
     'apiKey': apiKey,
     'url': url.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory TavilyOptions.fromJson(Map<String, dynamic> json) => TavilyOptions(
     id: json['id'],
     apiKey: json['apiKey'],
     url: json['url'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }
 
@@ -254,7 +344,12 @@ class ExaOptions extends SearchServiceOptions {
   final String apiKey;
   final String url;
 
-  ExaOptions({required super.id, required this.apiKey, this.url = ''});
+  ExaOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    super.extraApiKeys,
+  });
 
   String get resolvedUrl {
     final trimmed = url.trim();
@@ -267,29 +362,35 @@ class ExaOptions extends SearchServiceOptions {
     'id': id,
     'apiKey': apiKey,
     'url': url.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory ExaOptions.fromJson(Map<String, dynamic> json) => ExaOptions(
     id: json['id'],
     apiKey: json['apiKey'],
     url: json['url'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }
 
 class ZhipuOptions extends SearchServiceOptions {
   final String apiKey;
 
-  ZhipuOptions({required super.id, required this.apiKey});
+  ZhipuOptions({required super.id, required this.apiKey, super.extraApiKeys});
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'zhipu',
     'id': id,
     'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory ZhipuOptions.fromJson(Map<String, dynamic> json) =>
-      ZhipuOptions(id: json['id'], apiKey: json['apiKey']);
+  factory ZhipuOptions.fromJson(Map<String, dynamic> json) => ZhipuOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class SearXNGOptions extends SearchServiceOptions {
@@ -332,33 +433,84 @@ class SearXNGOptions extends SearchServiceOptions {
 class LinkUpOptions extends SearchServiceOptions {
   final String apiKey;
 
-  LinkUpOptions({required super.id, required this.apiKey});
+  LinkUpOptions({required super.id, required this.apiKey, super.extraApiKeys});
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'linkup',
     'id': id,
     'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory LinkUpOptions.fromJson(Map<String, dynamic> json) =>
-      LinkUpOptions(id: json['id'], apiKey: json['apiKey']);
+  factory LinkUpOptions.fromJson(Map<String, dynamic> json) => LinkUpOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class BraveOptions extends SearchServiceOptions {
-  final String apiKey;
+  static const String webMode = 'web';
+  static const String llmContextMode = 'llmContext';
+  static const String defaultMode = webMode;
+  static const List<String> modes = [webMode, llmContextMode];
+  static const int defaultMaximumNumberOfTokens = 8192;
+  static const int minMaximumNumberOfTokens = 1024;
+  static const int maxMaximumNumberOfTokens = 32768;
 
-  BraveOptions({required super.id, required this.apiKey});
+  final String apiKey;
+  final String mode;
+  final int maximumNumberOfTokens;
+
+  BraveOptions({
+    required super.id,
+    required this.apiKey,
+    this.mode = defaultMode,
+    this.maximumNumberOfTokens = defaultMaximumNumberOfTokens,
+    super.extraApiKeys,
+  });
+
+  static String normalizeMode(String? value) {
+    final mode = (value ?? '').trim();
+    return modes.contains(mode) ? mode : defaultMode;
+  }
+
+  static int normalizeMaximumNumberOfTokens(dynamic value) {
+    final parsed = value is int ? value : int.tryParse(value?.toString() ?? '');
+    if (parsed == null) return defaultMaximumNumberOfTokens;
+    return parsed.clamp(minMaximumNumberOfTokens, maxMaximumNumberOfTokens);
+  }
+
+  /// Empty input is valid and later defaults; out-of-range values are not.
+  static bool isValidMaximumNumberOfTokensInput(String? value) {
+    final text = value?.trim() ?? '';
+    if (text.isEmpty) return true;
+    final tokens = int.tryParse(text);
+    return tokens != null &&
+        tokens >= minMaximumNumberOfTokens &&
+        tokens <= maxMaximumNumberOfTokens;
+  }
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'brave',
     'id': id,
     'apiKey': apiKey,
+    'mode': mode,
+    'maximumNumberOfTokens': maximumNumberOfTokens,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory BraveOptions.fromJson(Map<String, dynamic> json) =>
-      BraveOptions(id: json['id'], apiKey: json['apiKey']);
+  factory BraveOptions.fromJson(Map<String, dynamic> json) => BraveOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    mode: normalizeMode(json['mode']),
+    maximumNumberOfTokens: normalizeMaximumNumberOfTokens(
+      json['maximumNumberOfTokens'],
+    ),
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class GoogleSearchOptions extends SearchServiceOptions {
@@ -390,45 +542,61 @@ class GoogleSearchOptions extends SearchServiceOptions {
 class MetasoOptions extends SearchServiceOptions {
   final String apiKey;
 
-  MetasoOptions({required super.id, required this.apiKey});
+  MetasoOptions({required super.id, required this.apiKey, super.extraApiKeys});
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'metaso',
     'id': id,
     'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory MetasoOptions.fromJson(Map<String, dynamic> json) =>
-      MetasoOptions(id: json['id'], apiKey: json['apiKey']);
+  factory MetasoOptions.fromJson(Map<String, dynamic> json) => MetasoOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class OllamaOptions extends SearchServiceOptions {
   final String apiKey;
 
-  OllamaOptions({required super.id, required this.apiKey});
+  OllamaOptions({required super.id, required this.apiKey, super.extraApiKeys});
 
   @override
   Map<String, dynamic> toJson() => {
     'type': 'ollama',
     'id': id,
     'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
-  factory OllamaOptions.fromJson(Map<String, dynamic> json) =>
-      OllamaOptions(id: json['id'], apiKey: json['apiKey']);
+  factory OllamaOptions.fromJson(Map<String, dynamic> json) => OllamaOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class JinaOptions extends SearchServiceOptions {
   final String apiKey;
 
-  JinaOptions({required super.id, required this.apiKey});
+  JinaOptions({required super.id, required this.apiKey, super.extraApiKeys});
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'jina', 'id': id, 'apiKey': apiKey};
+  Map<String, dynamic> toJson() => {
+    'type': 'jina',
+    'id': id,
+    'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
 
-  factory JinaOptions.fromJson(Map<String, dynamic> json) =>
-      JinaOptions(id: json['id'], apiKey: json['apiKey']);
+  factory JinaOptions.fromJson(Map<String, dynamic> json) => JinaOptions(
+    id: json['id'],
+    apiKey: json['apiKey'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
 }
 
 class DuckDuckGoOptions extends SearchServiceOptions {
@@ -459,6 +627,7 @@ class PerplexityOptions extends SearchServiceOptions {
     this.country,
     this.searchDomainFilter,
     this.maxTokensPerPage,
+    super.extraApiKeys,
   });
 
   @override
@@ -469,6 +638,7 @@ class PerplexityOptions extends SearchServiceOptions {
     if (country != null) 'country': country,
     if (searchDomainFilter != null) 'searchDomainFilter': searchDomainFilter,
     if (maxTokensPerPage != null) 'maxTokensPerPage': maxTokensPerPage,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory PerplexityOptions.fromJson(Map<String, dynamic> json) =>
@@ -480,6 +650,7 @@ class PerplexityOptions extends SearchServiceOptions {
             ?.map((e) => e.toString())
             .toList(),
         maxTokensPerPage: json['maxTokensPerPage'],
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
       );
 }
 
@@ -498,6 +669,7 @@ class BochaOptions extends SearchServiceOptions {
     this.summary = true,
     this.include,
     this.exclude,
+    super.extraApiKeys,
   });
 
   @override
@@ -509,6 +681,7 @@ class BochaOptions extends SearchServiceOptions {
     'summary': summary,
     if (include != null) 'include': include,
     if (exclude != null) 'exclude': exclude,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory BochaOptions.fromJson(Map<String, dynamic> json) => BochaOptions(
@@ -518,6 +691,7 @@ class BochaOptions extends SearchServiceOptions {
     summary: (json['summary'] ?? true) as bool,
     include: json['include'],
     exclude: json['exclude'],
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }
 
@@ -535,6 +709,7 @@ class SerperOptions extends SearchServiceOptions {
     this.hl = '',
     this.tbs = '',
     this.page = 1,
+    super.extraApiKeys,
   });
 
   @override
@@ -546,6 +721,7 @@ class SerperOptions extends SearchServiceOptions {
     'hl': hl.trim(),
     'tbs': tbs.trim(),
     'page': page,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory SerperOptions.fromJson(Map<String, dynamic> json) => SerperOptions(
@@ -555,18 +731,20 @@ class SerperOptions extends SearchServiceOptions {
     hl: json['hl'] ?? '',
     tbs: json['tbs'] ?? '',
     page: json['page'] ?? 1,
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }
 
 class GrokOptions extends SearchServiceOptions {
   static const String defaultUrl = 'https://api.x.ai/v1/responses';
-  static const String defaultModel = 'grok-4.3';
-  static const String defaultReasoningEffort = 'none';
+  static const String defaultModel = 'grok-4.5';
+  static const String defaultReasoningEffort = 'low';
   static const String defaultSystemPrompt =
       "You are a helpful search assistant. Search the web to find accurate and up-to-date information for the user's query. Provide a comprehensive answer with citations.";
 
   final String apiKey;
   final String model;
+  final String reasoningEffort;
   final String customUrl;
   final String systemPrompt;
 
@@ -574,9 +752,15 @@ class GrokOptions extends SearchServiceOptions {
     required super.id,
     required this.apiKey,
     this.model = defaultModel,
+    String? reasoningEffort,
     this.customUrl = defaultUrl,
     this.systemPrompt = defaultSystemPrompt,
-  });
+    super.extraApiKeys,
+  }) : reasoningEffort =
+           reasoningEffort ??
+           ((model.trim().isEmpty || model.trim() == defaultModel)
+               ? defaultReasoningEffort
+               : '');
 
   String get resolvedUrl {
     final trimmed = customUrl.trim();
@@ -588,13 +772,7 @@ class GrokOptions extends SearchServiceOptions {
     return trimmed.isEmpty ? defaultModel : trimmed;
   }
 
-  String get resolvedReasoningEffort {
-    final trimmed = model.trim();
-    if (trimmed.isEmpty || trimmed == defaultModel) {
-      return defaultReasoningEffort;
-    }
-    return '';
-  }
+  String get resolvedReasoningEffort => reasoningEffort.trim();
 
   String get resolvedSystemPrompt {
     final trimmed = systemPrompt.trim();
@@ -607,16 +785,20 @@ class GrokOptions extends SearchServiceOptions {
     'id': id,
     'apiKey': apiKey,
     'model': model.trim(),
+    'reasoningEffort': reasoningEffort.trim(),
     'customUrl': customUrl.trim(),
     'systemPrompt': systemPrompt,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory GrokOptions.fromJson(Map<String, dynamic> json) => GrokOptions(
     id: json['id'],
     apiKey: json['apiKey'] ?? '',
     model: json['model'] ?? defaultModel,
+    reasoningEffort: json['reasoningEffort'],
     customUrl: json['customUrl'] ?? defaultUrl,
     systemPrompt: json['systemPrompt'] ?? defaultSystemPrompt,
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
 }
 
@@ -636,6 +818,7 @@ class QueritOptions extends SearchServiceOptions {
     this.timeRange = '',
     this.countries = '',
     this.languages = '',
+    super.extraApiKeys,
   });
 
   @override
@@ -648,6 +831,7 @@ class QueritOptions extends SearchServiceOptions {
     'timeRange': timeRange.trim(),
     'countries': countries.trim(),
     'languages': languages.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
   };
 
   factory QueritOptions.fromJson(Map<String, dynamic> json) => QueritOptions(
@@ -658,5 +842,317 @@ class QueritOptions extends SearchServiceOptions {
     timeRange: json['timeRange'] ?? '',
     countries: json['countries'] ?? '',
     languages: json['languages'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
   );
+}
+
+class StepFunOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.stepfun.com/v1/search';
+
+  final String apiKey;
+  final String url;
+  final String category;
+
+  StepFunOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.category = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'stepfun',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'category': category.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory StepFunOptions.fromJson(Map<String, dynamic> json) => StepFunOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    url: json['url'] ?? '',
+    category: json['category'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
+}
+
+class FirecrawlOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.firecrawl.dev/v2/search';
+
+  final String apiKey;
+  final String url;
+  final List<String> sources;
+  final List<String> categories;
+  final String country;
+  final String location;
+
+  FirecrawlOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.sources = const <String>['web'],
+    this.categories = const <String>[],
+    this.country = '',
+    this.location = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'firecrawl',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'sources': sources,
+    'categories': categories,
+    'country': country.trim(),
+    'location': location.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory FirecrawlOptions.fromJson(Map<String, dynamic> json) =>
+      FirecrawlOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        url: json['url'] ?? '',
+        sources:
+            (json['sources'] as List?)
+                ?.map((e) => e.toString())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const <String>['web'],
+        categories:
+            (json['categories'] as List?)
+                ?.map((e) => e.toString())
+                .where((e) => e.isNotEmpty)
+                .toList() ??
+            const <String>[],
+        country: json['country'] ?? '',
+        location: json['location'] ?? '',
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class TinyFishOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.search.tinyfish.ai';
+
+  final String apiKey;
+  final String url;
+  final String location;
+  final String language;
+  final String includeDomains;
+  final String excludeDomains;
+
+  TinyFishOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    this.location = '',
+    this.language = '',
+    this.includeDomains = '',
+    this.excludeDomains = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'tinyfish',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    'location': location.trim(),
+    'language': language.trim(),
+    'includeDomains': includeDomains.trim(),
+    'excludeDomains': excludeDomains.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory TinyFishOptions.fromJson(Map<String, dynamic> json) =>
+      TinyFishOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        url: json['url'] ?? '',
+        location: json['location'] ?? '',
+        language: json['language'] ?? '',
+        includeDomains: json['includeDomains'] ?? '',
+        excludeDomains: json['excludeDomains'] ?? '',
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class AnySearchOptions extends SearchServiceOptions {
+  static const String defaultUrl = 'https://api.anysearch.com/v1/search';
+
+  final String apiKey;
+  final String url;
+
+  AnySearchOptions({
+    required super.id,
+    required this.apiKey,
+    this.url = '',
+    super.extraApiKeys,
+  });
+
+  String get resolvedUrl {
+    final trimmed = url.trim();
+    return trimmed.isEmpty ? defaultUrl : trimmed;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'anysearch',
+    'id': id,
+    'apiKey': apiKey,
+    'url': url.trim(),
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory AnySearchOptions.fromJson(Map<String, dynamic> json) =>
+      AnySearchOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        url: json['url'] ?? '',
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class DoubaoOptions extends SearchServiceOptions {
+  final String apiKey;
+
+  DoubaoOptions({required super.id, required this.apiKey, super.extraApiKeys});
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'doubao',
+    'id': id,
+    'apiKey': apiKey,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory DoubaoOptions.fromJson(Map<String, dynamic> json) => DoubaoOptions(
+    id: json['id'],
+    apiKey: json['apiKey'] ?? '',
+    extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+  );
+}
+
+class KelivoOptions extends SearchServiceOptions {
+  static const String builtInId = 'kelivo';
+
+  KelivoOptions({required super.id});
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'kelivo', 'id': id};
+
+  factory KelivoOptions.fromJson(Map<String, dynamic> json) =>
+      KelivoOptions(id: json['id']);
+}
+
+class ParallelOptions extends SearchServiceOptions {
+  static const String defaultMode = 'advanced';
+  static const List<String> modes = ['advanced', 'basic', 'fast', 'turbo'];
+
+  final String apiKey;
+  final String mode;
+
+  ParallelOptions({
+    required super.id,
+    required this.apiKey,
+    this.mode = defaultMode,
+    super.extraApiKeys,
+  });
+
+  static String normalizeMode(String? value) {
+    final mode = (value ?? '').trim();
+    return modes.contains(mode) ? mode : defaultMode;
+  }
+
+  static String modeLabel(String mode) {
+    switch (mode) {
+      case 'turbo':
+        return 'Turbo';
+      case 'fast':
+        return 'Fast';
+      case 'basic':
+        return 'Basic';
+      case 'advanced':
+      default:
+        return 'Advanced';
+    }
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'parallel',
+    'id': id,
+    'apiKey': apiKey,
+    'mode': mode,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory ParallelOptions.fromJson(Map<String, dynamic> json) =>
+      ParallelOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        mode: normalizeMode(json['mode']),
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
+}
+
+class YouSearchOptions extends SearchServiceOptions {
+  static const String highlightsMode = 'highlights';
+  static const String snippetsMode = 'snippets';
+  static const String defaultContentMode = highlightsMode;
+  static const List<String> contentModes = [highlightsMode, snippetsMode];
+
+  final String apiKey;
+  final String contentMode;
+
+  YouSearchOptions({
+    required super.id,
+    required this.apiKey,
+    this.contentMode = defaultContentMode,
+    super.extraApiKeys,
+  });
+
+  static String normalizeContentMode(String? value) {
+    final mode = (value ?? '').trim();
+    return contentModes.contains(mode) ? mode : defaultContentMode;
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'you',
+    'id': id,
+    'apiKey': apiKey,
+    'contentMode': contentMode,
+    if (extraApiKeys.isNotEmpty) 'apiKeys': extraApiKeys,
+  };
+
+  factory YouSearchOptions.fromJson(Map<String, dynamic> json) =>
+      YouSearchOptions(
+        id: json['id'],
+        apiKey: json['apiKey'] ?? '',
+        contentMode: normalizeContentMode(json['contentMode']),
+        extraApiKeys: SearchServiceOptions.parseExtraApiKeys(json),
+      );
 }

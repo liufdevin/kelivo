@@ -1,6 +1,8 @@
+import "support/business_test_harness.dart";
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/desktop/desktop_settings_page.dart';
+import 'package:Kelivo/features/provider/widgets/provider_custom_request_editor.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 import 'package:Kelivo/shared/widgets/ios_checkbox.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +43,8 @@ Widget _harness(
     providers: [
       ChangeNotifierProvider<SettingsProvider>.value(value: settings),
       ChangeNotifierProvider<AssistantProvider>(
-        create: (_) => AssistantProvider(),
+        create: (_) =>
+            AssistantProvider(preferences: createBusinessTestPreferences()),
       ),
     ],
     child: MaterialApp(
@@ -56,7 +59,7 @@ Widget _harness(
 
 Future<SettingsProvider> _buildSettings(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues(const {});
-  final settings = SettingsProvider();
+  final settings = SettingsProvider(createBusinessTestPreferences());
   await tester.runAsync(_waitForSettingsLoad);
   await settings.setProviderConfig('ProviderA', _providerConfig('ProviderA'));
   await settings.setProviderConfig('ProviderB', _providerConfig('ProviderB'));
@@ -187,5 +190,47 @@ void main() {
     final cfg = settings.getProviderConfig('ProviderA');
     expect(cfg.avatarType, 'lobehub');
     expect(cfg.avatarValue, 'openai');
+  });
+
+  testWidgets('desktop provider settings persist custom request rows', (
+    tester,
+  ) async {
+    final settings = await _buildSettings(tester);
+    addTearDown(settings.dispose);
+
+    await _pumpProviderSettings(tester, settings);
+    await tester.tap(
+      find.byKey(const ValueKey('desktop-provider-settings-ProviderA')),
+    );
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final customRequestEditor = tester.widget<ProviderCustomRequestEditor>(
+      find.byType(ProviderCustomRequestEditor),
+    );
+    expect(
+      customRequestEditor.key,
+      const ValueKey('desktop-provider-custom-request-ProviderA'),
+    );
+
+    final addBody = find.byKey(const ValueKey('provider-custom-body-add'));
+    await tester.ensureVisible(addBody);
+    await tester.pumpAndSettle();
+    await tester.tap(addBody);
+    await tester.pump();
+
+    expect(settings.getProviderConfig('ProviderA').customBody, hasLength(1));
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-body-name-0')),
+      'desktop',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-body-value-0')),
+      'true',
+    );
+    await tester.pump();
+
+    expect(settings.getProviderConfig('ProviderA').customBody, [
+      {'key': 'desktop', 'value': 'true'},
+    ]);
   });
 }

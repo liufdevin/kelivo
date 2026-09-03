@@ -1,4 +1,6 @@
+import "../../../support/business_test_harness.dart";
 import 'package:Kelivo/core/models/chat_input_data.dart';
+import 'package:Kelivo/features/home/utils/model_display_helper.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/features/home/widgets/chat_input_bar.dart';
@@ -33,14 +35,21 @@ void main() {
     double inputBackgroundOpacityLight = 0.8236,
     double inputBackgroundOpacityDark = 0.7396,
   }) {
+    final settings =
+        settingsProvider ?? SettingsProvider(createBusinessTestPreferences());
+    final assistants =
+        assistantProvider ??
+        AssistantProvider(preferences: createBusinessTestPreferences());
+    // In the app, HomePage resolves the chat model (conversation override ->
+    // assistant -> global default) and passes it down; mirror that here.
+    final chatModel = resolveChatModel(
+      settings,
+      assistant: assistants.currentAssistant,
+    );
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(
-          value: settingsProvider ?? SettingsProvider(),
-        ),
-        ChangeNotifierProvider.value(
-          value: assistantProvider ?? AssistantProvider(),
-        ),
+        ChangeNotifierProvider.value(value: settings),
+        ChangeNotifierProvider.value(value: assistants),
       ],
       child: MaterialApp(
         theme: theme,
@@ -52,6 +61,8 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ChatInputBar(
+            chatModelProviderKey: chatModel.providerKey,
+            chatModelId: chatModel.modelId,
             controller: controller,
             focusNode: focusNode,
             mediaController: mediaController,
@@ -195,7 +206,7 @@ void main() {
     final controller = TextEditingController(text: 'draw a cat');
     final focusNode = FocusNode();
     final mediaController = ChatInputBarController();
-    final settings = SettingsProvider();
+    final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.setProviderConfig(
       'GrokTest',
       ProviderConfig(
@@ -252,7 +263,7 @@ void main() {
   testWidgets('绘图模式关闭后切换对话会重新显示', (tester) async {
     final controller = TextEditingController(text: 'draw a cat');
     final focusNode = FocusNode();
-    final settings = SettingsProvider();
+    final settings = SettingsProvider(createBusinessTestPreferences());
     await settings.setProviderConfig(
       'OpenAITest',
       ProviderConfig(
@@ -523,6 +534,9 @@ void main() {
       ),
       findsNothing,
     );
+
+    await tester.pumpAndSettle();
+    expect(find.byType(CircularProgressIndicator), findsNothing);
 
     controller.dispose();
     focusNode.dispose();

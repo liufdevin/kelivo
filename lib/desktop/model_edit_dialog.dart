@@ -13,6 +13,7 @@ import '../shared/widgets/ios_switch.dart';
 import '../shared/widgets/snackbar.dart';
 import '../features/model/widgets/model_edit_state_helper.dart';
 import '../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<bool?> showDesktopModelEditDialog(
   BuildContext context, {
@@ -49,7 +50,7 @@ Future<bool?> _openDialog(
   await showGeneralDialog<bool>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Colors.black.withValues(alpha: 0.25),
+    barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.25),
     barrierLabel: 'model-edit-dialog',
     pageBuilder: (ctx, _, __) => _ModelEditDialogBody(
       providerKey: providerKey,
@@ -107,14 +108,10 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
   // Provider kind for conditional UI
   ProviderKind? _providerKind;
 
-  // Google built-in tools
-  bool _googleUrlContextTool = false;
-  bool _googleCodeExecutionTool = false;
-  bool _googleYoutubeTool = false;
+  /// Built-in tool names toggled on, mirroring the persisted set.
+  Set<String> _builtInTools = <String>{};
 
-  // OpenAI built-in tools
-  bool _openaiCodeInterpreterTool = false;
-  bool _openaiImageGenerationTool = false;
+  bool _showBuiltinToolsTab = false;
 
   @override
   void initState() {
@@ -126,11 +123,12 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
       explicitType: cfg.providerType,
     );
 
-    // Determine tab count: 3 for Google/OpenAI (has tools tab), 2 for others
-    final hasToolsTab =
-        _providerKind == ProviderKind.google ||
-        _providerKind == ProviderKind.openai;
-    _tabCtrl = TabController(length: hasToolsTab ? 3 : 2, vsync: this);
+    // Determine tab count: 3 when the provider exposes editable built-in
+    // tools, 2 for others
+    _showBuiltinToolsTab = BuiltInToolsHelper.modelSettingsToolNames(
+      cfg,
+    ).isNotEmpty;
+    _tabCtrl = TabController(length: _showBuiltinToolsTab ? 3 : 2, vsync: this);
     _tabCtrl.addListener(() {
       if (!_tabCtrl.indexIsChanging) {
         setState(() {
@@ -217,18 +215,10 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
         }
       }
 
-      final builtInSet = BuiltInToolNames.parseAndNormalize(ov['builtInTools']);
-      _googleUrlContextTool = builtInSet.contains(BuiltInToolNames.urlContext);
-      _googleCodeExecutionTool = builtInSet.contains(
-        BuiltInToolNames.codeExecution,
-      );
-      _googleYoutubeTool = builtInSet.contains(BuiltInToolNames.youtube);
-      _openaiCodeInterpreterTool = builtInSet.contains(
-        BuiltInToolNames.codeInterpreter,
-      );
-      _openaiImageGenerationTool = builtInSet.contains(
-        BuiltInToolNames.imageGeneration,
-      );
+      // parseFromOverride, not parseAndNormalize: the request path reads the
+      // legacy `tools` / `built_in_tools` keys too, and saving overwrites the
+      // override wholesale — reading less here silently drops those settings.
+      _builtInTools = BuiltInToolNames.parseFromOverride(ov);
     }
   }
 
@@ -276,12 +266,11 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
 
   // Desktop input decoration matching provider settings inputs
   InputDecoration _deskInputDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(
@@ -335,12 +324,12 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
           maxHeight: 650,
         ),
         child: Material(
-          color: cs.surface,
+          color: context.overlaySurface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.08)
+                  ? cs.onSurface.withValues(alpha: 0.08)
                   : cs.outlineVariant.withValues(alpha: 0.25),
             ),
           ),
@@ -352,7 +341,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
                 // Header
                 Container(
                   height: 52,
-                  color: cs.surface,
+                  color: context.overlaySurface,
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 10, 0),
                     child: Row(
@@ -387,7 +376,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
                 // Body
                 Expanded(
                   child: Container(
-                    color: cs.surface,
+                    color: context.overlaySurface,
                     child: Column(
                       children: [
                         Padding(
@@ -397,8 +386,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
                             tabs: [
                               l10n.modelDetailSheetBasicTab,
                               l10n.modelDetailSheetAdvancedTab,
-                              if (_providerKind == ProviderKind.google ||
-                                  _providerKind == ProviderKind.openai)
+                              if (_showBuiltinToolsTab)
                                 l10n.modelDetailSheetBuiltinToolsTab,
                             ],
                           ),
@@ -438,7 +426,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
                 ),
                 // Footer: right aligned confirm/add
                 Container(
-                  color: cs.surface,
+                  color: context.overlaySurface,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: Row(
                     children: [
@@ -698,14 +686,22 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
     ];
   }
 
+  void _toggleBuiltIn(String name, bool on) {
+    setState(() {
+      if (on) {
+        _builtInTools.add(name);
+      } else {
+        _builtInTools.remove(name);
+      }
+    });
+  }
+
   List<Widget> _buildTools(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
     final cfg = settings.getProviderConfig(widget.providerKey);
     final bool disableTools = _type == ModelType.embedding;
-    final bool hasTiles =
-        _providerKind == ProviderKind.google ||
-        _providerKind == ProviderKind.openai;
+    final bool isOpenRouter = BuiltInToolsHelper.isOpenRouterProvider(cfg);
     return [
       _DeskCard(
         child: Column(
@@ -719,6 +715,7 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
               ),
             ),
             if (_providerKind == ProviderKind.openai &&
+                !isOpenRouter &&
                 cfg.useResponseApi != true) ...[
               const SizedBox(height: 6),
               Text(
@@ -728,68 +725,23 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
                   fontSize: 12,
                 ),
               ),
-            ] else if (!hasTiles) ...[
-              const SizedBox(height: 6),
-              Text(
-                l10n.modelDetailSheetBuiltinToolsUnsupportedHint,
-                style: TextStyle(
-                  color: cs.onSurface.withValues(alpha: 0.65),
-                  fontSize: 12,
-                ),
-              ),
             ],
           ],
         ),
       ),
-      if (hasTiles) const SizedBox(height: 10),
-      if (_providerKind == ProviderKind.google) ...[
+      const SizedBox(height: 10),
+      for (final (index, tool) in ModelBuiltInToolTiles.forConfig(
+        cfg: cfg,
+        l10n: l10n,
+      ).indexed) ...[
+        if (index > 0) const SizedBox(height: 8),
         _ToolTile(
-          title: l10n.modelDetailSheetUrlContextTool,
-          desc: l10n.modelDetailSheetUrlContextToolDescription,
-          value: _googleUrlContextTool,
-          onChanged: disableTools
+          title: tool.title,
+          desc: tool.desc,
+          value: tool.available && _builtInTools.contains(tool.name),
+          onChanged: disableTools || !tool.available
               ? null
-              : (v) => setState(() => _googleUrlContextTool = v),
-        ),
-        const SizedBox(height: 8),
-        _ToolTile(
-          title: l10n.modelDetailSheetCodeExecutionTool,
-          desc: l10n.modelDetailSheetCodeExecutionToolDescription,
-          value: _googleCodeExecutionTool,
-          onChanged: disableTools
-              ? null
-              : (v) => setState(() => _googleCodeExecutionTool = v),
-        ),
-        const SizedBox(height: 8),
-        _ToolTile(
-          title: l10n.modelDetailSheetYoutubeTool,
-          desc: l10n.modelDetailSheetYoutubeToolDescription,
-          value: _googleYoutubeTool,
-          onChanged: disableTools
-              ? null
-              : (v) => setState(() => _googleYoutubeTool = v),
-        ),
-      ] else if (_providerKind == ProviderKind.openai) ...[
-        _ToolTile(
-          title: l10n.modelDetailSheetOpenaiCodeInterpreterTool,
-          desc: l10n.modelDetailSheetOpenaiCodeInterpreterToolDescription,
-          value: _openaiCodeInterpreterTool,
-          onChanged: disableTools
-              ? null
-              : ((cfg.useResponseApi == true)
-                    ? (v) => setState(() => _openaiCodeInterpreterTool = v)
-                    : null),
-        ),
-        const SizedBox(height: 8),
-        _ToolTile(
-          title: l10n.modelDetailSheetOpenaiImageGenerationTool,
-          desc: l10n.modelDetailSheetOpenaiImageGenerationToolDescription,
-          value: _openaiImageGenerationTool,
-          onChanged: disableTools
-              ? null
-              : ((cfg.useResponseApi == true)
-                    ? (v) => setState(() => _openaiImageGenerationTool = v)
-                    : null),
+              : (v) => _toggleBuiltIn(tool.name, v),
         ),
       ],
     ];
@@ -849,30 +801,13 @@ class _ModelEditDialogBodyState extends State<_ModelEditDialogBody>
               e.key.toString(): e.value,
           }
         : const <String, dynamic>{};
-    final builtInSet = BuiltInToolNames.parseAndNormalize(prev['builtInTools']);
-    if (_providerKind == ProviderKind.google) {
-      builtInSet.remove(BuiltInToolNames.urlContext);
-      builtInSet.remove(BuiltInToolNames.codeExecution);
-      builtInSet.remove(BuiltInToolNames.youtube);
-      if (_googleUrlContextTool) {
-        builtInSet.add(BuiltInToolNames.urlContext);
-      }
-      if (_googleCodeExecutionTool) {
-        builtInSet.add(BuiltInToolNames.codeExecution);
-      }
-      if (_googleYoutubeTool) {
-        builtInSet.add(BuiltInToolNames.youtube);
-      }
-    } else if (_providerKind == ProviderKind.openai) {
-      builtInSet.remove(BuiltInToolNames.codeInterpreter);
-      builtInSet.remove(BuiltInToolNames.imageGeneration);
-      if (_openaiCodeInterpreterTool) {
-        builtInSet.add(BuiltInToolNames.codeInterpreter);
-      }
-      if (_openaiImageGenerationTool) {
-        builtInSet.add(BuiltInToolNames.imageGeneration);
-      }
-    }
+    final builtInSet = BuiltInToolsHelper.replaceModelSettingsTools(
+      cfg: old,
+      // Same reader as the load path: the legacy `tools` / `built_in_tools`
+      // keys count too, or saving drops what they hold.
+      current: BuiltInToolNames.parseFromOverride(prev),
+      selected: _builtInTools,
+    );
     final builtInTools = BuiltInToolNames.orderedForStorage(builtInSet);
 
     final String key = (prevKey.isEmpty || widget.isNew)
@@ -1005,7 +940,7 @@ class _SegmentedSingle extends StatelessWidget {
     final selBg = isDark
         ? cs.primary.withValues(alpha: 0.20)
         : cs.primary.withValues(alpha: 0.12);
-    final baseBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final baseBg = context.appColors.surfaceFill;
     final children = <Widget>[];
     for (int i = 0; i < options.length; i++) {
       final selected = i == value;
@@ -1067,7 +1002,7 @@ class _SegmentedMulti extends StatelessWidget {
     final selBg = isDark
         ? cs.primary.withValues(alpha: 0.20)
         : cs.primary.withValues(alpha: 0.12);
-    final baseBg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final baseBg = context.appColors.surfaceFill;
     final children = <Widget>[];
     for (int i = 0; i < options.length; i++) {
       final selected = isSelected[i];
@@ -1174,7 +1109,6 @@ class _HeaderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1186,7 +1120,7 @@ class _HeaderRow extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: l10n.modelDetailSheetHeaderKeyHint,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
@@ -1223,7 +1157,7 @@ class _HeaderRow extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: l10n.modelDetailSheetHeaderValueHint,
                 filled: true,
-                fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+                fillColor: context.appColors.surfaceFill,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
@@ -1274,7 +1208,6 @@ class _BodyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1288,9 +1221,7 @@ class _BodyRow extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.modelDetailSheetBodyKeyHint,
                     filled: true,
-                    fillColor: isDark
-                        ? Colors.white10
-                        : const Color(0xFFF7F7F9),
+                    fillColor: context.appColors.surfaceFill,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide(
@@ -1338,7 +1269,7 @@ class _BodyRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.modelDetailSheetBodyJsonHint,
               filled: true,
-              fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+              fillColor: context.appColors.surfaceFill,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide(
@@ -1396,7 +1327,7 @@ class _ToolTileState extends State<_ToolTile> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final bool isDisabled = widget.onChanged == null;
-    final baseBg = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final baseBg = context.appColors.surfaceFill;
     final hoverBg = Color.alphaBlend(
       cs.primary.withValues(alpha: isDark ? 0.10 : 0.06),
       baseBg,
@@ -1489,9 +1420,7 @@ class _DeskCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF2F3F5);
+    final bg = context.appColors.surfaceFill;
     return Container(
       decoration: BoxDecoration(
         color: bg,
@@ -1547,9 +1476,7 @@ class _SegTabBarState extends State<_SegTabBar> {
                 (innerAvailWidth - gap * (tabs.length - 1)) / tabs.length;
             final double rowWidth =
                 segWidth * tabs.length + gap * (tabs.length - 1);
-            final Color shellBg = isDark
-                ? Colors.white.withValues(alpha: 0.08)
-                : Colors.white;
+            final Color shellBg = context.appColors.surfaceCard;
 
             List<Widget> children = [];
             for (int index = 0; index < tabs.length; index++) {
@@ -1558,9 +1485,7 @@ class _SegTabBarState extends State<_SegTabBar> {
               final Color bg = selected
                   ? cs.primary.withValues(alpha: 0.14)
                   : hovered
-                  ? (isDark
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.black.withValues(alpha: 0.03))
+                  ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.03))
                   : Colors.transparent;
               final Color fg = selected
                   ? cs.primary

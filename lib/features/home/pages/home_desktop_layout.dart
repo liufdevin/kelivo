@@ -20,6 +20,7 @@ import '../../../utils/brand_assets.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../../../desktop/hotkeys/chat_action_bus.dart';
 import '../../../desktop/hotkeys/sidebar_tab_bus.dart';
+import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 import '../widgets/assistant_avatar.dart';
 import '../widgets/assistant_entry_actions.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -118,53 +119,50 @@ class HomeDesktopScaffold extends StatelessWidget {
     final sp = context.watch<SettingsProvider>();
     final topicsOnRight = sp.desktopTopicPosition == DesktopTopicPosition.right;
 
-    return Stack(
-      children: [
-        Positioned.fill(child: buildAssistantBackground(context)),
-        SizedBox.expand(
-          child: Row(
-            children: [
-              // Left sidebar
-              _buildLeftSidebar(context, cs, topicsOnRight),
-              // Left sidebar resize handle / divider
-              if (_isDesktop)
-                SidebarResizeHandle(
-                  visible: tabletSidebarOpen,
-                  onDrag: onSidebarWidthChanged,
-                  onDragEnd: onSidebarWidthChangeEnd,
-                )
-              else
-                AnimatedContainer(
-                  duration: _sidebarAnimDuration,
-                  curve: _sidebarAnimCurve,
-                  width: tabletSidebarOpen ? 0.6 : 0,
-                  child: tabletSidebarOpen
-                      ? VerticalDivider(
-                          width: 0.6,
-                          thickness: 0.5,
-                          color: cs.outlineVariant.withValues(alpha: 0.20),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              // Main content
-              Expanded(
-                child: Scaffold(
-                  key: scaffoldKey,
-                  resizeToAvoidBottomInset: true,
-                  extendBodyBehindAppBar: true,
-                  backgroundColor: Colors.transparent,
-                  appBar:
-                      appBarOverride ??
-                      _buildAppBar(context, cs, topicsOnRight),
-                  body: body,
-                ),
+    return ChatFrostedBackdrop(
+      backdrop: buildAssistantBackground(context),
+      child: SizedBox.expand(
+        child: Row(
+          children: [
+            // Left sidebar
+            _buildLeftSidebar(context, cs, topicsOnRight),
+            // Left sidebar resize handle / divider
+            if (_isDesktop)
+              SidebarResizeHandle(
+                visible: tabletSidebarOpen,
+                onDrag: onSidebarWidthChanged,
+                onDragEnd: onSidebarWidthChangeEnd,
+              )
+            else
+              AnimatedContainer(
+                duration: _sidebarAnimDuration,
+                curve: _sidebarAnimCurve,
+                width: tabletSidebarOpen ? 0.6 : 0,
+                child: tabletSidebarOpen
+                    ? VerticalDivider(
+                        width: 0.6,
+                        thickness: 0.5,
+                        color: cs.outlineVariant.withValues(alpha: 0.20),
+                      )
+                    : const SizedBox.shrink(),
               ),
-              // Right sidebar (desktop only with topics on right)
-              _buildRightSidebar(context, cs, topicsOnRight),
-            ],
-          ),
+            // Main content
+            Expanded(
+              child: Scaffold(
+                key: scaffoldKey,
+                resizeToAvoidBottomInset: true,
+                extendBodyBehindAppBar: true,
+                backgroundColor: Colors.transparent,
+                appBar:
+                    appBarOverride ?? _buildAppBar(context, cs, topicsOnRight),
+                body: body,
+              ),
+            ),
+            // Right sidebar (desktop only with topics on right)
+            _buildRightSidebar(context, cs, topicsOnRight),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -352,6 +350,10 @@ class HomeDesktopScaffold extends StatelessWidget {
                       width: 16,
                       height: 16,
                       key: ValueKey('brand:$brandAsset'),
+                      colorFilter:
+                          isDark && BrandAssets.assetNeedsDarkInvert(brandAsset)
+                          ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+                          : null,
                     )
                   : Image.asset(
                       brandAsset,
@@ -390,9 +392,9 @@ class HomeDesktopScaffold extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       height: 1.1,
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.92)
-                          : cs.onSurface.withValues(alpha: 0.9),
+                      color: cs.onSurface.withValues(
+                        alpha: isDark ? 0.92 : 0.9,
+                      ),
                       fontWeight: AppFontWeights.medium,
                     ),
                     maxLines: 1,
@@ -741,7 +743,7 @@ class DesktopScrollNavigationButtons extends StatelessWidget {
             ),
           ),
         ),
-        // Scroll to previous question button
+        // Scroll to previous message button
         Align(
           alignment: Alignment.bottomRight,
           child: SafeArea(
@@ -791,21 +793,20 @@ class _DesktopScrollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ClipOval(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.white.withValues(alpha: 0.07),
+                ? cs.onSurface.withValues(alpha: 0.06)
+                : cs.surface.withValues(alpha: 0.07),
             shape: BoxShape.circle,
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.20),
+                  ? cs.onSurface.withValues(alpha: 0.10)
+                  : cs.outline.withValues(alpha: 0.20),
               width: 1,
             ),
           ),
@@ -820,7 +821,7 @@ class _DesktopScrollButton extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 18,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: cs.onSurface.withValues(alpha: isDark ? 1.0 : 0.87),
                 ),
               ),
             ),
@@ -918,12 +919,8 @@ class _DesktopGlassCircleButtonState extends State<_DesktopGlassCircleButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassBase = isDark
-        ? Colors.black.withValues(alpha: 0.06)
-        : Colors.white.withValues(alpha: 0.06);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final glassBase = cs.surface.withValues(alpha: 0.06);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)
         : glassBase;

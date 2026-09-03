@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-class AppColors {
-  static const Color textMuted = Colors.black54;
-}
-
 class AppShadows {
   static List<BoxShadow> soft = [
     BoxShadow(
@@ -12,6 +8,20 @@ class AppShadows {
       offset: const Offset(0, 6),
     ),
   ];
+}
+
+/// Shared desktop popover wash. Alpha is unchanged from the previous
+/// per-popover literals (`surface` @ 0.28 dark / 0.56 light).
+class AppOverlayColors {
+  static const double desktopPopoverAlphaDark = 0.28;
+  static const double desktopPopoverAlphaLight = 0.56;
+
+  static Color desktopPopoverSurface(ColorScheme cs) {
+    final isDark = cs.brightness == Brightness.dark;
+    return cs.surface.withValues(
+      alpha: isDark ? desktopPopoverAlphaDark : desktopPopoverAlphaLight,
+    );
+  }
 }
 
 class AppRadii {

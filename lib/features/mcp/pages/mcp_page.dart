@@ -11,6 +11,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../core/services/haptics.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class McpPage extends StatelessWidget {
   const McpPage({super.key});
@@ -19,12 +20,15 @@ class McpPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     switch (s) {
       case McpStatus.connected:
-        return Colors.green;
+        return context.appColors.success;
       case McpStatus.connecting:
+      case McpStatus.authorizing:
         return cs.primary;
+      case McpStatus.needsAuthorization:
+        return context.appColors.warning;
       case McpStatus.error:
       case McpStatus.idle:
-        return Colors.red;
+        return Theme.of(context).colorScheme.error;
     }
   }
 
@@ -44,7 +48,7 @@ class McpPage extends StatelessWidget {
       final l10n = AppLocalizations.of(context)!;
       await showModalBottomSheet<void>(
         context: context,
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -75,9 +79,7 @@ class McpPage extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white10
-                          : const Color(0xFFF7F7F9),
+                      color: context.appColors.surfaceFill,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -102,10 +104,7 @@ class McpPage extends StatelessWidget {
                           ),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(44),
-                            backgroundColor:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF2F3F5),
+                            backgroundColor: context.appColors.surfaceFill,
                             side: BorderSide(
                               color: cs.outlineVariant.withValues(alpha: 0.35),
                             ),
@@ -121,7 +120,8 @@ class McpPage extends StatelessWidget {
                           onPressed: () async {
                             final mcpProvider = ctx.read<McpProvider>();
                             await mcpProvider.reconnect(serverId);
-                            if (ctx.mounted) {
+                            if (mcpProvider.isConnected(serverId) &&
+                                ctx.mounted) {
                               Navigator.of(ctx).pop();
                             }
                           },
@@ -213,6 +213,15 @@ class McpPage extends StatelessWidget {
                 final s = servers[index];
                 final st = mcp.statusFor(s.id);
                 final err = mcp.errorFor(s.id);
+                final statusText = switch (st) {
+                  McpStatus.connected => l10n.mcpPageStatusConnected,
+                  McpStatus.connecting => l10n.mcpPageStatusConnecting,
+                  McpStatus.needsAuthorization =>
+                    l10n.mcpPageStatusAuthorizationRequired,
+                  McpStatus.authorizing => l10n.mcpPageStatusAuthorizing,
+                  McpStatus.idle ||
+                  McpStatus.error => l10n.mcpPageStatusDisconnected,
+                };
 
                 Widget tagStyled(String text, {Color? color}) => Container(
                   padding: const EdgeInsets.symmetric(
@@ -250,21 +259,15 @@ class McpPage extends StatelessWidget {
                       base: base,
                       builder: (c) {
                         final overlay = pressed
-                            ? (isDark
-                                  ? Colors.black.withValues(alpha: 0.06)
-                                  : Colors.white.withValues(alpha: 0.05))
+                            ? cs.surface.withValues(alpha: isDark ? 0.06 : 0.05)
                             : Colors.transparent;
                         return Container(
                           decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white10
-                                : Colors.white.withValues(alpha: 0.96),
+                            color: context.appColors.surfaceCard,
                             // Soften the list card corners a bit
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
-                              color: cs.outlineVariant.withValues(
-                                alpha: isDark ? 0.1 : 0.08,
-                              ),
+                              color: context.appColors.hairline,
                               width: 0.6,
                             ),
                           ),
@@ -283,9 +286,7 @@ class McpPage extends StatelessWidget {
                                       width: 42,
                                       height: 42,
                                       decoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.white10
-                                            : const Color(0xFFF2F3F5),
+                                        color: context.appColors.surfaceFill,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       alignment: Alignment.center,
@@ -298,7 +299,9 @@ class McpPage extends StatelessWidget {
                                     Positioned(
                                       right: 0,
                                       bottom: 0,
-                                      child: st == McpStatus.connecting
+                                      child:
+                                          st == McpStatus.connecting ||
+                                              st == McpStatus.authorizing
                                           ? SizedBox(
                                               width: 12,
                                               height: 12,
@@ -359,16 +362,8 @@ class McpPage extends StatelessWidget {
                                         runSpacing: 6,
                                         children: [
                                           tagStyled(
-                                            st == McpStatus.connected
-                                                ? l10n.mcpPageStatusConnected
-                                                : (st == McpStatus.connecting
-                                                      ? l10n.mcpPageStatusConnecting
-                                                      : l10n.mcpPageStatusDisconnected),
-                                            color: st == McpStatus.connected
-                                                ? Colors.green
-                                                : (st == McpStatus.connecting
-                                                      ? cs.primary
-                                                      : Colors.redAccent),
+                                            statusText,
+                                            color: _statusColor(context, st),
                                           ),
                                           tagStyled(
                                             s.transport ==
@@ -396,7 +391,10 @@ class McpPage extends StatelessWidget {
                                             ),
                                         ],
                                       ),
-                                      if (st == McpStatus.error &&
+                                      if ((st == McpStatus.error ||
+                                              st ==
+                                                  McpStatus
+                                                      .needsAuthorization) &&
                                           (err?.isNotEmpty ?? false)) ...[
                                         const SizedBox(height: 8),
                                         Row(
@@ -404,7 +402,9 @@ class McpPage extends StatelessWidget {
                                             Icon(
                                               Lucide.MessageCircleWarning,
                                               size: 14,
-                                              color: Colors.red,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.error,
                                             ),
                                             const SizedBox(width: 6),
                                             Expanded(
@@ -412,7 +412,9 @@ class McpPage extends StatelessWidget {
                                                 l10n.mcpPageConnectionFailed,
                                                 style: TextStyle(
                                                   fontSize: 12,
-                                                  color: Colors.red,
+                                                  color: Theme.of(
+                                                    context,
+                                                  ).colorScheme.error,
                                                 ),
                                               ),
                                             ),
@@ -423,6 +425,38 @@ class McpPage extends StatelessWidget {
                                                 s.name,
                                               ),
                                               child: Text(l10n.mcpPageDetails),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      if (st ==
+                                          McpStatus.needsAuthorization) ...[
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Lucide.KeyRound,
+                                              size: 14,
+                                              color: context.appColors.warning,
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Expanded(
+                                              child: Text(
+                                                l10n.mcpPageOAuthRequired,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      context.appColors.warning,
+                                                ),
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => context
+                                                  .read<McpProvider>()
+                                                  .authorize(s.id),
+                                              child: Text(
+                                                l10n.mcpPageOAuthSignIn,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -500,7 +534,7 @@ class McpPage extends StatelessWidget {
                             final ok = await showDialog<bool>(
                               context: context,
                               builder: (dctx) => AlertDialog(
-                                backgroundColor: cs.surface,
+                                backgroundColor: context.overlaySurface,
                                 title: Text(l10n.mcpPageConfirmDeleteTitle),
                                 content: Text(l10n.mcpPageConfirmDeleteContent),
                                 actions: [
@@ -534,6 +568,8 @@ class McpPage extends StatelessWidget {
                                     transport: prev.transport,
                                     url: prev.url,
                                     headers: prev.headers,
+                                    oauth: prev.oauth,
+                                    oauthClient: prev.oauthClient,
                                   );
                                   // Try to refresh tools when back online
                                   try {
@@ -656,9 +692,9 @@ class _AnimatedPressColor extends StatelessWidget {
   final Widget Function(Color c) builder;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),

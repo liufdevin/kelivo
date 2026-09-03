@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import '../../../l10n/app_localizations.dart';
@@ -17,7 +16,8 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/services/haptics.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../shared/widgets/ios_tactile.dart';
-import '../../../utils/sandbox_path_resolver.dart';
+import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
+import '../../chat/widgets/chat_assistant_background.dart';
 import '../widgets/assistant_avatar.dart';
 import '../widgets/assistant_entry_actions.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -116,12 +116,16 @@ class HomeMobileScaffold extends StatelessWidget {
           if (closeDrawer) drawerController.close();
         },
       ),
-      child: Scaffold(
-        key: scaffoldKey,
-        resizeToAvoidBottomInset: true,
-        extendBodyBehindAppBar: true,
-        appBar: appBarOverride ?? _buildAppBar(context, cs),
-        body: body,
+      child: ChatFrostedBackdrop(
+        backdrop: const MobileBackgroundLayer(),
+        child: Scaffold(
+          key: scaffoldKey,
+          resizeToAvoidBottomInset: true,
+          extendBodyBehindAppBar: true,
+          backgroundColor: Colors.transparent,
+          appBar: appBarOverride ?? _buildAppBar(context, cs),
+          body: body,
+        ),
       ),
     );
   }
@@ -332,68 +336,11 @@ class MobileBackgroundLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bg = context.watch<AssistantProvider>().currentAssistant?.background;
-    final maskStrength = context
-        .watch<SettingsProvider>()
-        .chatBackgroundMaskStrength;
-
-    if (bg == null || bg.trim().isEmpty) return const SizedBox.shrink();
-
-    ImageProvider provider;
-    if (bg.startsWith('http')) {
-      provider = NetworkImage(bg);
-    } else {
-      final localPath = SandboxPathResolver.fix(bg);
-      final file = File(localPath);
-      if (!file.existsSync()) return const SizedBox.shrink();
-      provider = FileImage(file);
-    }
-
-    return Positioned.fill(
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: provider,
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withValues(alpha: 0.04),
-                    BlendMode.srcATop,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      cs.surface.withValues(
-                        alpha: (0.20 * maskStrength).clamp(0.0, 1.0),
-                      ),
-                      cs.surface.withValues(
-                        alpha: (0.50 * maskStrength).clamp(0.0, 1.0),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return const ChatAssistantBackground();
   }
 }
 
-/// Scroll navigation buttons (scroll to bottom + scroll to previous question)
+/// Scroll navigation buttons (scroll to bottom + scroll to previous message)
 class ScrollNavigationButtons extends StatelessWidget {
   const ScrollNavigationButtons({
     super.key,
@@ -449,7 +396,7 @@ class ScrollNavigationButtons extends StatelessWidget {
             ),
           ),
         ),
-        // Scroll to previous question button
+        // Scroll to previous message button
         Align(
           alignment: Alignment.bottomRight,
           child: SafeArea(
@@ -499,21 +446,20 @@ class _ScrollButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ClipOval(
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           decoration: BoxDecoration(
             color: isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.white.withValues(alpha: 0.07),
+                ? cs.onSurface.withValues(alpha: 0.06)
+                : cs.surface.withValues(alpha: 0.07),
             shape: BoxShape.circle,
             border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.20),
+                  ? cs.onSurface.withValues(alpha: 0.10)
+                  : cs.outline.withValues(alpha: 0.20),
               width: 1,
             ),
           ),
@@ -528,7 +474,7 @@ class _ScrollButton extends StatelessWidget {
                 child: Icon(
                   icon,
                   size: 16,
-                  color: isDark ? Colors.white : Colors.black87,
+                  color: cs.onSurface.withValues(alpha: isDark ? 1.0 : 0.87),
                 ),
               ),
             ),
@@ -625,12 +571,8 @@ class _GlassCircleButtonState extends State<_GlassCircleButton> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final glassBase = isDark
-        ? Colors.black.withValues(alpha: 0.06)
-        : Colors.white.withValues(alpha: 0.06);
-    final overlay = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final glassBase = cs.surface.withValues(alpha: 0.06);
+    final overlay = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final tileColor = _pressed
         ? Color.alphaBlend(overlay, glassBase)
         : glassBase;

@@ -237,6 +237,7 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
           : () async {
               final l10n = AppLocalizations.of(context)!;
               final ap = context.read<AssistantProvider>();
+              final chatService = context.read<ChatService>();
               final ok = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -251,7 +252,9 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
                       onPressed: () => Navigator.of(ctx).pop(true),
                       child: Text(
                         l10n.providerDetailPageDeleteButton,
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ),
                   ],
@@ -271,6 +274,10 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
                     );
                   }
                 }
+                // Conversations can pin a model too.
+                await chatService.clearConversationModelOverrides(
+                  providerKey: item.key,
+                );
               } catch (_) {}
               await settings.removeProviderConfig(item.key);
               if (!mounted) return;
@@ -300,6 +307,8 @@ class _DesktopProvidersBodyState extends State<_DesktopProvidersBody> {
       (name: 'Tensdaq', key: 'Tensdaq'),
       (name: 'DeepSeek', key: 'DeepSeek'),
       (name: 'AIhubmix', key: 'AIhubmix'),
+      (name: '随想AI中转站', key: '随想AI中转站'),
+      (name: 'MaruCode', key: 'MaruCode'),
       (name: l10n.providersPageAliyunName, key: 'Aliyun'),
       (name: l10n.providersPageZhipuName, key: 'Zhipu AI'),
       (name: 'Claude', key: 'Claude'),
@@ -770,10 +779,7 @@ class _DesktopProvidersSearchField extends StatelessWidget {
     return TextField(
       controller: controller,
       onChanged: onChanged,
-      style: TextStyle(
-        color: isDark ? Colors.white : Colors.black87,
-        fontSize: 14,
-      ),
+      style: TextStyle(color: cs.onSurface, fontSize: 14),
       cursorColor: cs.primary,
       decoration: InputDecoration(
         hintText: hintText,
@@ -811,9 +817,7 @@ class _DesktopProvidersSearchField extends StatelessWidget {
           minHeight: 34,
         ),
         filled: true,
-        fillColor: isDark
-            ? Colors.white.withValues(alpha: 0.12)
-            : const Color(0xFFEBEBEB),
+        fillColor: cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.08),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -858,9 +862,7 @@ class _DesktopProviderGroupHeaderRowState
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
 
     return MouseRegion(
@@ -1066,14 +1068,13 @@ class _DesktopProviderDetailPaneState
     required String title,
     required String hint,
   }) async {
-    final cs = Theme.of(context).colorScheme;
     final ctrl = TextEditingController();
     String? result;
     await showDialog<String>(
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: ConstrainedBox(
@@ -1209,6 +1210,7 @@ class _DesktopProviderDetailPaneState
                   value: cfg.enabled,
                   onChanged: (v) async {
                     final ap = context.read<AssistantProvider>();
+                    final chatService = context.read<ChatService>();
                     final old = sp.getProviderConfig(
                       widget.providerKey,
                       defaultName: widget.displayName,
@@ -1235,6 +1237,10 @@ class _DesktopProviderDetailPaneState
                             );
                           }
                         }
+                        // Conversations can pin a model too.
+                        await chatService.clearConversationModelOverrides(
+                          providerKey: widget.providerKey,
+                        );
                       } catch (_) {}
                     }
                   },
@@ -1296,6 +1302,195 @@ class _DesktopProviderDetailPaneState
                                 ..onTap = () async {
                                   final uri = Uri.parse(
                                     'https://dashboard.x-aio.com',
+                                  );
+                                  try {
+                                    final ok = await launchUrl(
+                                      uri,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                    if (!ok) {
+                                      await launchUrl(uri);
+                                    }
+                                  } catch (_) {
+                                    await launchUrl(uri);
+                                  }
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (widget.providerKey.toLowerCase() == 'siliconflow') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: cs.primary.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '已内置硅基流动的免费模型，无需 API Key。若需更强大的模型，请申请并在此配置你自己的 API Key。',
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          text: '官网：',
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.8),
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'https://siliconflow.cn',
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontWeight: AppFontWeights.emphasis,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse(
+                                    'https://siliconflow.cn',
+                                  );
+                                  try {
+                                    final ok = await launchUrl(
+                                      uri,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                    if (!ok) {
+                                      await launchUrl(uri);
+                                    }
+                                  } catch (_) {
+                                    await launchUrl(uri);
+                                  }
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (widget.providerKey.toLowerCase() == '随想ai中转站') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: cs.primary.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '可靠高效的 API 中继服务，提供 Claude、Codex、Gemini 等中继服务。注重隐私·无数据倒卖·无模型掺水，充值额度 1:1，按量付费。多线路冗余、跨区域容灾、自动故障切换，长链路 SSE 不中断。',
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          text: '官网：',
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.8),
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'https://sui-xiang.com',
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontWeight: AppFontWeights.emphasis,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse(
+                                    'https://sui-xiang.com',
+                                  );
+                                  try {
+                                    final ok = await launchUrl(
+                                      uri,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                    if (!ok) {
+                                      await launchUrl(uri);
+                                    }
+                                  } catch (_) {
+                                    await launchUrl(uri);
+                                  }
+                                },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              if (widget.providerKey.toLowerCase() == 'marucode') ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: cs.primary.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '偶尔做做慈善的小破站 API，自营号池，主要提供 Codex、Claude Code、GPT Image 等主流模型。支持 Websocket 协议，明码标价(Codex 0.25x, CC 1.5x)，透明汇率(1:1)，新用户注册送 2 刀。',
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text.rich(
+                        TextSpan(
+                          text: '官网：',
+                          style: TextStyle(
+                            color: cs.onSurface.withValues(alpha: 0.8),
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'https://api.muteki.site',
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontWeight: AppFontWeights.emphasis,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () async {
+                                  final uri = Uri.parse(
+                                    'https://api.muteki.site/register?aff=kelivo&promo=kelivo',
                                   );
                                   try {
                                     final ok = await launchUrl(
@@ -1406,8 +1601,8 @@ class _DesktopProviderDetailPaneState
                               color: _eyeHover
                                   ? (Theme.of(context).brightness ==
                                             Brightness.dark
-                                        ? Colors.white.withValues(alpha: 0.06)
-                                        : Colors.black.withValues(alpha: 0.04))
+                                        ? cs.onSurface.withValues(alpha: 0.06)
+                                        : cs.onSurface.withValues(alpha: 0.04))
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -2121,12 +2316,11 @@ class _DesktopProviderDetailPaneState
   }
 
   InputDecoration _inputDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(
@@ -2202,12 +2396,11 @@ class _DesktopProviderDetailPaneState
   }
 
   InputDecoration _proxyInputDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return InputDecoration(
       isDense: true,
       filled: true,
-      fillColor: isDark ? Colors.white10 : const Color(0xFFF7F7F9),
+      fillColor: context.appColors.surfaceFill,
       hintStyle: TextStyle(
         fontSize: 14,
         color: cs.onSurface.withValues(alpha: 0.5),
@@ -2251,7 +2444,7 @@ class _DesktopProviderDetailPaneState
         final GlobalKey avatarKey = GlobalKey();
         return Dialog(
           key: const ValueKey('desktop-provider-settings-dialog'),
-          backgroundColor: cs.surface,
+          backgroundColor: context.overlaySurface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -2589,10 +2782,7 @@ class _DesktopProviderDetailPaneState
                                       options: groupOptions,
                                       maxLabelWidth: 150,
                                       triggerFillColor:
-                                          Theme.of(ctx).brightness ==
-                                              Brightness.dark
-                                          ? Colors.white10
-                                          : const Color(0xFFF7F7F9),
+                                          ctx.appColors.surfaceFill,
                                       onSelected: (v) async {
                                         if (v ==
                                             SettingsProvider
@@ -2618,7 +2808,7 @@ class _DesktopProviderDetailPaneState
                                           TextEditingController();
                                       final ok = await showDialog<bool>(
                                         context: ctx,
-                                        barrierColor: Colors.black.withValues(
+                                        barrierColor: cs.scrim.withValues(
                                           alpha: 0.12,
                                         ),
                                         builder: (dctx) => AlertDialog(
@@ -2671,7 +2861,7 @@ class _DesktopProviderDetailPaneState
                                       showDialog<void>(
                                         context: ctx,
                                         barrierDismissible: true,
-                                        barrierColor: Colors.black.withValues(
+                                        barrierColor: cs.scrim.withValues(
                                           alpha: 0.12,
                                         ),
                                         builder: (_) =>
@@ -3114,10 +3304,7 @@ class _DesktopProviderDetailPaneState
                                             ),
                                           ],
                                           triggerFillColor:
-                                              Theme.of(ctx).brightness ==
-                                                  Brightness.dark
-                                              ? Colors.white10
-                                              : const Color(0xFFF7F7F9),
+                                              ctx.appColors.surfaceFill,
                                           onSelected: (value) async {
                                             final old = spWatch
                                                 .getProviderConfig(
@@ -3179,10 +3366,7 @@ class _DesktopProviderDetailPaneState
                                         value: proxyTypeNow,
                                         options: proxyTypeOptions,
                                         triggerFillColor:
-                                            Theme.of(ctx).brightness ==
-                                                Brightness.dark
-                                            ? Colors.white10
-                                            : const Color(0xFFF7F7F9),
+                                            ctx.appColors.surfaceFill,
                                         onSelected: (value) async {
                                           final old = spWatch.getProviderConfig(
                                             widget.providerKey,
@@ -3411,6 +3595,34 @@ class _DesktopProviderDetailPaneState
                               duration: const Duration(milliseconds: 180),
                               sizeCurve: Curves.easeOutCubic,
                             ),
+                            const SizedBox(height: 16),
+                            ProviderCustomRequestEditor(
+                              key: ValueKey(
+                                'desktop-provider-custom-request-${widget.providerKey}',
+                              ),
+                              headers: cfgNow.customHeaders,
+                              body: cfgNow.customBody,
+                              onHeadersChanged: (rows) async {
+                                final old = spWatch.getProviderConfig(
+                                  widget.providerKey,
+                                  defaultName: widget.displayName,
+                                );
+                                await spWatch.setProviderConfig(
+                                  widget.providerKey,
+                                  old.copyWith(customHeaders: rows),
+                                );
+                              },
+                              onBodyChanged: (rows) async {
+                                final old = spWatch.getProviderConfig(
+                                  widget.providerKey,
+                                  defaultName: widget.displayName,
+                                );
+                                await spWatch.setProviderConfig(
+                                  widget.providerKey,
+                                  old.copyWith(customBody: rows),
+                                );
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -3445,7 +3657,7 @@ class _DesktopProviderDetailPaneState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              backgroundColor: cs.surface,
+              backgroundColor: context.overlaySurface,
               title: Text(l10n.sideDrawerImageUrlDialogTitle),
               content: TextField(
                 controller: controller,
@@ -3453,9 +3665,7 @@ class _DesktopProviderDetailPaneState
                 decoration: InputDecoration(
                   hintText: l10n.sideDrawerImageUrlDialogHint,
                   filled: true,
-                  fillColor: Theme.of(ctx2).brightness == Brightness.dark
-                      ? Colors.white10
-                      : const Color(0xFFF2F3F5),
+                  fillColor: ctx2.appColors.surfaceFill,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: const BorderSide(color: Colors.transparent),
@@ -3519,7 +3729,7 @@ class _DesktopProviderDetailPaneState
     String value = '';
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.16),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.16),
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         bool valid(String s) => s.trim().isNotEmpty;
@@ -3534,7 +3744,7 @@ class _DesktopProviderDetailPaneState
                 horizontal: 24,
                 vertical: 24,
               ),
-              backgroundColor: cs.surface,
+              backgroundColor: context.overlaySurface,
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Column(
@@ -3638,7 +3848,7 @@ class _DesktopProviderDetailPaneState
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          backgroundColor: cs.surface,
+          backgroundColor: context.overlaySurface,
           title: Text(l10n.providerAvatarIconDialogTitle),
           content: SizedBox(
             width: 360,
@@ -3679,9 +3889,9 @@ class _DesktopProviderDetailPaneState
                             aspectRatio: 1,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: isDark
-                                    ? Colors.white10
-                                    : cs.primary.withValues(alpha: 0.1),
+                                color: cs.primary.withValues(
+                                  alpha: isDark ? 0.18 : 0.1,
+                                ),
                                 shape: BoxShape.circle,
                                 border: selected
                                     ? Border.all(color: cs.primary, width: 2)
@@ -3696,8 +3906,8 @@ class _DesktopProviderDetailPaneState
                                         opt.asset,
                                         fit: BoxFit.contain,
                                         colorFilter: needsMono
-                                            ? const ColorFilter.mode(
-                                                Colors.white,
+                                            ? ColorFilter.mode(
+                                                cs.onSurface,
                                                 BlendMode.srcIn,
                                               )
                                             : null,
@@ -3705,7 +3915,7 @@ class _DesktopProviderDetailPaneState
                                     : Image.asset(
                                         opt.asset,
                                         fit: BoxFit.contain,
-                                        color: needsMono ? Colors.white : null,
+                                        color: needsMono ? cs.onSurface : null,
                                         colorBlendMode: needsMono
                                             ? BlendMode.srcIn
                                             : null,
@@ -4170,7 +4380,7 @@ class _DesktopProviderDetailPaneState
         }
 
         return Dialog(
-          backgroundColor: cs.surface,
+          backgroundColor: context.overlaySurface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
@@ -4514,7 +4724,7 @@ class _DesktopProviderDetailPaneState
             break;
           case _TestState.success:
             message = l10n.providerDetailPageTestSuccessMessage;
-            color = Colors.green;
+            color = context.appColors.success;
             break;
           case _TestState.error:
             message = errorMessage.isNotEmpty ? errorMessage : 'Error';
@@ -4524,7 +4734,7 @@ class _DesktopProviderDetailPaneState
         return StatefulBuilder(
           builder: (ctx, setState) {
             return Dialog(
-              backgroundColor: cs.surface,
+              backgroundColor: context.overlaySurface,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -4558,9 +4768,7 @@ class _DesktopProviderDetailPaneState
                             vertical: 10,
                           ),
                           decoration: BoxDecoration(
-                            color: Theme.of(ctx).brightness == Brightness.dark
-                                ? Colors.white10
-                                : const Color(0xFFF7F7F9),
+                            color: ctx.appColors.surfaceFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -4680,6 +4888,7 @@ class _DesktopProviderDetailPaneState
   Future<void> _clearAssistantSelectionsForModels(
     Set<String> modelIds,
     AssistantProvider assistantProvider,
+    ChatService chatService,
   ) async {
     if (modelIds.isEmpty) return;
     try {
@@ -4691,6 +4900,13 @@ class _DesktopProviderDetailPaneState
             assistant.copyWith(clearChatModel: true),
           );
         }
+      }
+      // Conversations can pin a model too.
+      for (final modelId in modelIds) {
+        await chatService.clearConversationModelOverrides(
+          providerKey: widget.providerKey,
+          modelId: modelId,
+        );
       }
     } catch (e, st) {
       FlutterLogger.log(
@@ -4753,7 +4969,7 @@ class _DesktopProviderDetailPaneState
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: ConstrainedBox(
@@ -4829,11 +5045,16 @@ class _DesktopProviderDetailPaneState
 
     final sp = context.read<SettingsProvider>();
     final assistantProvider = context.read<AssistantProvider>();
+    final chatService = context.read<ChatService>();
     final deletedCount = await sp.deleteModels(
       widget.providerKey,
       modelsToDelete,
     );
-    await _clearAssistantSelectionsForModels(modelsToDelete, assistantProvider);
+    await _clearAssistantSelectionsForModels(
+      modelsToDelete,
+      assistantProvider,
+      chatService,
+    );
     if (!mounted) return;
     setState(() {
       _selectedModels.clear();
@@ -4872,7 +5093,7 @@ class _DesktopProviderDetailPaneState
       context: context,
       barrierDismissible: true,
       builder: (ctx) => Dialog(
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         child: ConstrainedBox(
@@ -4947,8 +5168,13 @@ class _DesktopProviderDetailPaneState
     if (!mounted) return;
     final modelsToDelete = Set<String>.from(cfg.models);
     final assistantProvider = context.read<AssistantProvider>();
+    final chatService = context.read<ChatService>();
     await sp.deleteModels(widget.providerKey, modelsToDelete);
-    await _clearAssistantSelectionsForModels(modelsToDelete, assistantProvider);
+    await _clearAssistantSelectionsForModels(
+      modelsToDelete,
+      assistantProvider,
+      chatService,
+    );
     if (!mounted) return;
     setState(() {
       _selectedModels.clear();
@@ -5063,18 +5289,11 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
     _entry = OverlayEntry(
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         final content = Material(
           color: Colors.transparent,
           child: Container(
             decoration: BoxDecoration(
-              color:
-                  (Provider.of<SettingsProvider>(
-                    ctx,
-                    listen: false,
-                  ).usePureBackground)
-                  ? (isDark ? Colors.black : Colors.white)
-                  : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
+              color: ctx.appColors.surfaceCard,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -5082,7 +5301,7 @@ class _ProviderTypeDropdownState extends State<_ProviderTypeDropdown> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: cs.shadow.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 6),
                 ),
@@ -5201,7 +5420,6 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
     _entry = OverlayEntry(
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
-        final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return Stack(
           children: [
             Positioned.fill(
@@ -5223,13 +5441,7 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
                     maxWidth: triggerW,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        (Provider.of<SettingsProvider>(
-                          ctx,
-                          listen: false,
-                        ).usePureBackground)
-                        ? (isDark ? Colors.black : Colors.white)
-                        : (isDark ? const Color(0xFF1C1C1E) : Colors.white),
+                    color: ctx.appColors.surfaceCard,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: cs.outlineVariant.withValues(alpha: 0.12),
@@ -5237,7 +5449,7 @@ class _StrategyDropdownState extends State<_StrategyDropdown> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: cs.shadow.withValues(alpha: 0.05),
                         blurRadius: 12,
                         offset: const Offset(0, 6),
                       ),
@@ -5315,10 +5527,7 @@ class _GreyCapsule extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : const Color(0xFFF2F3F5);
+    final bg = context.appColors.surfaceFill;
     final fg = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -5361,9 +5570,7 @@ class _IconBtnState extends State<_IconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -5413,9 +5620,7 @@ class _IconTextBtnState extends State<_IconTextBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -5470,7 +5675,7 @@ class _DesktopProviderGroupsDialogState
     final controller = TextEditingController(text: initialText);
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.12),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
       builder: (ctx) => AlertDialog(
         title: Text(title),
         content: TextField(
@@ -5537,7 +5742,7 @@ class _DesktopProviderGroupsDialogState
     final l10n = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.12),
+      barrierColor: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.12),
       builder: (ctx) => AlertDialog(
         title: Text(l10n.providerGroupsDeleteConfirmTitle),
         content: Text(l10n.providerGroupsDeleteConfirmContent),
@@ -5550,7 +5755,7 @@ class _DesktopProviderGroupsDialogState
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(
               l10n.providerGroupsDeleteConfirmOk,
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
             ),
           ),
         ],
@@ -5602,7 +5807,7 @@ class _DesktopProviderGroupsDialogState
     ];
 
     return Dialog(
-      backgroundColor: cs.surface,
+      backgroundColor: context.overlaySurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
@@ -5731,7 +5936,7 @@ class _DesktopProviderGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : const Color(0xFFF7F7F9);
+    final bg = context.appColors.surfaceFill;
     final borderColor = cs.outlineVariant.withValues(
       alpha: isDark ? 0.12 : 0.10,
     );
@@ -5819,9 +6024,7 @@ class _DesktopDragHandleState extends State<_DesktopDragHandle> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       cursor: SystemMouseCursors.grab,
@@ -5952,7 +6155,7 @@ class _DesktopProviderShareDialogState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     return Dialog(
-      backgroundColor: cs.surface,
+      backgroundColor: context.overlaySurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
@@ -5995,7 +6198,8 @@ class _DesktopProviderShareDialogState
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color:
+                          Colors.white, // color-gate: ignore (QR scannability)
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: cs.outlineVariant.withValues(alpha: 0.2),
@@ -6018,9 +6222,7 @@ class _DesktopProviderShareDialogState
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.04)
-                      : Colors.black.withValues(alpha: 0.03),
+                  color: cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.03),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: cs.outlineVariant.withValues(alpha: 0.25),
@@ -6100,7 +6302,7 @@ class _DialogActionButtonState extends State<_DialogActionButton> {
     final enabled = widget.onTap != null;
     final baseBg = widget.filled ? cs.primary : Colors.transparent;
     final hoverOverlay = widget.filled
-        ? Colors.white.withValues(alpha: isDark ? 0.08 : 0.10)
+        ? cs.onPrimary.withValues(alpha: isDark ? 0.08 : 0.10)
         : cs.primary.withValues(alpha: isDark ? 0.12 : 0.10);
     final bg = Color.alphaBlend(
       (_hover ? hoverOverlay : Colors.transparent),
@@ -6187,6 +6389,9 @@ class _BrandCircle extends StatelessWidget {
         width: size * 0.62,
         height: size * 0.62,
         fit: BoxFit.contain,
+        colorFilter: isDark && BrandAssets.assetNeedsDarkInvert(asset)
+            ? ColorFilter.mode(cs.onSurface, BlendMode.srcIn)
+            : null,
       );
     } else {
       inner = Image.asset(
@@ -6200,7 +6405,7 @@ class _BrandCircle extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white10 : cs.primary.withValues(alpha: 0.10),
+        color: cs.primary.withValues(alpha: isDark ? 0.18 : 0.10),
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
@@ -6238,10 +6443,10 @@ class _ProviderListRowState extends State<_ProviderListRow> {
   bool _hover = false;
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hoverBg = _hover && !widget.selected
-        ? Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04)
+        ? cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04)
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -6312,8 +6517,11 @@ class _ProviderListRowState extends State<_ProviderListRow> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: (widget.enabled ? Colors.green : Colors.orange)
-                      .withValues(alpha: 0.12),
+                  color:
+                      (widget.enabled
+                              ? context.appColors.success
+                              : context.appColors.warning)
+                          .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(999),
                   // No border for left list status
                 ),
@@ -6325,7 +6533,9 @@ class _ProviderListRowState extends State<_ProviderListRow> {
                         )!.providersPageDisabledStatus,
                   style: TextStyle(
                     fontSize: 11,
-                    color: widget.enabled ? Colors.green : Colors.orange,
+                    color: widget.enabled
+                        ? context.appColors.success
+                        : context.appColors.warning,
                     fontWeight: AppFontWeights.emphasis,
                   ),
                 ),
@@ -6358,12 +6568,8 @@ class _AddFullWidthButtonState extends State<_AddFullWidthButton> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.10)
-        : Colors.black.withValues(alpha: 0.06);
+    final baseBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.10 : 0.06);
     final bg = _hover ? hoverBg : baseBg;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -6420,17 +6626,12 @@ class _DesktopIosSectionCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final Color base = cs.surface;
-    final Color bg = isDark
-        ? Color.lerp(base, Colors.white, 0.06)!
-        : const Color(0xFFF7F7F9);
+    final Color bg = Color.lerp(base, cs.onSurface, isDark ? 0.06 : 0.04)!;
     return Container(
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-          width: 0.6,
-        ),
+        border: Border.all(color: context.appColors.hairline, width: 0.6),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(children: children),
@@ -6471,7 +6672,7 @@ class _DesktopKeyRow extends StatelessWidget {
     Color statusColor(ApiKeyStatus st) {
       switch (st) {
         case ApiKeyStatus.active:
-          return Colors.green;
+          return context.appColors.success;
         case ApiKeyStatus.disabled:
           return cs.onSurface.withValues(alpha: 0.6);
         case ApiKeyStatus.error:
@@ -6636,8 +6837,8 @@ class _ModelGroupAccordionState extends State<_ModelGroupAccordion> {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white.withValues(alpha: 0.03)
-                        : Colors.black.withValues(alpha: 0.02),
+                        ? cs.onSurface.withValues(alpha: 0.03)
+                        : cs.onSurface.withValues(alpha: 0.02),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(12),
                       topRight: Radius.circular(12),
@@ -6838,7 +7039,9 @@ class _ModelRow extends StatelessWidget {
                         ? lucide.Lucide.CheckCircle
                         : lucide.Lucide.XCircle,
                     size: 16,
-                    color: detectionResult! ? Colors.green : cs.error,
+                    color: detectionResult!
+                        ? context.appColors.success
+                        : cs.error,
                   ),
                 ),
               ),
@@ -6863,6 +7066,7 @@ class _ModelRow extends StatelessWidget {
                 onTap: () async {
                   final sp = context.read<SettingsProvider>();
                   final ap = context.read<AssistantProvider>();
+                  final chatService = context.read<ChatService>();
                   final old = sp.getProviderConfig(providerKey);
                   final list = List<String>.from(old.models)
                     ..removeWhere((e) => e == modelId);
@@ -6889,6 +7093,11 @@ class _ModelRow extends StatelessWidget {
                         );
                       }
                     }
+                    // Conversations can pin a model too.
+                    await chatService.clearConversationModelOverrides(
+                      providerKey: providerKey,
+                      modelId: modelId,
+                    );
                   } catch (_) {}
                 },
               ),
@@ -6919,9 +7128,9 @@ class _CardPressState extends State<_CardPress> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final overlay = _pressed
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04))
+        ? (Theme.of(
+            context,
+          ).colorScheme.onSurface.withValues(alpha: isDark ? 0.06 : 0.04))
         : Colors.transparent;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,

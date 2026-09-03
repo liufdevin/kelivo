@@ -5,16 +5,16 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
 import '../../../core/services/haptics.dart';
 import '../../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<MessageEditResult?> showMessageEditSheet(
   BuildContext context, {
   required ChatMessage message,
 }) async {
-  final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<MessageEditResult?>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -161,9 +161,7 @@ class _MessageEditSheetState extends State<_MessageEditSheet> {
                     decoration: InputDecoration(
                       hintText: l10n.messageEditPageHint,
                       filled: true,
-                      fillColor: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white10
-                          : const Color(0xFFF2F3F5),
+                      fillColor: context.appColors.surfaceFill,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(20),
                         borderSide: const BorderSide(color: Colors.transparent),

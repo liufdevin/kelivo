@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/api/chat_api_service.dart';
+import 'package:Kelivo/core/utils/multimodal_input_utils.dart';
 
 ProviderConfig _openAiConfig(String baseUrl) {
   return ProviderConfig(
@@ -94,7 +95,11 @@ void main() {
             config: _openAiConfig(baseUrl),
             modelId: 'mimo-v2.5-pro',
             messages: [
-              {'role': 'user', 'content': 'before [image:${file.path}] after'},
+              {
+                'role': 'user',
+                'content': 'before after',
+                multimodalInternalMediaPathsKey: [file.path],
+              },
               {
                 'role': 'user',
                 'content': const [
@@ -123,9 +128,48 @@ void main() {
       expect(encoded, isNot(contains('[image:')));
       expect(encoded, isNot(contains(file.path)));
       final messages = (body['messages'] as List).cast<Map>();
-      expect(messages.first['content'], 'before  after');
+      expect(messages.first['content'], 'before after');
       expect(messages.last['content'], 'next');
     });
+
+    test(
+      'keeps remote markdown image links as text, drops data URLs',
+      () async {
+        final body = await _captureJsonRequest(
+          (baseUrl) {
+            return ChatApiService.sendMessageStream(
+              config: _openAiConfig(baseUrl),
+              modelId: 'mimo-v2.5-pro',
+              messages: [
+                {
+                  'role': 'user',
+                  'content':
+                      'doc ![pic](https://example.invalid/pic.jpg) and '
+                      '![inline](data:image/png;base64,QUJD) end',
+                },
+              ],
+              stream: false,
+            ).toList();
+          },
+          responseBody: const <String, dynamic>{
+            'choices': [
+              {
+                'message': {'content': 'ok'},
+              },
+            ],
+          },
+        );
+
+        final encoded = jsonEncode(body);
+        expect(encoded, isNot(contains('image_url')));
+        expect(encoded, isNot(contains('base64')));
+        final messages = (body['messages'] as List).cast<Map>();
+        expect(
+          messages.single['content'],
+          'doc ![pic](https://example.invalid/pic.jpg) and  end',
+        );
+      },
+    );
 
     test('removes Claude image blocks when OCR is inactive', () async {
       final file = await _tempPng('kelivo_claude_text_only_filter_');
@@ -135,7 +179,7 @@ void main() {
             config: _claudeConfig(baseUrl),
             modelId: 'claude-sonnet-4-6',
             messages: [
-              {'role': 'user', 'content': 'before [image:${file.path}] after'},
+              {'role': 'user', 'content': 'before after'},
               {'role': 'user', 'content': 'continue'},
             ],
             userImagePaths: [file.path],
@@ -156,7 +200,7 @@ void main() {
       expect(encoded, isNot(contains('[image:')));
       expect(encoded, isNot(contains(file.path)));
       final messages = (body['messages'] as List).cast<Map>();
-      expect(messages.first['content'], 'before  after');
+      expect(messages.first['content'], 'before after');
       expect(messages.last['content'], 'continue');
     });
 
@@ -168,7 +212,7 @@ void main() {
             config: _geminiConfig('$baseUrl/v1beta'),
             modelId: 'gemini-2.5-pro',
             messages: [
-              {'role': 'user', 'content': 'before [image:${file.path}] after'},
+              {'role': 'user', 'content': 'before after'},
               {'role': 'user', 'content': 'continue'},
             ],
             userImagePaths: [file.path],
@@ -195,7 +239,7 @@ void main() {
       final contents = (body['contents'] as List).cast<Map>();
       final firstParts = (contents.first['parts'] as List).cast<Map>();
       final lastParts = (contents.last['parts'] as List).cast<Map>();
-      expect(firstParts.single['text'], 'before  after');
+      expect(firstParts.single['text'], 'before after');
       expect(lastParts.single['text'], 'continue');
     });
   });

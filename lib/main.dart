@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show debugPrint, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'dart:async';
+import 'dart:ui' show AppExitResponse;
 import 'l10n/app_localizations.dart';
 import 'features/home/pages/home_page.dart';
+import 'features/migration/hive_to_sqlite_migration_page.dart';
+import 'features/migration/hive_to_sqlite_migration_service.dart';
 import 'desktop/desktop_home_page.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
@@ -13,13 +16,15 @@ import 'desktop/desktop_tray_controller.dart';
 // Theme is now managed in SettingsProvider
 import 'theme/theme_factory.dart';
 import 'theme/palettes.dart';
+import 'theme/custom_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:dynamic_color/dynamic_color.dart';
-import 'core/providers/chat_provider.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'core/providers/user_provider.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/mcp_provider.dart';
 import 'core/providers/tts_provider.dart';
+import 'core/providers/asr_provider.dart';
 import 'core/providers/assistant_provider.dart';
 import 'core/providers/tag_provider.dart';
 import 'core/providers/update_provider.dart';
@@ -28,35 +33,126 @@ import 'core/providers/instruction_injection_provider.dart';
 import 'core/providers/instruction_injection_group_provider.dart';
 import 'core/providers/world_book_provider.dart';
 import 'core/providers/memory_provider.dart';
+import 'core/providers/memory_provider_v2.dart';
 import 'core/providers/backup_provider.dart';
+import 'core/providers/local_snapshot_provider.dart';
+import 'features/backup/local_snapshot_scheduler.dart';
+import 'core/services/memory/memory_pipeline.dart';
+import 'core/services/memory/memory_repository.dart';
 import 'core/providers/s3_backup_provider.dart';
 import 'core/providers/backup_reminder_provider.dart';
 import 'core/providers/hotkey_provider.dart';
 import 'features/music/providers/music_feature_provider.dart';
+import 'core/database/database_installation_gate.dart';
+import 'core/database/app_database.dart';
+import 'core/database/business_migration_engine.dart';
+import 'core/database/business_preferences.dart';
+import 'core/database/business_repository.dart';
+import 'core/database/business_startup_gate.dart';
+import 'core/database/chat_database_gateway.dart';
+import 'core/database/startup_failure_report.dart';
+import 'core/services/backup/backup_activity.dart';
+import 'core/services/backup/local_snapshot_schedule.dart';
 import 'core/services/chat/chat_service.dart';
+import 'core/services/app_exit_flush.dart';
+import 'core/services/backup/restore_archive_pruner.dart';
+import 'core/services/backup/restore_business_lease.dart';
+import 'core/services/backup/restore_startup_gate.dart';
+import 'core/services/backup/restore_receipt.dart';
 import 'core/services/mcp/mcp_tool_service.dart';
 import 'core/services/logging/flutter_logger.dart';
+import 'core/services/storage/storage_usage_service.dart';
 import 'features/home/services/ask_user_interaction_service.dart';
 import 'features/home/services/tool_approval_service.dart';
+import 'utils/app_directories.dart';
+import 'utils/platform_utils.dart';
 import 'utils/sandbox_path_resolver.dart';
 import 'shared/widgets/app_overlays.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'shared/widgets/snackbar.dart';
+import 'shared/widgets/restore_failure_screen.dart';
+import 'shared/widgets/restore_progress_screen.dart';
+import 'shared/widgets/restore_outcome_notice.dart';
+import 'shared/widgets/update_required_screen.dart';
 import 'package:system_fonts/system_fonts.dart';
 import 'dart:io'
-    show Platform; // kept for global override usage inside provider
+    show
+        Directory,
+        File,
+        FileMode,
+        Platform,
+        stderr; // kept for global override usage inside provider
 import 'core/services/android_background.dart';
 import 'core/services/notification_service.dart';
+import 'features/home/controllers/chat_actions.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final RouteObserver<ModalRoute<dynamic>> routeObserver =
     RouteObserver<ModalRoute<dynamic>>();
+bool _didCheckUpdates = false; // one-time update check flag
 bool _didEnsureAssistants = false; // ensure defaults after l10n ready
+AppLifecycleListener? _displayModeLifecycleListener;
+const MethodChannel _displayModeChannel = MethodChannel('app.display_mode');
 
 Future<void> main() async {
   await runZoned(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      // Register notification tap handling for every Android launch. This is
+      // independent of the current background-chat mode: an older completion
+      // notification can still launch the app after the mode has changed.
+      // Initialization does not request notification permission.
+      if (Platform.isAndroid) {
+        try {
+          await NotificationService.ensureInitialized();
+        } catch (_) {}
+      }
       FlutterLogger.installGlobalHandlers();
+      _initializeAndroidDisplayMode();
+      final appDataDirectory = await AppDirectories.getAppDataDirectory();
+      final RestoreReceipt? restoreOutcome;
+      // A restore large enough to take seconds would otherwise spend all of
+      // them before the first frame, which is indistinguishable from a hang.
+      // Only paint when there is actually work waiting: an ordinary launch
+      // must not pay for a frame it immediately replaces.
+      final restoreStage =
+          await RestoreStartupGate.hasPendingWork(
+            appDataDirectory: appDataDirectory,
+          )
+          ? ValueNotifier(RestoreStartupStage.checkingBackup)
+          : null;
+      if (restoreStage != null) {
+        runApp(_RestoreProgressApp(stage: restoreStage));
+      }
+      try {
+        // The lease remains process-owned through its internal registry until
+        // process exit, preventing another instance from racing business I/O.
+        final businessLease = await RestoreBusinessLease.acquire(
+          appDataDirectory: appDataDirectory,
+        );
+        restoreOutcome =
+            await RestoreStartupGate.recoverAndRequireBusinessReady(
+              appDataDirectory: appDataDirectory,
+              businessLease: businessLease,
+              onStage: restoreStage == null
+                  ? null
+                  : (stage) => restoreStage.value = stage,
+            );
+      } catch (error, stackTrace) {
+        stderr.writeln('[RestoreStartupGate] $error\n$stackTrace');
+        await _initRestoreFailureWindow();
+        runApp(
+          _RestoreFailureApp(
+            report: StartupFailureReport.capture(
+              stage: StartupFailureStage.restoreGate,
+              error: error,
+              step: 'recover_and_require_business_ready',
+              stackTrace: stackTrace,
+            ),
+            appDataDirectory: appDataDirectory,
+          ),
+        );
+        return;
+      }
       try {
         final prefs = await SharedPreferences.getInstance();
         final enabled = prefs.getBool('flutter_log_enabled_v1') ?? false;
@@ -79,10 +175,111 @@ Future<void> main() async {
       // logging.Logger.root.onRecord.listen((rec) { ... });
       // Cache current Documents directory to fix sandboxed absolute paths on iOS
       await SandboxPathResolver.init();
+      ChatDatabaseLease? processDatabaseLease;
+      BusinessPreferences? businessPreferences;
+      var recoveryAttempted = false;
+      // Every call below can fail through drift's worker isolate, which erases
+      // the distinction between them. Naming the current one is what lets the
+      // failure screen say where startup actually stopped.
+      var admissionStep = 'legacy_migration_check';
+      while (true) {
+        try {
+          admissionStep = 'legacy_migration_check';
+          final migrationDecision = await HiveToSqliteMigrationService.check();
+          if (migrationDecision.needsMigration) {
+            runApp(
+              MigrationApp(
+                service: HiveToSqliteMigrationService(migrationDecision),
+                restoreOutcome: restoreOutcome?.state,
+              ),
+            );
+            return;
+          }
+          admissionStep = 'installation_gate';
+          await DatabaseInstallationGate.ensureReady(
+            appDataDirectory: appDataDirectory,
+            allowDatabaseIdentityChange:
+                restoreOutcome?.selectedComponents.contains(
+                  RestoreComponent.database,
+                ) ??
+                false,
+          );
+          final databaseFile = File(
+            '${appDataDirectory.path}/${AppDatabase.databaseFileName}',
+          );
+          admissionStep = 'gateway_open';
+          final databaseLease = await ChatDatabaseGateway.instance.acquire(
+            databaseFile,
+          );
+          try {
+            admissionStep = 'business_migration';
+            final legacyPreferences =
+                await SharedPreferencesLegacyBusinessPreferences.open();
+            final loadedBusinessPreferences =
+                await BusinessStartupGate.migrateAndLoad(
+                  repository: databaseLease.businessRepository,
+                  legacyPreferences: legacyPreferences,
+                );
+            processDatabaseLease = databaseLease;
+            businessPreferences = loadedBusinessPreferences;
+          } catch (_) {
+            await databaseLease.release();
+            rethrow;
+          }
+          break;
+        } catch (error, stackTrace) {
+          stderr.writeln('[DatabaseAdmission] $error\n$stackTrace');
+          if (!recoveryAttempted) {
+            recoveryAttempted = true;
+            final recovery = await _recoverFailedAdmission(
+              appDataDirectory,
+              error,
+            );
+            if (recovery == _AdmissionRecovery.remigrate) {
+              runApp(
+                MigrationApp(
+                  service: HiveToSqliteMigrationService(
+                    _legacyMigrationDecision(appDataDirectory),
+                  ),
+                  restoreOutcome: restoreOutcome?.state,
+                ),
+              );
+              return;
+            }
+            if (recovery == _AdmissionRecovery.rebuilt) {
+              continue;
+            }
+          }
+          await _initRestoreFailureWindow();
+          runApp(
+            _RestoreFailureApp(
+              report: StartupFailureReport.capture(
+                stage: StartupFailureStage.databaseAdmission,
+                error: error,
+                step: admissionStep,
+                stackTrace: stackTrace,
+              ),
+              appDataDirectory: appDataDirectory,
+            ),
+          );
+          return;
+        }
+      }
+      // Desktop exit hook: drain queued preference writes before process exit.
+      _installExitFlush(businessPreferences);
+      // Best-effort trim of archived restore runs after a few cold starts.
+      unawaited(_pruneRestoreArchive(appDataDirectory));
       // Enable edge-to-edge to allow content under system bars (Android)
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       // Start app (Flutter log capture is toggleable and off by default)
-      runApp(const MyApp());
+      runApp(
+        MyApp(
+          databaseLease: processDatabaseLease,
+          businessPreferences: businessPreferences,
+          appDataDirectory: appDataDirectory,
+          restoreOutcome: restoreOutcome?.state,
+        ),
+      );
     },
     zoneSpecification: ZoneSpecification(
       print: (self, parent, zone, line) {
@@ -91,6 +288,212 @@ Future<void> main() async {
       },
     ),
   );
+}
+
+void _initializeAndroidDisplayMode() {
+  if (!Platform.isAndroid || _displayModeLifecycleListener != null) return;
+
+  // Some Android variants clear refresh-rate requests in background.
+  _displayModeLifecycleListener = AppLifecycleListener(
+    onResume: _requestHighRefreshRate,
+  );
+  _requestHighRefreshRate();
+}
+
+void _requestHighRefreshRate() {
+  unawaited(_applyAndroidHighRefreshRate());
+}
+
+Future<void> _applyAndroidHighRefreshRate() async {
+  try {
+    final handledNatively =
+        await _displayModeChannel.invokeMethod<bool>(
+          'requestHighRefreshRate',
+        ) ??
+        false;
+    if (!handledNatively) {
+      await FlutterDisplayMode.setHighRefreshRate();
+    }
+  } catch (error) {
+    debugPrint('[DisplayMode] High refresh rate request failed: $error');
+  }
+}
+
+enum _AdmissionRecovery { none, rebuilt, remigrate }
+
+/// Names must mirror HiveToSqliteMigrationService.check().
+const _legacyHiveSourceNames = <String>[
+  'conversations.hive',
+  'messages.hive',
+  'tool_events_v1.hive',
+];
+
+bool _legacyHiveSourcesExist(Directory appDataDirectory) =>
+    _legacyHiveSourceNames.any(
+      (name) => File('${appDataDirectory.path}/$name').existsSync(),
+    );
+
+Future<_AdmissionRecovery> _recoverFailedAdmission(
+  Directory appDataDirectory,
+  Object error,
+) async {
+  final action = await DatabaseInstallationGate.recoveryActionFor(
+    appDataDirectory: appDataDirectory,
+    error: error,
+    legacyHiveDataPresent: _legacyHiveSourcesExist(appDataDirectory),
+  );
+  switch (action) {
+    case DatabaseRecoveryAction.rebuildAutomatically:
+      try {
+        // The only route that destroys state without anyone confirming it, so
+        // it is the only one that has to leave a record of itself. A user who
+        // finds the app empty otherwise has nothing to report but the symptom.
+        await _recordAutomaticRebuild(appDataDirectory, error);
+        await DatabaseInstallationGate.rebuildFresh(
+          appDataDirectory: appDataDirectory,
+        );
+        return _AdmissionRecovery.rebuilt;
+      } catch (rebuildError, rebuildStack) {
+        stderr.writeln(
+          '[DatabaseAdmission] rebuild failed: $rebuildError\n$rebuildStack',
+        );
+        return _AdmissionRecovery.none;
+      }
+    case DatabaseRecoveryAction.promptRemigration:
+      return _AdmissionRecovery.remigrate;
+    case DatabaseRecoveryAction.promptUpgrade:
+    case DatabaseRecoveryAction.none:
+      return _AdmissionRecovery.none;
+  }
+}
+
+/// Appends a record of an unattended rebuild to `logs/`.
+///
+/// Deliberately independent of the Flutter log capture toggle, which is off by
+/// default: this is the one startup outcome that silently destroys state, and
+/// a user who finds the app empty has nothing else to report. The listing is
+/// taken before the rebuild, so it still describes the files it is about to
+/// clear. Best-effort throughout — a rebuild must not fail for want of a note.
+Future<void> _recordAutomaticRebuild(
+  Directory appDataDirectory,
+  Object error,
+) async {
+  try {
+    var report = StartupFailureReport.capture(
+      stage: StartupFailureStage.databaseAdmission,
+      error: error,
+      step: 'automatic_rebuild',
+    );
+    try {
+      report = report.withEnvironment(
+        await StartupFailureEnvironment.collect(
+          appDataDirectory: appDataDirectory,
+        ),
+      );
+    } catch (_) {}
+    final logs = Directory('${appDataDirectory.path}/logs');
+    await logs.create(recursive: true);
+    await File('${logs.path}/$startupRecoveryLogFileName').writeAsString(
+      '${report.toText()}\n\n',
+      mode: FileMode.append,
+      flush: true,
+    );
+  } catch (_) {}
+}
+
+HiveToSqliteMigrationDecision _legacyMigrationDecision(
+  Directory appDataDirectory,
+) {
+  return HiveToSqliteMigrationDecision(
+    needsMigration: true,
+    appDataDir: appDataDirectory,
+    sqliteFile: File(
+      '${appDataDirectory.path}/${AppDatabase.databaseFileName}',
+    ),
+    hiveFiles: [
+      for (final name in _legacyHiveSourceNames)
+        if (File('${appDataDirectory.path}/$name').existsSync())
+          File('${appDataDirectory.path}/$name'),
+    ],
+  );
+}
+
+Future<void> _initRestoreFailureWindow() async {
+  if (kIsWeb) return;
+  final isDesktop =
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+  if (!isDesktop) return;
+  try {
+    await windowManager.ensureInitialized();
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      await windowManager.setTitleBarStyle(TitleBarStyle.hidden);
+      await windowManager.show();
+      await windowManager.focus();
+      return;
+    }
+    await windowManager.waitUntilReadyToShow(
+      const WindowOptions(title: 'Kelivo'),
+      () async {
+        await windowManager.show();
+        await windowManager.focus();
+      },
+    );
+  } catch (error) {
+    stderr.writeln('[RestoreFailureWindow] $error');
+  }
+}
+
+/// Persistence-free shell for [RestoreProgressScreen].
+///
+/// Deliberately built from defaults: the user's theme and locale live in the
+/// settings this restore may be replacing, and nothing here may open them.
+class _RestoreProgressApp extends StatelessWidget {
+  const _RestoreProgressApp({required this.stage});
+
+  final ValueNotifier<RestoreStartupStage> stage;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ThemePalettes.defaultPalette;
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Kelivo',
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildLightThemeForScheme(palette.light),
+      darkTheme: buildDarkThemeForScheme(palette.dark),
+      home: RestoreProgressScreen(stage: stage),
+    );
+  }
+}
+
+class _RestoreFailureApp extends StatelessWidget {
+  const _RestoreFailureApp({required this.report, this.appDataDirectory});
+
+  final StartupFailureReport report;
+  final Directory? appDataDirectory;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ThemePalettes.defaultPalette;
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Kelivo',
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildLightThemeForScheme(palette.light),
+      darkTheme: buildDarkThemeForScheme(palette.dark),
+      home: report.diagnosticCode == 'database_schema_too_new'
+          ? UpdateRequiredScreen(diagnosticCode: report.diagnosticCode)
+          : RestoreFailureScreen(
+              report: report,
+              restart: PlatformUtils.restartApp,
+              appDataDirectory: appDataDirectory,
+            ),
+    );
+  }
 }
 
 Future<void> _initDesktopWindow() async {
@@ -109,55 +512,217 @@ Future<void> _initDesktopWindow() async {
 
 // Removed eager system font preloading to reduce memory footprint at launch.
 
+AppLifecycleListener? _exitFlushListener;
+
+/// Desktop-only: mobile process kills cannot be intercepted, and SQLite WAL
+/// already protects committed transactions, so only Dart-side write queues
+/// need draining before exit.
+void _installExitFlush(BusinessPreferences businessPreferences) {
+  if (kIsWeb) return;
+  final isDesktop =
+      defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux;
+  if (!isDesktop || _exitFlushListener != null) return;
+  AppExitFlush.register(businessPreferences.flushPendingWrites);
+  AppExitFlush.register(ChatActions.flushActiveGenerationProgress);
+  _exitFlushListener = AppLifecycleListener(
+    onExitRequested: () async {
+      try {
+        // Bound the wait: a stuck write transaction must not leave the
+        // process unkillable after macOS answers NSTerminateLater.
+        await AppExitFlush.flushAll().timeout(
+          const Duration(seconds: 2),
+          onTimeout: () {},
+        );
+      } catch (_) {}
+      return AppExitResponse.exit;
+    },
+  );
+}
+
+Future<void> _pruneRestoreArchive(Directory appDataDirectory) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    const key = RestoreArchivePruner.coldStartsKey;
+    await RestoreArchivePruner(
+      appDataDirectory: appDataDirectory,
+      readColdStarts: () async => prefs.getInt(key) ?? 0,
+      writeColdStarts: (count) => prefs.setInt(key, count),
+    ).pruneAfterSuccessfulColdStart();
+  } catch (_) {}
+}
+
+class MigrationApp extends StatelessWidget {
+  const MigrationApp({super.key, required this.service, this.restoreOutcome});
+
+  final HiveToSqliteMigrationService service;
+  final RestoreReceiptState? restoreOutcome;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = ThemePalettes.defaultPalette;
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Kelivo',
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      theme: buildLightThemeForScheme(palette.light),
+      darkTheme: buildDarkThemeForScheme(palette.dark),
+      builder: (context, child) =>
+          AppSnackBarOverlay(child: child ?? const SizedBox.shrink()),
+      home: RestoreOutcomeNotice(
+        outcome: restoreOutcome,
+        child: HiveToSqliteMigrationPage(service: service),
+      ),
+    );
+  }
+}
+
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({
+    super.key,
+    required this.databaseLease,
+    required this.businessPreferences,
+    required this.appDataDirectory,
+    this.restoreOutcome,
+  });
+
+  final ChatDatabaseLease databaseLease;
+  final BusinessPreferences businessPreferences;
+  final Directory appDataDirectory;
+  final RestoreReceiptState? restoreOutcome;
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
+        Provider<BusinessRepository>.value(
+          value: databaseLease.businessRepository,
+        ),
+        Provider<BusinessPreferences>.value(value: businessPreferences),
+        ChangeNotifierProvider(
+          create: (_) => UserProvider(preferences: businessPreferences),
+        ),
         ChangeNotifierProvider(
           create: (_) {
-            final settings = SettingsProvider();
-            unawaited(settings.incrementAppLaunchCount());
+            final settings = SettingsProvider(businessPreferences);
+            unawaited(
+              settings.loaded.then((_) => settings.incrementAppLaunchCount()),
+            );
             return settings;
           },
         ),
-        ChangeNotifierProvider(create: (_) => ChatService()),
+        ChangeNotifierProvider(
+          create: (_) =>
+              ChatService(existingRepository: databaseLease.chatRepository),
+        ),
         ChangeNotifierProvider(create: (_) => McpToolService()),
-        ChangeNotifierProvider(create: (_) => McpProvider()),
+        ChangeNotifierProvider(
+          create: (_) => McpProvider(preferences: businessPreferences),
+        ),
         ChangeNotifierProvider(create: (_) => ToolApprovalService()),
         ChangeNotifierProvider(create: (_) => AskUserInteractionService()),
         ChangeNotifierProvider(
-          create: (ctx) =>
-              AssistantProvider(chatService: ctx.read<ChatService>()),
+          create: (ctx) => AssistantProvider(
+            preferences: businessPreferences,
+            chatService: ctx.read<ChatService>(),
+          ),
         ),
-        ChangeNotifierProvider(create: (_) => TagProvider()),
-        ChangeNotifierProvider(create: (_) => TtsProvider()),
-        ChangeNotifierProvider(create: (_) => UpdateProvider()),
-        ChangeNotifierProvider(create: (_) => QuickPhraseProvider()),
-        ChangeNotifierProvider(create: (_) => InstructionInjectionProvider()),
         ChangeNotifierProvider(
-          create: (_) => InstructionInjectionGroupProvider(),
+          create: (_) => TagProvider(preferences: businessPreferences),
         ),
-        ChangeNotifierProvider(create: (_) => WorldBookProvider()),
-        ChangeNotifierProvider(create: (_) => MemoryProvider()),
-        ChangeNotifierProvider(create: (_) => BackupReminderProvider()),
+        ChangeNotifierProvider(
+          create: (_) => TtsProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) =>
+              AsrProvider(settingsProvider: ctx.read<SettingsProvider>()),
+        ),
+        ChangeNotifierProvider(create: (_) => UpdateProvider()),
+        ChangeNotifierProvider(
+          create: (_) => QuickPhraseProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              InstructionInjectionProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => InstructionInjectionGroupProvider(
+            preferences: businessPreferences,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WorldBookProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MemoryProvider(preferences: businessPreferences),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => MemoryProviderV2(
+            repository: MemoryRepository(businessPreferences),
+            chatRepository: databaseLease.chatRepository,
+          ),
+        ),
+        Provider<MemoryPipelineService>(
+          create: (ctx) {
+            final memoryV2 = ctx.read<MemoryProviderV2>();
+            return MemoryPipelineService(
+              chatService: ctx.read<ChatService>(),
+              repository: memoryV2.repository,
+              chatRepository: memoryV2.chatRepository,
+              settings: () => ctx.read<SettingsProvider>(),
+              assistants: () => ctx.read<AssistantProvider>(),
+              memoryV2: () => ctx.read<MemoryProviderV2>(),
+            );
+          },
+        ),
+        ChangeNotifierProvider(
+          create: (_) =>
+              BackupReminderProvider(preferences: businessPreferences),
+        ),
         // Desktop hotkeys provider
         ChangeNotifierProvider(create: (_) => HotkeyProvider()),
         ChangeNotifierProvider(create: (_) => MusicFeatureProvider()),
         ChangeNotifierProvider(
           create: (ctx) => BackupProvider(
             chatService: ctx.read<ChatService>(),
+            businessRepository: databaseLease.businessRepository,
+            businessPreferences: businessPreferences,
             initialConfig: ctx.read<SettingsProvider>().webDavConfig,
           ),
         ),
         ChangeNotifierProvider(
           create: (ctx) => S3BackupProvider(
             chatService: ctx.read<ChatService>(),
+            businessRepository: databaseLease.businessRepository,
+            businessPreferences: businessPreferences,
             initialConfig: ctx.read<SettingsProvider>().s3Config,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => LocalSnapshotProvider(
+            appDataDirectory: appDataDirectory,
+            chatService: ctx.read<ChatService>(),
+            businessRepository: databaseLease.businessRepository,
+            businessPreferences: businessPreferences,
+            isBusy: () {
+              // Never compete with a reply the user is watching, nor with a
+              // backup, restore or import that is already holding the
+              // database. Asked of the process-wide tracker rather than of the
+              // providers here: the mobile backup screen builds its own
+              // instances, so these root ones stay idle throughout a mobile
+              // backup, and a local-file restore never marks them busy at all.
+              if (ChatActions.hasAnyActiveGeneration) {
+                return LocalSnapshotSkipReason.generating;
+              }
+              if (BackupActivity.isActive ||
+                  ctx.read<BackupProvider>().busy ||
+                  ctx.read<S3BackupProvider>().busy) {
+                return LocalSnapshotSkipReason.busy;
+              }
+              return null;
+            },
           ),
         ),
       ],
@@ -176,15 +741,13 @@ class MyApp extends StatelessWidget {
                       defaultTargetPlatform == TargetPlatform.macOS ||
                       defaultTargetPlatform == TargetPlatform.linux);
               if (!isDesktop) return;
-              // Selected system app/code fonts (not Google, not local alias)
+              // Selected system app/code fonts (not local alias)
               final wantsAppSystem =
                   (settings.appFontFamily?.isNotEmpty == true) &&
-                  !settings.appFontIsGoogle &&
                   (settings.appFontLocalAlias == null ||
                       settings.appFontLocalAlias!.isEmpty);
               final wantsCodeSystem =
                   (settings.codeFontFamily?.isNotEmpty == true) &&
-                  !settings.codeFontIsGoogle &&
                   (settings.codeFontLocalAlias == null ||
                       settings.codeFontLocalAlias!.isEmpty);
               if (wantsAppSystem || wantsCodeSystem) {
@@ -204,6 +767,17 @@ class MyApp extends StatelessWidget {
               }
             } catch (_) {}
           });
+          // One-time app update check after first build
+          if (settings.showAppUpdates && !_didCheckUpdates) {
+            _didCheckUpdates = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              try {
+                await settings.loaded;
+                if (!context.mounted || !settings.showAppUpdates) return;
+                await context.read<UpdateProvider>().checkForUpdates();
+              } catch (_) {}
+            });
+          }
           return DynamicColorBuilder(
             builder: (lightDynamic, darkDynamic) {
               // if (lightDynamic != null) {
@@ -264,7 +838,6 @@ class MyApp extends StatelessWidget {
                         }
                       } catch (_) {}
                       if (mode == AndroidBackgroundChatMode.onNotify) {
-                        await NotificationService.ensureInitialized();
                         await NotificationService.ensureAndroidNotificationsPermission();
                       }
                     }
@@ -273,30 +846,29 @@ class MyApp extends StatelessWidget {
               });
 
               final useDyn = isAndroid && settings.useDynamicColor;
-              final palette = ThemePalettes.byId(settings.themePaletteId);
+              final custom = settings.selectedCustomTheme;
+              final palette =
+                  settings.themePaletteId == ThemePalettes.customPaletteId &&
+                      custom != null
+                  ? buildCustomThemePalette(custom)
+                  : ThemePalettes.byId(settings.themePaletteId);
 
               final light = buildLightThemeForScheme(
                 palette.light,
                 dynamicScheme: useDyn ? lightDynamic : null,
                 pureBackground: settings.usePureBackground,
+                layeredSurfaces: settings.useLayeredSurfaces,
               );
               final dark = buildDarkThemeForScheme(
                 palette.dark,
                 dynamicScheme: useDyn ? darkDynamic : null,
                 pureBackground: settings.usePureBackground,
+                layeredSurfaces: settings.useLayeredSurfaces,
               );
-              // Resolve effective app font family (system/Google/local alias)
+              // Resolve effective app font family (system/local alias)
               String? effectiveAppFontFamily() {
                 final fam = settings.appFontFamily;
                 if (fam == null || fam.isEmpty) return null;
-                if (settings.appFontIsGoogle) {
-                  try {
-                    final s = GoogleFonts.getFont(fam);
-                    return s.fontFamily ?? fam;
-                  } catch (_) {
-                    return fam;
-                  }
-                }
                 return fam;
               }
 
@@ -349,6 +921,7 @@ class MyApp extends StatelessWidget {
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 title: 'Kelivo',
+                navigatorKey: rootNavigatorKey,
                 // App UI language; null = follow system (respects iOS per-app language)
                 locale: settings.appLocaleForMaterialApp,
                 supportedLocales: AppLocalizations.supportedLocales,
@@ -357,7 +930,10 @@ class MyApp extends StatelessWidget {
                 darkTheme: themedDark,
                 themeMode: settings.themeMode,
                 navigatorObservers: <NavigatorObserver>[routeObserver],
-                home: _selectHome(),
+                home: RestoreOutcomeNotice(
+                  outcome: restoreOutcome,
+                  child: _selectHome(),
+                ),
                 builder: (ctx, child) {
                   final bright = Theme.of(ctx).brightness;
                   final overlay = bright == Brightness.dark
@@ -423,10 +999,32 @@ class MyApp extends StatelessWidget {
                     });
                   }
 
-                  // Enforce app font as a default across the tree for Texts without explicit family
-                  final appWithOverlays = AppOverlays(
-                    child: child ?? const SizedBox.shrink(),
+                  final mq = MediaQuery.of(ctx);
+                  final display = View.of(ctx).display;
+                  final displaySize = display.size / display.devicePixelRatio;
+                  final isFloatingIpad =
+                      defaultTargetPlatform == TargetPlatform.iOS &&
+                      displaySize.shortestSide >= 600 &&
+                      (mq.size.shortestSide < displaySize.shortestSide - 1 ||
+                          mq.size.longestSide < displaySize.longestSide - 1);
+                  final systemTop = mq.viewPadding.top;
+                  final controlsTop = systemTop < 56 ? 56.0 : systemTop;
+                  final appWithOverlays = MediaQuery(
+                    data: isFloatingIpad
+                        ? mq.copyWith(
+                            padding: mq.padding.copyWith(top: controlsTop),
+                            viewPadding: mq.viewPadding.copyWith(
+                              top: controlsTop,
+                            ),
+                          )
+                        : mq,
+                    child: LocalSnapshotScheduler(
+                      child: AppOverlays(
+                        child: child ?? const SizedBox.shrink(),
+                      ),
+                    ),
                   );
+                  // Enforce app font as a default across the tree for Texts without explicit family
                   return AnnotatedRegion<SystemUiOverlayStyle>(
                     value: overlay,
                     child: effectiveAppFont == null

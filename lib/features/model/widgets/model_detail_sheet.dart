@@ -14,17 +14,17 @@ import '../../../shared/widgets/ios_tactile.dart';
 import '../../../shared/widgets/ios_tile_button.dart';
 import 'model_edit_state_helper.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 Future<bool?> showModelDetailSheet(
   BuildContext context, {
   required String providerKey,
   required String modelId,
 }) {
-  final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -48,11 +48,10 @@ Future<bool?> showCreateModelSheet(
   BuildContext context, {
   required String providerKey,
 }) {
-  final cs = Theme.of(context).colorScheme;
   return showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: cs.surface,
+    backgroundColor: context.overlaySurface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -91,7 +90,6 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     with SingleTickerProviderStateMixin {
   _TabKind _tab = _TabKind.basic;
   late final TabController _tabCtrl;
-  late final ProviderKind _providerKind;
   late final bool _showBuiltinToolsTab;
 
   late TextEditingController _idCtrl;
@@ -110,25 +108,19 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   final List<_HeaderKV> _headers = [];
   final List<_BodyKV> _bodies = [];
 
-  // Built-in tools (per provider)
-  bool _googleUrlContextTool = false;
-  bool _googleCodeExecutionTool = false;
-  bool _googleYoutubeTool = false;
-  bool _openaiCodeInterpreterTool = false;
-  bool _openaiImageGenerationTool = false;
+  /// Built-in tool names toggled on, mirroring the persisted set.
+  Set<String> _builtInTools = <String>{};
 
   @override
   void initState() {
     super.initState();
     final settings = context.read<SettingsProvider>();
     final cfg = settings.getProviderConfig(widget.providerKey);
-    _providerKind = ProviderConfig.classify(
-      cfg.id,
-      explicitType: cfg.providerType,
-    );
-    _showBuiltinToolsTab =
-        _providerKind == ProviderKind.google ||
-        _providerKind == ProviderKind.openai;
+    // Determine tab count: 3 when the provider exposes editable built-in
+    // tools, 2 for others
+    _showBuiltinToolsTab = BuiltInToolsHelper.modelSettingsToolNames(
+      cfg,
+    ).isNotEmpty;
     _tabCtrl = TabController(length: _showBuiltinToolsTab ? 3 : 2, vsync: this);
     _tabCtrl.addListener(() {
       if (_tabCtrl.indexIsChanging) return;
@@ -216,23 +208,10 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
           _bodies.add(kv);
         }
       }
-      final builtInSet = BuiltInToolNames.parseAndNormalize(ov['builtInTools']);
-      _googleUrlContextTool = builtInSet.contains(BuiltInToolNames.urlContext);
-      _googleCodeExecutionTool = builtInSet.contains(
-        BuiltInToolNames.codeExecution,
-      );
-      _googleYoutubeTool = builtInSet.contains(BuiltInToolNames.youtube);
-      _openaiCodeInterpreterTool = builtInSet.contains(
-        BuiltInToolNames.codeInterpreter,
-      );
-      _openaiImageGenerationTool = builtInSet.contains(
-        BuiltInToolNames.imageGeneration,
-      );
-
-      final rawTools = ov['tools'];
-      final tools = rawTools is Map ? rawTools : const <dynamic, dynamic>{};
-      _googleUrlContextTool =
-          _googleUrlContextTool || ((tools['urlContext'] as bool?) ?? false);
+      // parseFromOverride, not parseAndNormalize: the request path reads the
+      // legacy `tools` / `built_in_tools` keys too, and saving overwrites the
+      // override wholesale — reading less here silently drops those settings.
+      _builtInTools = BuiltInToolNames.parseFromOverride(ov);
     }
   }
 
@@ -386,7 +365,6 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
   }
 
   List<Widget> _buildBasic(BuildContext context, AppLocalizations l10n) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return [
       Padding(
@@ -415,7 +393,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
                   : null,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 hintText: l10n.modelDetailSheetModelIdHint,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
@@ -479,7 +457,7 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
               },
               decoration: InputDecoration(
                 filled: true,
-                fillColor: isDark ? Colors.white10 : Colors.white,
+                fillColor: context.appColors.surfaceCard,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
                   borderSide: BorderSide(
@@ -687,6 +665,16 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     ];
   }
 
+  void _toggleBuiltIn(String name, bool on) {
+    setState(() {
+      if (on) {
+        _builtInTools.add(name);
+      } else {
+        _builtInTools.remove(name);
+      }
+    });
+  }
+
   List<Widget> _buildTools(BuildContext context, AppLocalizations l10n) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
@@ -703,87 +691,19 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
           ),
         ),
       ),
-      if (_providerKind == ProviderKind.google) ...[
+      for (final (index, tool) in ModelBuiltInToolTiles.forConfig(
+        cfg: cfg,
+        l10n: l10n,
+      ).indexed)
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          padding: EdgeInsets.fromLTRB(16, index == 0 ? 10 : 8, 16, 0),
           child: _ToolTile(
-            title: l10n.modelDetailSheetUrlContextTool,
-            desc: l10n.modelDetailSheetUrlContextToolDescription,
-            value: _googleUrlContextTool,
-            onChanged: disableTools
+            title: tool.title,
+            desc: tool.desc,
+            value: tool.available && _builtInTools.contains(tool.name),
+            onChanged: disableTools || !tool.available
                 ? null
-                : (v) => setState(() => _googleUrlContextTool = v),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: _ToolTile(
-            title: l10n.modelDetailSheetCodeExecutionTool,
-            desc: l10n.modelDetailSheetCodeExecutionToolDescription,
-            value: _googleCodeExecutionTool,
-            onChanged: disableTools
-                ? null
-                : (v) => setState(() => _googleCodeExecutionTool = v),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: _ToolTile(
-            title: l10n.modelDetailSheetYoutubeTool,
-            desc: l10n.modelDetailSheetYoutubeToolDescription,
-            value: _googleYoutubeTool,
-            onChanged: disableTools
-                ? null
-                : (v) => setState(() => _googleYoutubeTool = v),
-          ),
-        ),
-      ] else if (_providerKind == ProviderKind.openai) ...[
-        if (cfg.useResponseApi != true)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-            child: Text(
-              l10n.modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint,
-              style: TextStyle(
-                color: cs.onSurface.withValues(alpha: 0.65),
-                fontSize: 12,
-              ),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: _ToolTile(
-            title: l10n.modelDetailSheetOpenaiCodeInterpreterTool,
-            desc: l10n.modelDetailSheetOpenaiCodeInterpreterToolDescription,
-            value: _openaiCodeInterpreterTool,
-            onChanged: disableTools
-                ? null
-                : ((cfg.useResponseApi == true)
-                      ? (v) => setState(() => _openaiCodeInterpreterTool = v)
-                      : null),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-          child: _ToolTile(
-            title: l10n.modelDetailSheetOpenaiImageGenerationTool,
-            desc: l10n.modelDetailSheetOpenaiImageGenerationToolDescription,
-            value: _openaiImageGenerationTool,
-            onChanged: disableTools
-                ? null
-                : ((cfg.useResponseApi == true)
-                      ? (v) => setState(() => _openaiImageGenerationTool = v)
-                      : null),
-          ),
-        ),
-      ] else
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-          child: Text(
-            l10n.modelDetailSheetBuiltinToolsUnsupportedHint,
-            style: TextStyle(
-              color: cs.onSurface.withValues(alpha: 0.65),
-              fontSize: 12,
-            ),
+                : (v) => _toggleBuiltIn(tool.name, v),
           ),
         ),
     ];
@@ -865,28 +785,13 @@ class _ModelDetailSheetState extends State<_ModelDetailSheet>
     final prev = (prevKey.isNotEmpty && ov[prevKey] is Map)
         ? (ov[prevKey] as Map).cast<String, dynamic>()
         : const <String, dynamic>{};
-    final builtInSet = BuiltInToolNames.parseAndNormalize(prev['builtInTools']);
-    if (_providerKind == ProviderKind.google) {
-      builtInSet.remove(BuiltInToolNames.urlContext);
-      builtInSet.remove(BuiltInToolNames.codeExecution);
-      builtInSet.remove(BuiltInToolNames.youtube);
-      if (_googleUrlContextTool) builtInSet.add(BuiltInToolNames.urlContext);
-      if (_googleCodeExecutionTool) {
-        builtInSet.add(BuiltInToolNames.codeExecution);
-      }
-      if (_googleYoutubeTool) {
-        builtInSet.add(BuiltInToolNames.youtube);
-      }
-    } else if (_providerKind == ProviderKind.openai) {
-      builtInSet.remove(BuiltInToolNames.codeInterpreter);
-      builtInSet.remove(BuiltInToolNames.imageGeneration);
-      if (_openaiCodeInterpreterTool) {
-        builtInSet.add(BuiltInToolNames.codeInterpreter);
-      }
-      if (_openaiImageGenerationTool) {
-        builtInSet.add(BuiltInToolNames.imageGeneration);
-      }
-    }
+    final builtInSet = BuiltInToolsHelper.replaceModelSettingsTools(
+      cfg: old,
+      // Same reader as the load path: the legacy `tools` / `built_in_tools`
+      // keys count too, or saving drops what they hold.
+      current: BuiltInToolNames.parseFromOverride(prev),
+      selected: _builtInTools,
+    );
     final builtInTools = BuiltInToolNames.orderedForStorage(builtInSet);
     // Decide which logical key to use for this instance
     final String key = (prevKey.isEmpty || widget.isNew)
@@ -967,7 +872,7 @@ class _SegmentedSingle extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+        color: context.appColors.surfaceFill,
         border: Border.all(
           color: Theme.of(
             context,
@@ -1042,7 +947,7 @@ class _SegmentedMulti extends StatelessWidget {
         isSelected.isNotEmpty && isSelected.every((e) => e);
     final int selectedCount = isSelected.where((e) => e).length;
 
-    final base = isDark ? Colors.white10 : const Color(0xFFF2F3F5);
+    final base = context.appColors.surfaceFill;
     final sel = isDark
         ? cs.primary.withValues(alpha: 0.20)
         : cs.primary.withValues(alpha: 0.14);
@@ -1154,7 +1059,6 @@ class _HeaderRow extends StatelessWidget {
   final VoidCallback onDelete;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Padding(
@@ -1169,7 +1073,7 @@ class _HeaderRow extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.modelDetailSheetHeaderKeyHint,
                     filled: true,
-                    fillColor: isDark ? Colors.white10 : Colors.white,
+                    fillColor: context.appColors.surfaceCard,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
@@ -1207,7 +1111,7 @@ class _HeaderRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.modelDetailSheetHeaderValueHint,
               filled: true,
-              fillColor: isDark ? Colors.white10 : Colors.white,
+              fillColor: context.appColors.surfaceCard,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
@@ -1243,7 +1147,6 @@ class _BodyRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -1257,7 +1160,7 @@ class _BodyRow extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: l10n.modelDetailSheetBodyKeyHint,
                     filled: true,
-                    fillColor: isDark ? Colors.white10 : Colors.white,
+                    fillColor: context.appColors.surfaceCard,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide(
@@ -1303,7 +1206,7 @@ class _BodyRow extends StatelessWidget {
             decoration: InputDecoration(
               hintText: l10n.modelDetailSheetBodyJsonHint,
               filled: true,
-              fillColor: isDark ? Colors.white10 : Colors.white,
+              fillColor: context.appColors.surfaceCard,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide(
@@ -1349,13 +1252,12 @@ class _ToolTile extends StatelessWidget {
   final ValueChanged<bool>? onChanged;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final cs = Theme.of(context).colorScheme;
     final bool isDisabled = onChanged == null;
     return Opacity(
       opacity: isDisabled ? 0.45 : 1.0,
       child: Material(
-        color: isDark ? Colors.white10 : const Color(0xFFF2F3F5),
+        color: context.appColors.surfaceFill,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -1515,8 +1417,8 @@ class _SegTabBar extends StatelessWidget {
             segWidth * tabs.length + gap * (tabs.length - 1);
 
         final Color shellBg = isDark
-            ? Colors.white.withValues(alpha: 0.08)
-            : Colors.white;
+            ? context.appColors.surfaceFill
+            : context.appColors.surfaceCard;
 
         List<Widget> children = [];
         for (int index = 0; index < tabs.length; index++) {

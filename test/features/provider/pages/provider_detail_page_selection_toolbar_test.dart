@@ -1,3 +1,4 @@
+import "../../../support/business_test_harness.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +12,7 @@ import 'package:Kelivo/l10n/app_localizations.dart';
 
 Future<SettingsProvider> _createSettings(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
-  final settings = SettingsProvider();
+  final settings = SettingsProvider(createBusinessTestPreferences());
   await tester.pump(const Duration(milliseconds: 300));
   await tester.pump();
   await settings.setProviderConfig(
@@ -39,7 +40,8 @@ Widget _buildHarness({
     providers: [
       ChangeNotifierProvider<SettingsProvider>.value(value: settings),
       ChangeNotifierProvider<AssistantProvider>(
-        create: (_) => AssistantProvider(),
+        create: (_) =>
+            AssistantProvider(preferences: createBusinessTestPreferences()),
       ),
     ],
     child: MaterialApp(
@@ -146,5 +148,59 @@ void main() {
 
     expect(find.text('使用流式'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mobile provider config persists custom request rows', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(400, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final settings = await _createSettings(tester);
+    addTearDown(settings.dispose);
+    await tester.pumpWidget(
+      _buildHarness(
+        settings: settings,
+        locale: const Locale('en'),
+        child: const ProviderDetailPage(
+          keyName: 'TestProvider',
+          displayName: 'Test Provider',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Custom request editor lives on a dedicated page after the UI refactor.
+    final customRequestEntry = find.text('Custom Request');
+    await tester.ensureVisible(customRequestEntry);
+    await tester.pumpAndSettle();
+    await tester.tap(customRequestEntry);
+    await tester.pumpAndSettle();
+
+    final addHeader = find.byKey(const ValueKey('provider-custom-header-add'));
+    await tester.ensureVisible(addHeader);
+    await tester.pumpAndSettle();
+    await tester.tap(addHeader);
+    await tester.pump();
+
+    expect(
+      settings.getProviderConfig('TestProvider').customHeaders,
+      hasLength(1),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-header-name-0')),
+      'X-Mobile',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('provider-custom-header-value-0')),
+      'saved',
+    );
+    await tester.pump();
+
+    expect(settings.getProviderConfig('TestProvider').customHeaders, [
+      {'name': 'X-Mobile', 'value': 'saved'},
+    ]);
   });
 }

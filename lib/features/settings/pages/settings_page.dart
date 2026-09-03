@@ -10,7 +10,10 @@ import 'display_settings_page.dart';
 import '../../mcp/pages/mcp_page.dart';
 import '../../assistant/pages/assistant_settings_page.dart';
 import 'about_page.dart';
+import 'memory_settings_page.dart';
 import 'tts_services_page.dart';
+import 'tool_schema_settings_page.dart';
+import 'sponsor_page.dart';
 import 'log_viewer_page.dart';
 import '../../search/pages/search_services_page.dart';
 import '../../image_generation/pages/image_generation_page.dart';
@@ -18,6 +21,7 @@ import '../../backup/pages/backup_page.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import '../../instruction_injection/pages/instruction_injection_page.dart';
 import '../../world_book/pages/world_book_page.dart';
+import '../../../shared/widgets/section_card.dart';
 import 'network_proxy_page.dart';
 import 'storage_space_page.dart';
 import '../../stats/pages/stats_page.dart';
@@ -25,6 +29,7 @@ import '../../music/pages/music_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -50,7 +55,7 @@ class SettingsPage extends StatelessWidget {
       final settingsProvider = context.read<SettingsProvider>();
       final selected = await showModalBottomSheet<ThemeMode>(
         context: context,
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
@@ -151,7 +156,7 @@ class SettingsPage extends StatelessWidget {
 
           // 通用设置：使用iOS风格分组卡片，黑色（中性）图标与标题，无描述
           header(l10n.settingsPageGeneralSection, first: true),
-          _iosSectionCard(
+          SectionCard(
             children: [
               _iosNavRow(
                 context,
@@ -191,7 +196,7 @@ class SettingsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
           header(l10n.settingsPageModelsServicesSection),
-          _iosSectionCard(
+          SectionCard(
             children: [
               _iosNavRow(
                 context,
@@ -287,6 +292,19 @@ class SettingsPage extends StatelessWidget {
               _iosDivider(context),
               _iosNavRow(
                 context,
+                icon: Lucide.Brain,
+                label: l10n.settingsPageMemory,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MemorySettingsPage(),
+                    ),
+                  );
+                },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
                 icon: Lucide.Zap,
                 label: l10n.settingsPageQuickPhrase,
                 onTap: () {
@@ -324,7 +342,7 @@ class SettingsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
           header(l10n.settingsPageDataSection),
-          _iosSectionCard(
+          SectionCard(
             children: [
               _iosNavRow(
                 context,
@@ -353,7 +371,7 @@ class SettingsPage extends StatelessWidget {
 
           const SizedBox(height: 12),
           header(l10n.settingsPageAboutSection),
-          _iosSectionCard(
+          SectionCard(
             children: [
               _iosNavRow(
                 context,
@@ -388,7 +406,9 @@ class SettingsPage extends StatelessWidget {
                   }
                 },
               ),
-              if (settings.requestLogEnabled || settings.flutterLogEnabled) ...[
+              if (settings.requestLogEnabled ||
+                  settings.flutterLogEnabled ||
+                  settings.contextLogEnabled) ...[
                 _iosDivider(context),
                 _iosNavRow(
                   context,
@@ -401,6 +421,30 @@ class SettingsPage extends StatelessWidget {
                   },
                 ),
               ],
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Wrench,
+                label: l10n.toolSchemaSettingsPageTitle,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ToolSchemaSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Heart,
+                label: l10n.settingsPageSponsor,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SponsorPage()),
+                  );
+                },
+              ),
               // _iosDivider(context),
               // _iosNavRow(
               //   context,
@@ -439,35 +483,6 @@ class SettingsPage extends StatelessWidget {
 
 // --- iOS-style widgets for Settings page ---
 
-Widget _iosSectionCard({required List<Widget> children}) {
-  return Builder(
-    builder: (context) {
-      final theme = Theme.of(context);
-      final cs = theme.colorScheme;
-      final isDark = theme.brightness == Brightness.dark;
-      // Light: white with slight transparency; Dark: subtle translucent dark
-      final Color bg = isDark
-          ? Colors.white10
-          : Colors.white.withValues(alpha: 0.96);
-      return Container(
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-            width: 0.6,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(children: children),
-        ),
-      );
-    },
-  );
-}
-
 Widget _iosDivider(BuildContext context) {
   final cs = Theme.of(context).colorScheme;
   // Restore previous visual: align with icon slot (36) + gap (12) + padding (12)
@@ -492,9 +507,9 @@ class _AnimatedPressColor extends StatelessWidget {
   final Widget Function(Color color) builder;
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cs = Theme.of(context).colorScheme;
     final target = pressed
-        ? (Color.lerp(base, isDark ? Colors.black : Colors.white, 0.55) ?? base)
+        ? (Color.lerp(base, cs.surface, 0.55) ?? base)
         : base;
     return TweenAnimationBuilder<Color?>(
       tween: ColorTween(end: target),
@@ -734,9 +749,7 @@ Widget _sheetOption(
     builder: (pressed) {
       final base = cs.onSurface;
       final bgTarget = pressed
-          ? (isDark
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.black.withValues(alpha: 0.05))
+          ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
           : Colors.transparent;
       return _AnimatedPressColor(
         pressed: pressed,

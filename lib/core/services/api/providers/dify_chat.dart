@@ -1,4 +1,14 @@
-part of '../chat_api_service.dart';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:http/http.dart' as http;
+
+import '../../../models/token_usage.dart';
+import '../../../providers/settings_provider.dart';
+import '../chat_api_helpers.dart';
+import '../stream/stream_chunk.dart';
+
+final Map<String, String> _difyConversationIds = <String, String>{};
 
 Uri _difyChatMessagesUrl(ProviderConfig config) {
   final rawBase = config.baseUrl.endsWith('/')
@@ -101,7 +111,7 @@ void _rememberDifyConversationId({
   if (localId == null || localId.isEmpty) return;
   final conversationId = value?.toString().trim();
   if (conversationId == null || conversationId.isEmpty) return;
-  ChatApiService._difyConversationIds[cacheKey] = conversationId;
+  _difyConversationIds[cacheKey] = conversationId;
 }
 
 Map<String, dynamic> _difyBuildBody({
@@ -125,7 +135,7 @@ Map<String, dynamic> _difyBuildBody({
         );
   final cachedDifyConversationId = cacheKey == null
       ? null
-      : ChatApiService._difyConversationIds[cacheKey];
+      : _difyConversationIds[cacheKey];
 
   final body = <String, dynamic>{
     'inputs': <String, dynamic>{},
@@ -136,11 +146,11 @@ Map<String, dynamic> _difyBuildBody({
       'conversation_id': cachedDifyConversationId,
   };
 
-  final configuredBody = _customBody(config, modelId);
+  final configuredBody = customBody(config, modelId);
   if (configuredBody.isNotEmpty) body.addAll(configuredBody);
   if (extraBody != null && extraBody.isNotEmpty) {
     extraBody.forEach((key, value) {
-      body[key] = value is String ? _parseOverrideValue(value) : value;
+      body[key] = value;
     });
   }
   body['response_mode'] = stream ? 'streaming' : 'blocking';
@@ -150,7 +160,7 @@ Map<String, dynamic> _difyBuildBody({
   return body;
 }
 
-Stream<ChatStreamChunk> _sendDifyChatStream(
+Stream<StreamChunk> sendDifyChatStream(
   http.Client client,
   ProviderConfig config,
   String modelId,
@@ -170,11 +180,11 @@ Stream<ChatStreamChunk> _sendDifyChatStream(
   );
   final request = http.Request('POST', _difyChatMessagesUrl(config));
   final headers = <String, String>{
-    'Authorization': 'Bearer ${_apiKeyForRequest(config, modelId)}',
+    'Authorization': 'Bearer ${apiKeyForRequest(config, modelId)}',
     'Content-Type': 'application/json',
     'Accept': stream ? 'text/event-stream' : 'application/json',
   };
-  headers.addAll(_customHeaders(config, modelId));
+  headers.addAll(customHeaders(config, modelId));
   if (extraHeaders != null && extraHeaders.isNotEmpty) {
     headers.addAll(extraHeaders);
   }
@@ -200,7 +210,7 @@ Stream<ChatStreamChunk> _sendDifyChatStream(
     final text = await response.stream.bytesToString();
     final obj = jsonDecode(text);
     if (obj is! Map) {
-      yield ChatStreamChunk(content: '', isDone: true, totalTokens: 0);
+      yield const Finish();
       return;
     }
     _rememberDifyConversationId(
@@ -209,12 +219,10 @@ Stream<ChatStreamChunk> _sendDifyChatStream(
       value: obj['conversation_id'],
     );
     final usage = _difyUsage(obj['metadata']);
-    yield ChatStreamChunk(
-      content: (obj['answer'] ?? '').toString(),
-      isDone: true,
-      totalTokens: usage?.totalTokens ?? 0,
-      usage: usage,
-    );
+    final answer = (obj['answer'] ?? '').toString();
+    if (answer.isNotEmpty) yield TextDelta(id: 'dify', text: answer);
+    if (usage != null) yield Usage(usage);
+    yield const Finish();
     return;
   }
 
@@ -240,17 +248,13 @@ Stream<ChatStreamChunk> _sendDifyChatStream(
     if (event == 'message' || event == 'agent_message') {
       final answer = (obj['answer'] ?? '').toString();
       if (answer.isNotEmpty) {
-        yield ChatStreamChunk(content: answer, isDone: false, totalTokens: 0);
+        yield TextDelta(id: 'dify', text: answer);
       }
     } else if (event == 'message_end') {
       usage = _difyUsage(obj['metadata']);
       done = true;
-      yield ChatStreamChunk(
-        content: '',
-        isDone: true,
-        totalTokens: usage?.totalTokens ?? 0,
-        usage: usage,
-      );
+      if (usage != null) yield Usage(usage);
+      yield const Finish();
     } else if (event == 'error') {
       final message = (obj['message'] ?? obj['code'] ?? 'Dify error')
           .toString();
@@ -259,11 +263,7 @@ Stream<ChatStreamChunk> _sendDifyChatStream(
   }
 
   if (!done) {
-    yield ChatStreamChunk(
-      content: '',
-      isDone: true,
-      totalTokens: usage?.totalTokens ?? 0,
-      usage: usage,
-    );
+    if (usage != null) yield Usage(usage);
+    yield const Finish();
   }
 }

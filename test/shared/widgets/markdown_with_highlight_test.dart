@@ -1,6 +1,10 @@
+import "../../support/business_test_harness.dart";
 import 'dart:async';
+import 'dart:ui' as ui;
 
+import 'package:Kelivo/core/database/business_preferences.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
+import 'package:Kelivo/shared/widgets/markdown_line_lexer.dart';
 import 'package:Kelivo/shared/widgets/markdown_with_highlight.dart';
 import 'package:Kelivo/shared/widgets/export_capture_scope.dart';
 import 'package:Kelivo/shared/widgets/mermaid_image_cache.dart';
@@ -16,8 +20,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_math_fork/tex.dart' show TexEncoderExt;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:gpt_markdown/gpt_markdown.dart' show GptMarkdown, HTag;
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Finder _findMathWidget() {
   return find.byType(Math);
@@ -263,23 +267,35 @@ Finder _findSoftHorizontalRule() {
   return find.byKey(const ValueKey('markdown-soft-horizontal-rule'));
 }
 
+String _nestedDetailsHtml(int levels) {
+  final out = StringBuffer();
+  for (var i = 1; i <= levels; i++) {
+    out.writeln('<details>');
+    out.writeln('<summary>L$i</summary>');
+  }
+  out.write('deep-body');
+  for (var i = 0; i < levels; i++) {
+    out.write('</details>');
+    if (i < levels - 1) out.writeln();
+  }
+  return out.toString();
+}
+
 Widget _markdownHarness(
   String text, {
   double? width,
   bool streaming = false,
-  Map<String, Object>? preferences,
+  BusinessPreferences? businessPreferences,
   void Function(String id)? onCitationTap,
+  String? Function(String id)? citationIndexResolver,
   ThemeData? theme,
   ThemeData? darkTheme,
   ThemeMode? themeMode,
 }) {
-  SharedPreferences.setMockInitialValues(preferences ?? {});
   return ChangeNotifierProvider(
-    create: (_) {
-      final settings = SettingsProvider();
-      _applyMarkdownPreferenceOverrides(settings, preferences);
-      return settings;
-    },
+    create: (_) => SettingsProvider(
+      businessPreferences ?? createBusinessTestPreferences(),
+    ),
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -292,6 +308,7 @@ Widget _markdownHarness(
                 text: text,
                 streaming: streaming,
                 onCitationTap: onCitationTap,
+                citationIndexResolver: citationIndexResolver,
               )
             : Align(
                 alignment: Alignment.topLeft,
@@ -301,43 +318,13 @@ Widget _markdownHarness(
                     text: text,
                     streaming: streaming,
                     onCitationTap: onCitationTap,
+                    citationIndexResolver: citationIndexResolver,
                   ),
                 ),
               ),
       ),
     ),
   );
-}
-
-void _applyMarkdownPreferenceOverrides(
-  SettingsProvider settings,
-  Map<String, Object>? preferences,
-) {
-  if (preferences == null) return;
-
-  final appFontFamily = preferences['display_app_font_family_v1'];
-  if (appFontFamily is String) {
-    unawaited(settings.setAppFontSystemFamily(appFontFamily));
-  }
-
-  final enableDollarLatex = preferences['display_enable_dollar_latex_v1'];
-  if (enableDollarLatex is bool) {
-    unawaited(settings.setEnableDollarLatex(enableDollarLatex));
-  }
-
-  final autoCollapseCodeBlock =
-      preferences['display_auto_collapse_code_block_v1'];
-  if (autoCollapseCodeBlock is bool) {
-    unawaited(settings.setAutoCollapseCodeBlock(autoCollapseCodeBlock));
-  }
-
-  final autoCollapseCodeBlockLines =
-      preferences['display_auto_collapse_code_block_lines_v1'];
-  if (autoCollapseCodeBlockLines is int) {
-    unawaited(
-      settings.setAutoCollapseCodeBlockLines(autoCollapseCodeBlockLines),
-    );
-  }
 }
 
 void _overrideMarkdownTablePlatform(TargetPlatform platform) {
@@ -348,15 +335,12 @@ void _overrideMarkdownTablePlatform(TargetPlatform platform) {
 Widget _streamingMarkdownHarness(
   ValueListenable<String> text, {
   double? width,
-  Map<String, Object>? preferences,
+  BusinessPreferences? businessPreferences,
 }) {
-  SharedPreferences.setMockInitialValues(preferences ?? {});
   return ChangeNotifierProvider(
-    create: (_) {
-      final settings = SettingsProvider();
-      _applyMarkdownPreferenceOverrides(settings, preferences);
-      return settings;
-    },
+    create: (_) => SettingsProvider(
+      businessPreferences ?? createBusinessTestPreferences(),
+    ),
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -383,13 +367,11 @@ Widget _streamingMarkdownHarness(
 
 Widget _settingsHarness({
   required Widget child,
-  Map<String, Object>? preferences,
   required void Function(SettingsProvider settings) onSettingsReady,
 }) {
-  SharedPreferences.setMockInitialValues(preferences ?? {});
   return ChangeNotifierProvider(
     create: (_) {
-      final settings = SettingsProvider();
+      final settings = SettingsProvider(createBusinessTestPreferences());
       onSettingsReady(settings);
       return settings;
     },
@@ -562,6 +544,62 @@ Inline ***strong emphasis*** text.
     },
   );
 
+  testWidgets(
+    'MarkdownWithCodeHighlight renders cite markers as numbered capsules',
+    (tester) async {
+      final tapped = <String>[];
+
+      await tester.pumpWidget(
+        _markdownHarness(
+          '巴黎是法国的首都。[cite:96d0ed] 人口约 210 万。[cite:5675a3][cite:96d0ed]',
+          width: 360,
+          onCitationTap: tapped.add,
+          citationIndexResolver: (id) => {'96d0ed': '1', '5675a3': '4'}[id],
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('1'), findsNWidgets(2));
+      expect(find.text('4'), findsOneWidget);
+      expect(find.textContaining('cite:96d0ed'), findsNothing);
+
+      // Capsules must hug their content, not stretch to the full line width.
+      final capsuleSize = tester.getSize(
+        find
+            .ancestor(of: find.text('4'), matching: find.byType(Container))
+            .first,
+      );
+      expect(capsuleSize.width, lessThan(40));
+      expect(capsuleSize.height, 20);
+
+      await tester.tap(find.text('4'));
+      expect(tapped, ['5675a3']);
+    },
+  );
+
+  testWidgets(
+    'MarkdownWithCodeHighlight renders unresolved cite markers as placeholder',
+    (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness('结论如下。[cite:deadbe]', width: 360),
+      );
+      await tester.pump();
+
+      expect(find.text('?'), findsOneWidget);
+      expect(find.textContaining('cite:deadbe'), findsNothing);
+    },
+  );
+
+  testWidgets('MarkdownWithCodeHighlight keeps cite markers inside code', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_markdownHarness('`[cite:96d0ed]`', width: 360));
+    await tester.pump();
+
+    expect(find.textContaining('cite:96d0ed'), findsOneWidget);
+    expect(find.text('?'), findsNothing);
+  });
+
   testWidgets('MarkdownWithCodeHighlight applies markdown image dimensions', (
     tester,
   ) async {
@@ -573,6 +611,7 @@ Inline ***strong emphasis*** text.
     final image = tester.widget<Image>(find.byType(Image));
     expect(image.width, 42.0);
     expect(image.height, 24.0);
+    expect(image.image, isA<ResizeImage>());
   });
 
   testWidgets(
@@ -869,6 +908,61 @@ Inline ***strong emphasis*** text.
     },
   );
 
+  testWidgets('MarkdownWithCodeHighlight saves an opaque table image', (
+    tester,
+  ) async {
+    _overrideMarkdownTablePlatform(TargetPlatform.android);
+    Uint8List? savedBytes;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('image_gallery_saver_plus'),
+          (call) async {
+            if (call.method == 'saveImageToGallery') {
+              final raw = call.arguments['imageBytes'];
+              if (raw is Uint8List) {
+                savedBytes = raw;
+              } else if (raw is List<int>) {
+                savedBytes = Uint8List.fromList(raw);
+              }
+              return <String, Object>{'isSuccess': true};
+            }
+            return null;
+          },
+        );
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('image_gallery_saver_plus'),
+            null,
+          );
+    });
+
+    await tester.pumpWidget(
+      _markdownHarness('''
+| Name | Value |
+| - | - |
+| Alpha | 42 |
+''', width: 360),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byTooltip('Save to Gallery'));
+    await tester.pump();
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+    await tester.pump(const Duration(seconds: 4));
+
+    expect(savedBytes, isNotNull);
+    await tester.runAsync(() async {
+      final pixels = await _pngRgbaPixels(savedBytes!);
+      expect(pixels, isNotEmpty);
+      for (var i = 3; i < pixels.length; i += 4) {
+        expect(pixels[i], 255);
+      }
+    });
+  });
+
   testWidgets('MarkdownWithCodeHighlight scrolls only overflowing table', (
     tester,
   ) async {
@@ -966,7 +1060,11 @@ Inline ***strong emphasis*** text.
       await tester.pump(const Duration(milliseconds: 50));
       text.value = '$baseLines\nframe-3';
       await tester.pump(const Duration(milliseconds: 50));
-      await tester.pump(const Duration(milliseconds: 40));
+      // The throttle publishes the text the last build saw, so the newest value
+      // lands one window later. Give it that window rather than pinning the
+      // test to the exact interval.
+      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 60));
 
       expect(find.textContaining('frame-3'), findsOneWidget);
     },
@@ -1003,6 +1101,67 @@ ${rows.join('\n')}
       expect(plainText, isNot(contains('row39')));
     },
   );
+
+  testWidgets('D5 completed table builds bounded row pages', (tester) async {
+    final rows = List<String>.generate(
+      1000,
+      (index) => '| row$index | value$index |',
+    );
+    await tester.pumpWidget(
+      _markdownHarness('''
+| Name | Value |
+| - | - |
+${rows.join('\n')}
+''', width: 360),
+    );
+    await tester.pump();
+
+    String renderedTableText() => tester
+        .widgetList<RichText>(
+          find.descendant(
+            of: find.byKey(const ValueKey('markdown-table-body')),
+            matching: find.byType(RichText),
+          ),
+        )
+        .map((widget) => widget.text.toPlainText())
+        .join('\n');
+
+    expect(renderedTableText(), contains('row0'));
+    expect(renderedTableText(), isNot(contains('row999')));
+    expect(
+      find.byKey(const ValueKey('markdown-table-row-pager')),
+      findsOneWidget,
+    );
+
+    tester
+        .widget<TextButton>(
+          find.byKey(const ValueKey('markdown-table-show-more')),
+        )
+        .onPressed!();
+    await tester.pump();
+
+    expect(renderedTableText(), contains('row100'));
+    expect(renderedTableText(), isNot(contains('row999')));
+  });
+
+  testWidgets('D5 completed code uses a lazy chunk viewport', (tester) async {
+    final code = List<String>.generate(
+      10000,
+      (index) => 'line$index',
+    ).join('\n');
+    await tester.pumpWidget(
+      _markdownHarness('```text\n$code\n```', width: 500),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('virtualized-code-view')), findsOneWidget);
+    expect(find.byType(SelectableHighlightView), findsWidgets);
+    expect(
+      find.byType(SelectableHighlightView).evaluate().length,
+      lessThan(10),
+    );
+    expect(find.textContaining('line9999'), findsNothing);
+  });
 
   testWidgets(
     'MarkdownWithCodeHighlight keeps an unfinished streaming table row in table layout',
@@ -1693,6 +1852,57 @@ $code
     expect(find.textContaining('graph TD'), findsNothing);
   });
 
+  testWidgets('Mermaid keeps theme ink instead of inherited text color', (
+    tester,
+  ) async {
+    addTearDown(MermaidImageCache.clear);
+    addTearDown(() => debugMermaidBitmapRenderOverride = null);
+    MermaidImageCache.clear();
+
+    const inheritedInk = Color(0xFFCC3300);
+    const themeInk = Color(0xFF112233);
+    Map<String, String>? capturedThemeVars;
+    debugMermaidBitmapRenderOverride = (code, isDark, themeVars) async {
+      capturedThemeVars = Map<String, String>.from(themeVars);
+      return MermaidBitmapRenderResult.failed();
+    };
+
+    final baseTheme = ThemeData.light();
+    final theme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(onSurface: themeInk),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => SettingsProvider(createBusinessTestPreferences()),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: theme,
+          home: Scaffold(
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(color: inheritedInk),
+              child: const MarkdownWithCodeHighlight(
+                text: '```mermaid\ngraph TD\nA-->B\n```',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 240));
+
+    expect(capturedThemeVars, isNotNull);
+    for (final key in const [
+      'lineColor',
+      'textColor',
+      'actorTextColor',
+      'taskTextDarkColor',
+      'labelColor',
+    ]) {
+      expect(capturedThemeVars![key], '#112233', reason: key);
+    }
+  });
+
   testWidgets(
     'MarkdownWithCodeHighlight shows fixed Mermaid loading state while rendering',
     (tester) async {
@@ -1936,6 +2146,9 @@ A-->B
   testWidgets('MarkdownWithCodeHighlight applies app font to table text', (
     tester,
   ) async {
+    final harness = await createBusinessTestHarness(
+      initial: const {'display_app_font_family_v1': 'Courier'},
+    );
     await tester.pumpWidget(
       _markdownHarness(
         '''
@@ -1944,7 +2157,7 @@ A-->B
 | Alpha | Beta |
 ''',
         width: 360,
-        preferences: const {'display_app_font_family_v1': 'Courier'},
+        businessPreferences: harness.preferences,
       ),
     );
     await tester.pump();
@@ -2059,6 +2272,34 @@ A-->B
     },
   );
 
+  testWidgets(
+    'MarkdownWithCodeHighlight forwards Windows CJK fonts to math fallbacks',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(
+          _markdownHarness(
+            r'出现 \(0 = \text{非零常数的矛盾}\)',
+            theme: buildLightThemeForScheme(ThemePalettes.defaultPalette.light),
+          ),
+        );
+        await tester.pump();
+
+        final cjkGlyph = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .firstWhere((widget) => widget.text.toPlainText() == '非');
+
+        expect(cjkGlyph.text.style?.fontFamily, contains('KaTeX_Main'));
+        expect(
+          cjkGlyph.text.style?.fontFamilyFallback,
+          containsAllInOrder(kWindowsFontFamilyFallback),
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
   testWidgets('MarkdownWithCodeHighlight baseline-aligns inline math', (
     tester,
   ) async {
@@ -2127,10 +2368,13 @@ A-->B
   testWidgets('MarkdownWithCodeHighlight keeps dollar math switch scoped', (
     tester,
   ) async {
+    final harness = await createBusinessTestHarness(
+      initial: const {'display_enable_dollar_latex_v1': false},
+    );
     await tester.pumpWidget(
       _markdownHarness(
         r'Inline $a+b$ and \(c+d\)',
-        preferences: const {'display_enable_dollar_latex_v1': false},
+        businessPreferences: harness.preferences,
       ),
     );
     await tester.pump();
@@ -2368,6 +2612,28 @@ A-->B
       expect(encoded[2], isNot(contains(r'\#197')));
       expect(encoded[3], contains(r'\#'));
       expect(find.textContaining(r'\(\color{#FF5733}{A}\)'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    r'MarkdownWithCodeHighlight renders nested ovalbox and operatorname expressions',
+    (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness(r'''
+标签\(\textbf{\small\colorbox{white}{\textcolor{#AEC6CF}{\ovalbox{\textcolor{#AEC6CF}{\textbf{示例文字}}}}}}\)。
+函数\(\operatorname{Function}\left(x\right)\)&#x20;
+'''),
+      );
+      await tester.pump();
+
+      final mathWidgets = _mathWidgets(tester);
+      expect(mathWidgets, hasLength(2));
+      expect(
+        mathWidgets.map((widget) => widget.parseError),
+        everyElement(isNull),
+      );
+      expect(find.textContaining(r'\ovalbox'), findsNothing);
+      expect(find.textContaining(r'\operatorname'), findsNothing);
     },
   );
 
@@ -2687,6 +2953,180 @@ final price = "$12";
   });
 
   testWidgets(
+    'SelectableHighlightView adds iOS native translation for non-empty selection',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const channel = MethodChannel('app.ios_translation');
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return call.method == 'isAvailable' ? true : null;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: SelectableHighlightView(
+              'final value = 1;',
+              language: 'dart',
+              theme: {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final editableTextState = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      final contextMenuBuilder = tester
+          .widget<SelectableText>(find.byType(SelectableText))
+          .contextMenuBuilder!;
+      final editableContext = tester.element(find.byType(EditableText));
+
+      final collapsedMenu =
+          contextMenuBuilder(editableContext, editableTextState)
+              as AdaptiveTextSelectionToolbar;
+      expect(
+        collapsedMenu.buttonItems,
+        isNot(
+          contains(
+            predicate<ContextMenuButtonItem>((item) {
+              return item.label == 'Translate';
+            }),
+          ),
+        ),
+      );
+
+      editableTextState.userUpdateTextEditingValue(
+        editableTextState.textEditingValue.copyWith(
+          selection: const TextSelection(baseOffset: 0, extentOffset: 5),
+        ),
+        SelectionChangedCause.longPress,
+      );
+      await tester.pump();
+
+      final selectionMenu =
+          contextMenuBuilder(editableContext, editableTextState)
+              as AdaptiveTextSelectionToolbar;
+      final translateItem = selectionMenu.buttonItems!.singleWhere(
+        (item) => item.label == 'Translate',
+      );
+      translateItem.onPressed!();
+      await tester.pump();
+
+      final presentCall = calls.singleWhere((call) => call.method == 'present');
+      final arguments = presentCall.arguments as Map<Object?, Object?>;
+      expect(arguments['text'], 'final');
+      expect(arguments['anchorX'], isA<double>());
+      expect(arguments['anchorY'], isA<double>());
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
+    'SelectableHighlightView keeps stock menu when iOS translation is unavailable',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const channel = MethodChannel('app.ios_translation');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async => false);
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SelectableHighlightView(
+              'final value = 1;',
+              language: 'dart',
+              theme: {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final editableTextState = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      editableTextState.userUpdateTextEditingValue(
+        editableTextState.textEditingValue.copyWith(
+          selection: const TextSelection(baseOffset: 0, extentOffset: 5),
+        ),
+        SelectionChangedCause.longPress,
+      );
+      await tester.pump();
+      final menu =
+          tester
+              .widget<SelectableText>(find.byType(SelectableText))
+              .contextMenuBuilder!(
+            tester.element(find.byType(EditableText)),
+            editableTextState,
+          );
+
+      expect(menu, isA<AdaptiveTextSelectionToolbar>());
+      expect(
+        (menu as AdaptiveTextSelectionToolbar).buttonItems,
+        isNot(
+          contains(
+            predicate<ContextMenuButtonItem>((item) {
+              return item.label == 'Translate';
+            }),
+          ),
+        ),
+      );
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
+    'SelectableHighlightView does not query native translation off iOS',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      const channel = MethodChannel('app.ios_translation');
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return true;
+          });
+      addTearDown(
+        () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, null),
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SelectableHighlightView(
+              'final value = 1;',
+              language: 'dart',
+              theme: {},
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(calls, isEmpty);
+      debugDefaultTargetPlatformOverride = null;
+    },
+  );
+
+  testWidgets(
     'SelectableHighlightView skips synchronous highlighting on demand',
     (tester) async {
       await tester.pumpWidget(
@@ -2754,6 +3194,52 @@ void main() {}
     expect(find.text('dart'), findsOneWidget);
   });
 
+  test('FencedCodeBlockMd does not close on an info-string fence line', () {
+    for (final item in const [
+      ('```', '```', '```dart\na\n``` not-a-closer\nfollowing\n```'),
+      ('~~~', '~~~', '~~~\na\n~~~ not-a-closer\nfollowing\n~~~'),
+      ('````', '````', '````dart\na\n```` not-a-closer\nfollowing\n````'),
+      ('~~~~', '~~~~', '~~~~\na\n~~~~ not-a-closer\nfollowing\n~~~~'),
+      ('````', '```', '````dart\na\n``` not-a-closer\nfollowing\n````'),
+    ]) {
+      final match = FencedCodeBlockMd(streaming: false).exp.firstMatch(item.$3);
+      expect(match, isNotNull, reason: item.$3);
+      expect(match!.group(0), item.$3, reason: item.$3);
+      expect(match.group(4), contains('not-a-closer'), reason: item.$3);
+      expect(match.group(4), contains('following'), reason: item.$3);
+    }
+  });
+
+  testWidgets(
+    'MarkdownWithCodeHighlight keeps an info-string fence line inside the code block',
+    (tester) async {
+      for (final source in const [
+        '```dart\na\n``` not-a-closer\nfollowing\n```',
+        '~~~\na\n~~~ not-a-closer\nfollowing\n~~~',
+        '````dart\na\n```` not-a-closer\nfollowing\n````',
+      ]) {
+        await tester.pumpWidget(_markdownHarness(source));
+        await tester.pump();
+        expect(
+          find.descendant(
+            of: find.byType(SelectableHighlightView),
+            matching: find.textContaining('not-a-closer'),
+          ),
+          findsOneWidget,
+          reason: source,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(SelectableHighlightView),
+            matching: find.textContaining('following'),
+          ),
+          findsOneWidget,
+          reason: source,
+        );
+      }
+    },
+  );
+
   testWidgets(
     'MarkdownWithCodeHighlight keeps details tags literal in html code blocks',
     (tester) async {
@@ -2798,20 +3284,20 @@ void main() {}
   testWidgets(
     'MarkdownWithCodeHighlight toggles auto-collapsed code block from header',
     (tester) async {
+      final harness = await createBusinessTestHarness(
+        initial: const {
+          'display_auto_collapse_code_block_v1': true,
+          'display_auto_collapse_code_block_lines_v1': 2,
+        },
+      );
       await tester.pumpWidget(
-        _markdownHarness(
-          '''
+        _markdownHarness('''
 ```dart
 line1
 line2
 line3
 ```
-''',
-          preferences: const {
-            'display_auto_collapse_code_block_v1': true,
-            'display_auto_collapse_code_block_lines_v1': 2,
-          },
-        ),
+''', businessPreferences: harness.preferences),
       );
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();
@@ -2843,20 +3329,20 @@ line3
   testWidgets(
     'MarkdownWithCodeHighlight shows collapsed code tail fade when hidden lines exist',
     (tester) async {
+      final harness = await createBusinessTestHarness(
+        initial: const {
+          'display_auto_collapse_code_block_v1': true,
+          'display_auto_collapse_code_block_lines_v1': 2,
+        },
+      );
       await tester.pumpWidget(
-        _markdownHarness(
-          '''
+        _markdownHarness('''
 ```dart
 fade1
 fade2
 fade3
 ```
-''',
-          preferences: const {
-            'display_auto_collapse_code_block_v1': true,
-            'display_auto_collapse_code_block_lines_v1': 2,
-          },
-        ),
+''', businessPreferences: harness.preferences),
       );
       await tester.pumpAndSettle();
       await tester.pumpAndSettle();
@@ -2965,14 +3451,17 @@ alpha2
 alpha3
 ```
 ''');
+    final harness = await createBusinessTestHarness(
+      initial: const {
+        'display_auto_collapse_code_block_v1': true,
+        'display_auto_collapse_code_block_lines_v1': 2,
+      },
+    );
 
     await tester.pumpWidget(
       _streamingMarkdownHarness(
         streamText,
-        preferences: const {
-          'display_auto_collapse_code_block_v1': true,
-          'display_auto_collapse_code_block_lines_v1': 2,
-        },
+        businessPreferences: harness.preferences,
       ),
     );
     await tester.pumpAndSettle();
@@ -3028,14 +3517,17 @@ press2
 press3
 ```
 ''');
+      final harness = await createBusinessTestHarness(
+        initial: const {
+          'display_auto_collapse_code_block_v1': true,
+          'display_auto_collapse_code_block_lines_v1': 2,
+        },
+      );
 
       await tester.pumpWidget(
         _streamingMarkdownHarness(
           streamText,
-          preferences: const {
-            'display_auto_collapse_code_block_v1': true,
-            'display_auto_collapse_code_block_lines_v1': 2,
-          },
+          businessPreferences: harness.preferences,
         ),
       );
       await tester.pumpAndSettle();
@@ -3083,13 +3575,26 @@ press5
   );
 
   testWidgets(
-    'MarkdownWithCodeHighlight renders details collapsed then expands',
+    'MarkdownWithCodeHighlight renders wrapped details collapsed then expands',
     (tester) async {
       await tester.pumpWidget(
-        _markdownHarness('<details><summary>更多信息</summary>隐藏内容</details>'),
+        _markdownHarness('''
+<theater>
+<details><summary>更多信息</summary>隐藏内容</details>
+</theater>
+返回 List<String> 给 <username>
+'''),
       );
       await tester.pump();
 
+      expect(
+        find.textContaining(RegExp(r'</?theater>'), findRichText: true),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('返回 List<String> 给 <username>', findRichText: true),
+        findsOneWidget,
+      );
       expect(find.text('更多信息'), findsOneWidget);
       expect(find.text('隐藏内容', findRichText: true), findsNothing);
 
@@ -3102,6 +3607,376 @@ press5
       await tester.pumpAndSettle();
 
       expect(find.text('隐藏内容', findRichText: true), findsNothing);
+    },
+  );
+
+  testWidgets('details walker, DetailsHtmlMd, and the widget share tokenization', (
+    tester,
+  ) async {
+    Future<void> expectShared({
+      required String source,
+      required bool isDetails,
+      int depth = 0,
+      String? summary,
+      String? hiddenBody,
+      String? visibleText,
+    }) async {
+      final walker = MarkdownDetailsWalker()..consumeText(source);
+      expect(walker.depth, depth);
+      expect(walker.overflowed, isFalse);
+      expect(markdownDetailsExtent(source) >= 0, isDetails);
+      expect(markdownParseDetails(source) != null, isDetails);
+      final registry = MarkdownDetailsRegistry();
+      final rewritten = registry.rewrite(source);
+      expect(
+        registry.hasIssuedPlaceholders &&
+            DetailsHtmlMd(registry).exp.hasMatch(rewritten),
+        isDetails,
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_markdownHarness(source));
+      await tester.pump();
+      final details = find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+      );
+      if (!isDetails) {
+        expect(details, findsNothing);
+        if (visibleText != null) {
+          expect(
+            find.textContaining(visibleText, findRichText: true),
+            findsWidgets,
+          );
+        }
+        return;
+      }
+      expect(details, findsOneWidget);
+      if (summary != null) {
+        expect(find.text(summary), findsOneWidget);
+      }
+      if (hiddenBody == null) return;
+      expect(find.textContaining(hiddenBody, findRichText: true), findsNothing);
+      await tester.tap(find.text(summary!));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(hiddenBody, findRichText: true), findsWidgets);
+    }
+
+    await expectShared(
+      source:
+          '<details>\n<summary>s</summary>\nUse `<details>` here\n\nmore\n</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source: '<details><summary>s</summary>body</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'body',
+    );
+    await expectShared(
+      source: '<details\nopen>\n<summary>s</summary>\n\nbody\n</details>',
+      isDetails: false,
+      visibleText: 'body',
+    );
+    await expectShared(
+      source:
+          '<details>\n<summary>outer</summary>\n'
+          'prefix <details>\n<summary>inner</summary>\n\n'
+          'inner body\n</details>\n\nouter body\n</details>',
+      isDetails: true,
+      summary: 'outer',
+      hiddenBody: 'outer body',
+    );
+    await expectShared(
+      source: '<details><summary>Use `<details>`</summary>\n\nbody\n</details>',
+      isDetails: true,
+    );
+    await expectShared(
+      source: _nestedDetailsHtml(6),
+      isDetails: true,
+      summary: 'L1',
+      hiddenBody: 'L2',
+    );
+    await expectShared(
+      source: '<DETAILS><SUMMARY>s</SUMMARY>more</DETAILS>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source: '<Details><Summary>s</Summary>more</Details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source:
+          '<details>\n<summary>s</summary>\n<details.foo>\n\nmore\n</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source: '<details>\n<summary>s</summary>\n<details/>\n\nmore\n</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source:
+          '<details>\n<summary>s</summary>\nsee <details\n\nmore\n</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source:
+          '<details>\n<summary>s</summary>\n'
+          'Use `<details.foo>` and `<DETAILS>` here\n\nmore\n</details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'more',
+    );
+    await expectShared(
+      source: r'<details><summary>s</summary>`x`<details>y`</details>',
+      isDetails: false,
+      depth: 1,
+    );
+    await expectShared(
+      source: r'<details><summary>s</summary>`x```<details>y`</details>',
+      isDetails: true,
+      summary: 's',
+    );
+    await expectShared(
+      source: r'<details><summary>s</summary>``x``<details>y``</details>',
+      isDetails: false,
+      depth: 1,
+    );
+    await expectShared(
+      source: '<details><summary>s</summary>before <details missing </details>',
+      isDetails: true,
+      summary: 's',
+      hiddenBody: 'before',
+    );
+  });
+
+  testWidgets('inline code keeps a literal less-than and U+E002', (
+    tester,
+  ) async {
+    Future<void> expectUnmasked({
+      required String source,
+      required String visible,
+      bool expectDetails = false,
+    }) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_markdownHarness(source));
+      await tester.pump();
+      final data = tester
+          .widgetList<GptMarkdown>(find.byType(GptMarkdown))
+          .map((widget) => widget.data)
+          .join('\n');
+      expect(find.byType(GptMarkdown), findsWidgets);
+      expect(data, isNot(contains('\uE002')));
+      final details = find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+      );
+      expect(details, expectDetails ? findsOneWidget : findsNothing);
+      if (expectDetails) {
+        expect(find.textContaining(visible, findRichText: true), findsNothing);
+        await tester.tap(find.text('s'));
+        await tester.pumpAndSettle();
+      } else {
+        expect(data, contains(visible));
+      }
+      expect(find.textContaining(visible, findRichText: true), findsWidgets);
+    }
+
+    await expectUnmasked(source: 'Use `a < b` now', visible: 'a < b');
+    await expectUnmasked(source: r'Use ``a < b`` now', visible: 'a < b');
+    await expectUnmasked(source: r'Use `<details>` here', visible: '<details>');
+    await expectUnmasked(
+      source: '<details><summary>s</summary>`a < b` still open',
+      visible: 'a < b',
+    );
+    await expectUnmasked(
+      source: '<details><summary>s</summary>\n\nUse `a < b` now\n</details>',
+      visible: 'a < b',
+      expectDetails: true,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(_markdownHarness('hello \uE002 world'));
+    await tester.pump();
+    final privateData = tester
+        .widget<GptMarkdown>(find.byType(GptMarkdown))
+        .data;
+    expect(privateData, contains('\uE002'));
+    expect(privateData, isNot(contains('hello < world')));
+    expect(
+      find.textContaining('hello \uE002 world', findRichText: true),
+      findsWidgets,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(_markdownHarness('Use `a \uE002 b` now'));
+    await tester.pump();
+    expect(find.text('a \uE002 b'), findsWidgets);
+    expect(
+      tester.widget<GptMarkdown>(find.byType(GptMarkdown)).data,
+      contains('\uE002'),
+    );
+  });
+
+  testWidgets('details registry keeps walker top-level and block boundaries', (
+    tester,
+  ) async {
+    Finder detailsFinder() => find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+    );
+
+    Future<String> pumpSource(String source) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_markdownHarness(source));
+      await tester.pump();
+      return tester
+          .widgetList<GptMarkdown>(find.byType(GptMarkdown))
+          .map((widget) => widget.data)
+          .join('\n');
+    }
+
+    const nestedUnclosed =
+        '<details>\n<summary>A</summary>\nunclosed\n'
+        '<details><summary>B</summary>body B</details>';
+    var data = await pumpSource(nestedUnclosed);
+    expect(detailsFinder(), findsNothing);
+    expect(data, isNot(contains('\uE010')));
+    expect(find.textContaining('body B', findRichText: true), findsWidgets);
+
+    data = await pumpSource(_nestedDetailsHtml(7));
+    expect(detailsFinder(), findsNothing);
+    expect(data, isNot(contains('\uE010')));
+    expect(find.text('L2'), findsNothing);
+
+    const tailed = '<details><summary>s</summary>body</details> tail';
+    data = await pumpSource(tailed);
+    expect(detailsFinder(), findsNothing);
+    expect(data, isNot(contains('\uE010')));
+    expect(find.textContaining('tail', findRichText: true), findsWidgets);
+
+    data = await pumpSource('<details><summary>s</summary>body</details>  ');
+    expect(detailsFinder(), findsOneWidget);
+    expect(find.text('s'), findsOneWidget);
+
+    const adjacent =
+        '<details><summary>A</summary>a</details>'
+        '<details><summary>B</summary>b</details>';
+    data = await pumpSource(adjacent);
+    expect(detailsFinder(), findsNothing);
+    expect(data, isNot(contains('\uE010')));
+
+    data = await pumpSource('  <details><summary>s</summary>body</details>');
+    expect(detailsFinder(), findsOneWidget);
+    expect(find.text('s'), findsOneWidget);
+
+    const literal = '\uE010DETAILS0\uE011';
+    data = await pumpSource(
+      '<details><summary>real</summary>body</details>\n\n$literal',
+    );
+    expect(detailsFinder(), findsOneWidget);
+    expect(find.text('real'), findsOneWidget);
+    expect(data, contains(literal));
+    expect(find.textContaining(literal, findRichText: true), findsWidgets);
+  });
+
+  testWidgets('details render inside list, quote, table, and details body', (
+    tester,
+  ) async {
+    Finder detailsFinder() => find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+    );
+
+    Future<void> expectFoldable(String source, String summary) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_markdownHarness(source));
+      await tester.pump();
+      expect(detailsFinder(), findsWidgets);
+      expect(find.textContaining(summary, findRichText: true), findsWidgets);
+      expect(find.textContaining('body', findRichText: true), findsNothing);
+      await tester.tap(find.textContaining(summary, findRichText: true).first);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('body', findRichText: true), findsWidgets);
+    }
+
+    await expectFoldable(
+      '- <details><summary>list</summary>body</details>',
+      'list',
+    );
+    await expectFoldable(
+      '> <details><summary>quote</summary>body</details>',
+      'quote',
+    );
+    await expectFoldable(
+      '| x |\n| --- |\n| <details><summary>cell</summary>body</details> |',
+      'cell',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      _markdownHarness(
+        '<details><summary>outer</summary>\n\n'
+        '<details><summary>inner</summary>body</details>\n'
+        '</details>',
+      ),
+    );
+    await tester.pump();
+    await tester.tap(find.text('outer'));
+    await tester.pumpAndSettle();
+    expect(find.text('inner'), findsOneWidget);
+    expect(find.textContaining('body', findRichText: true), findsNothing);
+    await tester.tap(find.text('inner'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('body', findRichText: true), findsWidgets);
+  });
+
+  testWidgets('details inside display math follow the math-rendering flag', (
+    tester,
+  ) async {
+    Finder detailsFinder() => find.byWidgetPredicate(
+      (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+    );
+    const source = '\$\$\n<details><summary>s</summary>body</details>\n\$\$';
+    late SettingsProvider settings;
+
+    await tester.pumpWidget(
+      _settingsHarness(
+        onSettingsReady: (value) => settings = value,
+        child: const MarkdownWithCodeHighlight(text: source),
+      ),
+    );
+    await tester.pump();
+    expect(detailsFinder(), findsNothing);
+    expect(_findMathWidget(), findsOneWidget);
+
+    await settings.setEnableMathRendering(false);
+    await tester.pumpAndSettle();
+    expect(detailsFinder(), findsOneWidget);
+    expect(_findMathWidget(), findsNothing);
+    expect(find.text('s'), findsOneWidget);
+  });
+
+  testWidgets(
+    'an unclosed dollar opener does not hide a following details block',
+    (tester) async {
+      Finder detailsFinder() => find.byWidgetPredicate(
+        (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+      );
+      await tester.pumpWidget(
+        _markdownHarness('\$\$\n<details><summary>s</summary>body</details>'),
+      );
+      await tester.pump();
+      expect(detailsFinder(), findsOneWidget);
+      expect(find.text('s'), findsOneWidget);
     },
   );
 
@@ -3280,6 +4155,85 @@ press5
     expect(expandedSize.width, closeTo(360, 2));
   });
 
+  group('block fill translucency', () {
+    double? fillAlpha(WidgetTester tester, Finder finder) {
+      final container = tester.widget<Container>(finder);
+      final decoration = container.decoration;
+      expect(decoration, isA<BoxDecoration>());
+      return (decoration as BoxDecoration).color?.a;
+    }
+
+    testWidgets('details block fill is translucent in dark mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _markdownHarness(
+          '<details><summary>更多信息</summary>隐藏内容</details>',
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: Colors.indigo,
+              brightness: Brightness.dark,
+            ),
+          ),
+          themeMode: ThemeMode.dark,
+        ),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('details-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaDetails, 0.01));
+    });
+
+    testWidgets('details block fill is translucent in light mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _markdownHarness('<details><summary>更多信息</summary>隐藏内容</details>'),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('details-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaDetails, 0.01));
+    });
+
+    testWidgets('table block fill is translucent', (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness('''
+| Name | Value |
+| - | - |
+| Alpha | Beta |
+''', width: 360),
+      );
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('markdown-table-block'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaTable, 0.01));
+    });
+
+    testWidgets('code block fill is translucent', (tester) async {
+      await tester.pumpWidget(_markdownHarness('```dart\nvoid main() {}\n```'));
+      await tester.pump();
+
+      final block = find.byKey(const ValueKey('code-block-surface'));
+      expect(block, findsOneWidget);
+      expect(fillAlpha(tester, block), closeTo(kBlockFillAlphaContent, 0.01));
+    });
+
+    testWidgets('inline code fill is translucent in light mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_markdownHarness('Body with `code`.'));
+      await tester.pump();
+
+      final chip = find.byKey(const ValueKey('inline-code-surface'));
+      expect(chip, findsOneWidget);
+      expect(fillAlpha(tester, chip), closeTo(kBlockFillAlphaInline, 0.01));
+    });
+  });
+
   testWidgets(
     'MarkdownWithCodeHighlight keeps full details around code blocks',
     (tester) async {
@@ -3333,4 +4287,603 @@ void main() {
       expect(plainText, isNot(contains('<a href=')));
     },
   );
+
+  testWidgets(
+    'SelectableHighlightView reuses parsed highlight nodes across remounts',
+    (tester) async {
+      debugResetHighlightNodeCache();
+      addTearDown(debugResetHighlightNodeCache);
+
+      Widget view(String source) => MaterialApp(
+        home: Scaffold(
+          body: SelectableHighlightView(
+            source,
+            language: 'dart',
+            theme: const {},
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(view('final lruCachedAlpha = 1;'));
+      expect(debugHighlightParseCount, 1);
+
+      await tester.pumpWidget(const MaterialApp(home: SizedBox()));
+      await tester.pumpWidget(view('final lruCachedAlpha = 1;'));
+      expect(debugHighlightParseCount, 1);
+
+      await tester.pumpWidget(view('final lruCachedBeta = 2;'));
+      expect(debugHighlightParseCount, 2);
+    },
+  );
+
+  testWidgets(
+    'MarkdownWithCodeHighlight reuses built markdown until theme or font changes',
+    (tester) async {
+      late StateSetter rebuild;
+      var dark = false;
+      var fontSize = 15.5;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider(createBusinessTestPreferences()),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: buildLightThemeForScheme(
+                  ThemePalettes.defaultPalette.light,
+                ),
+                darkTheme: buildDarkThemeForScheme(
+                  ThemePalettes.defaultPalette.dark,
+                ),
+                themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+                home: Scaffold(
+                  body: MarkdownWithCodeHighlight(
+                    text: 'cached body text',
+                    baseStyle: TextStyle(fontSize: fontSize, height: 1.5),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      GptMarkdown builtMarkdown() =>
+          tester.widget<GptMarkdown>(find.byType(GptMarkdown));
+
+      final initial = builtMarkdown();
+
+      rebuild(() {});
+      await tester.pump();
+      expect(identical(initial, builtMarkdown()), isTrue);
+
+      rebuild(() => dark = true);
+      await tester.pump();
+      // MaterialApp animates theme changes; let the lerp finish.
+      await tester.pump(const Duration(milliseconds: 300));
+      final darkMarkdown = builtMarkdown();
+      expect(identical(initial, darkMarkdown), isFalse);
+      expect(find.textContaining('cached body text'), findsOneWidget);
+
+      rebuild(() {});
+      await tester.pump();
+      expect(identical(darkMarkdown, builtMarkdown()), isTrue);
+
+      rebuild(() => fontSize = 16.5);
+      await tester.pump();
+      expect(identical(darkMarkdown, builtMarkdown()), isFalse);
+      expect(find.textContaining('cached body text'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MarkdownWithCodeHighlight rethemes code without reparsing highlight nodes',
+    (tester) async {
+      debugResetHighlightNodeCache();
+      addTearDown(debugResetHighlightNodeCache);
+
+      late StateSetter rebuild;
+      var dark = false;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider(createBusinessTestPreferences()),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                theme: buildLightThemeForScheme(
+                  ThemePalettes.defaultPalette.light,
+                ),
+                darkTheme: buildDarkThemeForScheme(
+                  ThemePalettes.defaultPalette.dark,
+                ),
+                themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+                home: const Scaffold(
+                  body: MarkdownWithCodeHighlight(
+                    text: '```dart\nfinal rethemedValue = 42;\n```',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      Set<Color?> codeSpanColors() {
+        final richText = tester.widget<SelectableText>(
+          find.descendant(
+            of: find.byType(SelectableHighlightView),
+            matching: find.byType(SelectableText),
+          ),
+        );
+        final colors = <Color?>{};
+        void walk(InlineSpan span) {
+          if (span is! TextSpan) return;
+          if (span.style?.color != null) colors.add(span.style!.color);
+          span.children?.forEach(walk);
+        }
+
+        walk(richText.textSpan!);
+        return colors;
+      }
+
+      final lightColors = codeSpanColors();
+      expect(lightColors, isNotEmpty);
+      expect(debugHighlightParseCount, 1);
+
+      rebuild(() => dark = true);
+      await tester.pump();
+      // MaterialApp animates theme changes; let the lerp finish.
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final darkColors = codeSpanColors();
+      expect(debugHighlightParseCount, 1);
+      expect(darkColors, isNotEmpty);
+      expect(darkColors, isNot(lightColors));
+    },
+  );
+
+  testWidgets(
+    'streaming text between 512 and 4096 uses incremental markdown blocks',
+    (tester) async {
+      final paragraph = 'Streaming markdown paragraph for block split. ' * 6;
+      final text = List<String>.generate(
+        4,
+        (index) => '$paragraph$index',
+      ).join('\n\n');
+      expect(text.length, greaterThanOrEqualTo(512));
+      expect(text.length, lessThan(4096));
+
+      await tester.pumpWidget(_markdownHarness(text, streaming: true));
+      await tester.pump();
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_MarkdownBlockColumn',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_CachedMarkdownBlock',
+        ),
+        findsAtLeastNWidgets(2),
+      );
+    },
+  );
+
+  testWidgets(
+    '512+ streaming italic paragraphs keep every completed body visible',
+    (tester) async {
+      final padding = List<String>.generate(
+        12,
+        (index) => '前置段落$index：${'这是一段用于进入增量渲染路径的普通正文。' * 3}',
+      ).join('\n\n');
+      expect(padding.length, greaterThanOrEqualTo(512));
+      const paragraphs = <String>[
+        '*被窝裹住*',
+        '*反而笑得更甜*',
+        '*懒懒地、黏糊糊地*',
+        '对……',
+        '*摊平自己*',
+        '*眯着眼*',
+        '还要继续说。',
+        '*伸了个懒腰*',
+        '*然后理直气壮*',
+        '你养我。',
+        '*气音*',
+        '……我要吃了。',
+      ];
+      final text = ValueNotifier<String>(padding);
+
+      await tester.pumpWidget(_streamingMarkdownHarness(text, width: 360));
+      await tester.pump();
+
+      final tail = paragraphs.join('\n\n');
+      var source = padding;
+      for (var end = 1; end <= tail.length; end++) {
+        source = '$padding\n\n${tail.substring(0, end)}';
+        text.value = source;
+        await tester.pump();
+
+        final plainText = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .map((widget) => widget.text.toPlainText())
+            .join('\n');
+        for (final completed in paragraphs.where(source.contains)) {
+          expect(
+            plainText,
+            contains(completed.replaceAll('*', '')),
+            reason: 'streaming prefix ending at tail code unit $end',
+          );
+        }
+      }
+
+      await tester.pumpWidget(_markdownHarness(source, width: 360));
+      await tester.pump();
+      final finishedPlainText = tester
+          .widgetList<RichText>(find.byType(RichText))
+          .map((widget) => widget.text.toPlainText())
+          .join('\n');
+      for (final paragraph in paragraphs) {
+        expect(finishedPlainText, contains(paragraph.replaceAll('*', '')));
+      }
+    },
+  );
+
+  testWidgets('streaming markdown uses AtxHeadingMd and not the default HTag', (
+    tester,
+  ) async {
+    final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+    await tester.pumpWidget(
+      _markdownHarness('$pad\n\n# Real heading\n\nNext', streaming: true),
+    );
+    await tester.pump();
+
+    final markdown = tester.widget<GptMarkdown>(find.byType(GptMarkdown).first);
+    expect(markdown.components!.whereType<HTag>(), isEmpty);
+    expect(markdown.components!.whereType<AtxHeadingMd>(), hasLength(1));
+    expect(_spanFontSize(tester, 'Real heading'), 24);
+  });
+
+  testWidgets('regular and inline code text follow inherited ink color', (
+    tester,
+  ) async {
+    const inheritedInk = Color(0xFF224466);
+    const themeInk = Color(0xFF112233);
+    _overrideMarkdownTablePlatform(TargetPlatform.android);
+    final baseTheme = ThemeData.light();
+    final theme = baseTheme.copyWith(
+      colorScheme: baseTheme.colorScheme.copyWith(onSurface: themeInk),
+    );
+    await tester.pumpWidget(
+      ChangeNotifierProvider(
+        create: (_) => SettingsProvider(createBusinessTestPreferences()),
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: theme,
+          home: Scaffold(
+            body: DefaultTextStyle.merge(
+              style: const TextStyle(color: inheritedInk),
+              child: const MarkdownWithCodeHighlight(
+                text: '''
+# Real heading
+
+Body copy with `code`.
+
+| Theme table header |
+| --- |
+| Theme table body |
+
+```text
+Fenced code body
+```
+''',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      _paragraphContaining('Real heading').text.style?.color,
+      inheritedInk,
+    );
+    expect(
+      _paragraphContaining('Body copy with').text.style?.color,
+      inheritedInk,
+    );
+    expect(tester.widget<Text>(find.text('code')).style?.color, inheritedInk);
+    expect(
+      _paragraphContaining('Theme table header').text.style?.color,
+      themeInk,
+    );
+    expect(
+      _paragraphContaining('Theme table body').text.style?.color,
+      themeInk.withValues(alpha: 0.90),
+    );
+    final fencedCode = tester.widget<SelectableText>(
+      find.descendant(
+        of: find.byType(SelectableHighlightView),
+        matching: find.byType(SelectableText),
+      ),
+    );
+    expect(fencedCode.textSpan?.style?.color, themeInk);
+  });
+
+  testWidgets(
+    'four-space hashes are not rendered as a heading on either path',
+    (tester) async {
+      final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+      final text = '$pad\n\n    # Not a heading\n\nNext';
+      for (final streaming in const [true, false]) {
+        await tester.pumpWidget(_markdownHarness(text, streaming: streaming));
+        await tester.pump();
+        expect(
+          _spanFontSize(tester, 'Not a heading'),
+          isNot(24),
+          reason: streaming ? 'streaming' : 'finished',
+        );
+        final markdown = tester.widget<GptMarkdown>(
+          find.byType(GptMarkdown).first,
+        );
+        expect(markdown.components!.whereType<HTag>(), isEmpty);
+      }
+    },
+  );
+
+  testWidgets(
+    'ATX enumeration rewrite does not cross a blank line into a list',
+    (tester) async {
+      final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+      final text = '$pad\n\n#\n\n1. item';
+      for (final streaming in const [true, false]) {
+        await tester.pumpWidget(_markdownHarness(text, streaming: streaming));
+        await tester.pump();
+        final plain = tester
+            .widgetList<RichText>(find.byType(RichText))
+            .map((widget) => widget.text.toPlainText())
+            .join('\n');
+        expect(plain, isNot(contains('\u200C')), reason: '$streaming');
+        expect(plain, contains('item'));
+        expect(_spanFontSize(tester, 'item'), isNot(24));
+      }
+    },
+  );
+
+  testWidgets('a completed pipe row is not turned into a streaming table', (
+    tester,
+  ) async {
+    final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+    final text = '$pad\n\n| a | b |\n\nNext paragraph';
+    await tester.pumpWidget(_markdownHarness(text, streaming: true));
+    await tester.pump();
+    expect(find.byType(Table), findsNothing);
+    expect(find.byKey(const ValueKey('markdown-table-body')), findsNothing);
+
+    await tester.pumpWidget(_markdownHarness(text, streaming: false));
+    await tester.pump();
+    expect(find.byType(Table), findsNothing);
+  });
+
+  testWidgets(
+    'parent rebuilds with new citation closures keep the same GptMarkdown',
+    (tester) async {
+      late StateSetter rebuild;
+      var lookup = <String, String>{'96d0ed': '1'};
+      var taps = 0;
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider(
+          create: (_) => SettingsProvider(createBusinessTestPreferences()),
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              rebuild = setState;
+              return MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: MarkdownWithCodeHighlight(
+                    text: 'See [cite:96d0ed]',
+                    onCitationTap: (_) => taps++,
+                    citationIndexResolver: (id) => lookup[id],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      GptMarkdown builtMarkdown() =>
+          tester.widget<GptMarkdown>(find.byType(GptMarkdown));
+      final initial = builtMarkdown();
+      expect(find.text('1'), findsOneWidget);
+
+      rebuild(() {});
+      await tester.pump();
+      expect(identical(initial, builtMarkdown()), isTrue);
+      expect(find.text('1'), findsOneWidget);
+
+      rebuild(() => lookup = <String, String>{'96d0ed': '7'});
+      await tester.pump();
+      expect(identical(initial, builtMarkdown()), isFalse);
+      expect(find.text('7'), findsOneWidget);
+      expect(find.text('1'), findsNothing);
+
+      await tester.tap(find.text('7'));
+      expect(taps, 1);
+    },
+  );
+
+  testWidgets(
+    'image data URIs are not copied into the parsed markdown cache key',
+    (tester) async {
+      await tester.pumpWidget(
+        _markdownHarness('![42x24]($_transparentPngDataUrl)', width: 160),
+      );
+      await tester.pump();
+
+      final key = tester.widget<GptMarkdown>(find.byType(GptMarkdown)).key;
+      expect(key, isA<ValueKey<String>>());
+      final value = (key! as ValueKey<String>).value;
+      expect(value, startsWith('parsed-markdown-'));
+      expect(value.contains('data:image'), isFalse);
+      expect(value.contains('iVBORw0KGgo'), isFalse);
+    },
+  );
+
+  testWidgets('a later image is visible when opening an earlier cached image', (
+    tester,
+  ) async {
+    final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+    const second = 'https://example.com/b.png';
+    final text = ValueNotifier<String>(
+      '![42x24]($_transparentPngDataUrl)\n\n$pad\n\n',
+    );
+    await tester.pumpWidget(_streamingMarkdownHarness(text, width: 360));
+    await tester.pump();
+
+    text.value = '![42x24]($_transparentPngDataUrl)\n\n$pad\n\n\n![]($second)';
+    await tester.pump();
+
+    await tester.tap(find.byType(Image).first);
+    await tester.pumpAndSettle();
+
+    final viewer = tester.widget<ImageViewerPage>(find.byType(ImageViewerPage));
+    expect(viewer.images, hasLength(2));
+    expect(viewer.images.last, second);
+  });
+
+  testWidgets(
+    'sibling list fragments do not collide on a literal placeholder token',
+    (tester) async {
+      const literal = '\uE0100:0\uE011';
+      await tester.pumpWidget(
+        _markdownHarness(
+          '- <details><summary>real</summary>body</details>\n- $literal',
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget.runtimeType.toString() == '_DetailsHtmlBlock',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('real'), findsOneWidget);
+      expect(find.textContaining(literal, findRichText: true), findsWidgets);
+    },
+  );
+
+  testWidgets('appending to the same tail keeps an expanded details open', (
+    tester,
+  ) async {
+    final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+    final text = ValueNotifier<String>(
+      '$pad\n\n<details><summary>s</summary>\n\nhidden\n</details>',
+    );
+    await tester.pumpWidget(_streamingMarkdownHarness(text));
+    await tester.pump();
+
+    await tester.tap(find.text('s'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('hidden', findRichText: true), findsWidgets);
+
+    text.value =
+        '$pad\n\n<details><summary>s</summary>\n\nhidden\n</details>\n'
+        'more from the same block';
+    await tester.pump();
+    expect(find.textContaining('hidden', findRichText: true), findsWidgets);
+    expect(
+      find.textContaining('more from the same block', findRichText: true),
+      findsWidgets,
+    );
+  });
+
+  testWidgets(
+    'replacing a tail resets an expanded details instead of appending',
+    (tester) async {
+      final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+      final text = ValueNotifier<String>(
+        '$pad\n\n<details><summary>s</summary>\n\nhidden\n</details>',
+      );
+      await tester.pumpWidget(_streamingMarkdownHarness(text));
+      await tester.pump();
+
+      await tester.tap(find.text('s'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('hidden', findRichText: true), findsWidgets);
+
+      text.value =
+          '$pad\n\n<details><summary>other</summary>\n\nhidden\n</details>';
+      await tester.pump();
+      expect(find.text('other'), findsOneWidget);
+      expect(find.textContaining('hidden', findRichText: true), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'appending an image keeps an earlier expanded details open and shows the new image',
+    (tester) async {
+      final pad = 'Body. ${'The rain kept falling on the quiet street. ' * 16}';
+      const second = 'https://example.com/b.png';
+      final text = ValueNotifier<String>(
+        '<details><summary>s</summary>\n\nhidden\n</details>\n\n'
+        '![42x24]($_transparentPngDataUrl)\n\n$pad\n\n',
+      );
+      await tester.pumpWidget(_streamingMarkdownHarness(text, width: 360));
+      await tester.pump();
+
+      expect(find.textContaining('hidden', findRichText: true), findsNothing);
+      await tester.tap(find.text('s'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('hidden', findRichText: true), findsWidgets);
+
+      text.value =
+          '<details><summary>s</summary>\n\nhidden\n</details>\n\n'
+          '![42x24]($_transparentPngDataUrl)\n\n$pad\n\n\n![]($second)';
+      await tester.pump();
+      expect(find.textContaining('hidden', findRichText: true), findsWidgets);
+
+      await tester.tap(find.byType(Image).first);
+      await tester.pumpAndSettle();
+      final viewer = tester.widget<ImageViewerPage>(
+        find.byType(ImageViewerPage),
+      );
+      expect(viewer.images, hasLength(2));
+      expect(viewer.images.last, second);
+    },
+  );
+}
+
+double? _spanFontSize(WidgetTester tester, String text) {
+  for (final span in _resolvedTextSpansFromRichText(tester)) {
+    if (span.text.contains(text)) return span.style.fontSize;
+  }
+  return null;
+}
+
+Future<Uint8List> _pngRgbaPixels(Uint8List pngBytes) async {
+  final codec = await ui.instantiateImageCodec(pngBytes);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+  try {
+    final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    return data!.buffer.asUint8List();
+  } finally {
+    image.dispose();
+  }
 }

@@ -5,16 +5,19 @@ import 'package:provider/provider.dart';
 
 import '../../../core/models/assistant.dart';
 import '../../../core/providers/assistant_provider.dart';
+import '../controllers/chat_actions.dart';
 import '../../../core/providers/tag_provider.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/section_card.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../assistant/pages/assistant_settings_edit_page.dart';
 import '../../assistant/pages/tags_manager_page.dart';
 import '../../assistant/widgets/tags_manager_dialog.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class AssistantEntryActions {
   const AssistantEntryActions._();
@@ -157,7 +160,7 @@ class AssistantEntryActions {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: false,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: context.overlaySurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -176,7 +179,7 @@ class AssistantEntryActions {
               height: 48,
               child: IosCardPress(
                 borderRadius: BorderRadius.circular(14),
-                baseColor: cs.surface,
+                baseColor: sheetTileColor(sheetContext),
                 duration: const Duration(milliseconds: 220),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
@@ -286,6 +289,8 @@ class AssistantEntryActions {
     );
 
     if (!context.mounted || confirmed != true) return;
+    await ChatActions.cancelActiveGenerationsForAssistant(assistant.id);
+    if (!context.mounted) return;
     final ok = await assistantProvider.deleteAssistant(assistant.id);
     if (!context.mounted) return;
 

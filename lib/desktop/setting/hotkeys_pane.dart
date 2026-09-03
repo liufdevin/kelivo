@@ -7,6 +7,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/ios_switch.dart';
 import '../../core/providers/hotkey_provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
+import 'package:Kelivo/shared/widgets/section_card.dart';
 
 class DesktopHotkeysPane extends StatefulWidget {
   const DesktopHotkeysPane({super.key});
@@ -64,7 +65,7 @@ class _DesktopHotkeysPaneState extends State<DesktopHotkeysPane> {
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 6)),
               SliverToBoxAdapter(
-                child: _sectionCard(
+                child: SectionCard(
                   children: [
                     for (int i = 0; i < hk.items.length; i++) ...[
                       _HotkeyRow(item: hk.items[i]),
@@ -76,26 +77,6 @@ class _DesktopHotkeysPaneState extends State<DesktopHotkeysPane> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _sectionCard({required List<Widget> children}) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        // Match TTS card's lighter border when unselected
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: isDark ? 0.12 : 0.08),
-          width: 0.6,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-        child: Column(children: children),
       ),
     );
   }
@@ -268,9 +249,7 @@ class _ShortcutEditorState extends State<_ShortcutEditor> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final border = cs.outlineVariant.withValues(alpha: 0.35);
-    final bg = isDark
-        ? Colors.white.withValues(alpha: 0.04)
-        : Colors.black.withValues(alpha: 0.03);
+    final bg = cs.onSurface.withValues(alpha: isDark ? 0.04 : 0.03);
     return KeyboardListener(
       focusNode: widget.focusNode,
       onKeyEvent: (KeyEvent e) {
@@ -426,9 +405,7 @@ class _SmallIconBtnState extends State<_SmallIconBtn> {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = _hover
-        ? (isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.05))
+        ? (cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05))
         : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),

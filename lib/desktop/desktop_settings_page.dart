@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../theme/app_font_weights.dart';
 import '../theme/palettes.dart';
 import '../core/providers/settings_provider.dart';
+import '../core/services/chat/chat_service.dart';
 import '../core/providers/model_provider.dart';
 import '../core/services/logging/flutter_logger.dart';
 import '../core/services/model_override_resolver.dart';
@@ -24,6 +25,7 @@ import '../shared/widgets/ios_checkbox.dart';
 import '../features/assistant/pages/assistant_settings_edit_page.dart'
     show showAssistantDesktopDialog; // dialog opener only
 import '../core/providers/assistant_provider.dart';
+import '../features/home/controllers/chat_actions.dart' show ChatActions;
 import '../core/models/assistant.dart';
 import '../utils/avatar_cache.dart';
 import '../utils/sandbox_path_resolver.dart';
@@ -48,14 +50,17 @@ import '../shared/widgets/snackbar.dart';
 import 'setting/default_model_pane.dart';
 import 'setting/search_services_pane.dart';
 import '../features/image_generation/pages/image_generation_page.dart';
+import 'setting/tool_schemas_pane.dart';
 import 'setting/mcp_pane.dart';
 import 'setting/tts_services_pane.dart';
+import 'setting/memory_settings_pane.dart';
 import 'setting/quick_phrases_pane.dart';
 import 'setting/instruction_injection_pane.dart';
 import 'setting/world_book_pane.dart';
 import 'setting/backup_pane.dart';
 import 'setting/hotkeys_pane.dart';
 import 'setting/network_proxy_pane.dart';
+import 'setting/auto_retry_pane.dart';
 import 'setting/about_pane.dart';
 import 'setting/stats_pane.dart';
 import '../features/music/pages/music_page.dart';
@@ -66,10 +71,16 @@ import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:super_clipboard/super_clipboard.dart';
 import '../features/provider/widgets/provider_avatar.dart';
 import '../features/provider/widgets/provider_balance_badge.dart';
+import '../features/provider/widgets/provider_custom_request_editor.dart';
 import '../features/provider/widgets/share_provider_sheet.dart'
     show encodeProviderConfig;
 import '../utils/clipboard_images.dart';
 import '../utils/provider_grouping_logic.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
+import '../theme/custom_theme.dart';
+import '../features/settings/widgets/custom_theme_widgets.dart';
+import '../features/settings/pages/message_style_settings_page.dart';
+import '../features/settings/widgets/memory_ui.dart';
 
 part 'setting/assistants_pane.dart';
 part 'setting/providers_pane.dart';
@@ -94,10 +105,12 @@ enum _SettingsMenuItem {
   defaultModel,
   search,
   imageGeneration,
+  toolSchemas,
   mcp,
   quickPhrases,
   instructionInjection,
   worldBook,
+  memory,
   tts,
   music,
   networkProxy,
@@ -213,6 +226,10 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                             key: ValueKey('imageGeneration'),
                             embedded: true,
                           );
+                        case _SettingsMenuItem.toolSchemas:
+                          return const DesktopToolSchemasPane(
+                            key: ValueKey('toolSchemas'),
+                          );
                         case _SettingsMenuItem.mcp:
                           return const DesktopMcpPane(key: ValueKey('mcp'));
                         case _SettingsMenuItem.networkProxy:
@@ -238,6 +255,10 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                         case _SettingsMenuItem.worldBook:
                           return const DesktopWorldBookPane(
                             key: ValueKey('worldBook'),
+                          );
+                        case _SettingsMenuItem.memory:
+                          return const DesktopMemorySettingsPane(
+                            key: ValueKey('memory'),
                           );
                         case _SettingsMenuItem.tts:
                           return const DesktopTtsServicesPane(
@@ -321,6 +342,7 @@ class _SettingsMenu extends StatelessWidget {
         lucide.Lucide.BookOpen,
         l10n.settingsPageWorldBook,
       ),
+      (_SettingsMenuItem.memory, lucide.Lucide.Brain, l10n.settingsPageMemory),
       (_SettingsMenuItem.tts, lucide.Lucide.Volume2, l10n.settingsPageTts),
       (
         _SettingsMenuItem.music,
@@ -348,6 +370,11 @@ class _SettingsMenu extends StatelessWidget {
         l10n.settingsPageStatistics,
       ),
       (
+        _SettingsMenuItem.toolSchemas,
+        lucide.Lucide.Wrench,
+        l10n.toolSchemaSettingsPageTitle,
+      ),
+      (
         _SettingsMenuItem.about,
         lucide.Lucide.BadgeInfo,
         l10n.settingsPageAbout,
@@ -368,9 +395,7 @@ class _SettingsMenu extends StatelessWidget {
               onTap: () => onSelect(items[i].$1),
               color: cs.onSurface.withValues(alpha: 0.9),
               selectedColor: cs.primary,
-              hoverBg: isDark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.black.withValues(alpha: 0.04),
+              hoverBg: cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04),
             ),
             if (i != items.length - 1) const SizedBox(height: 8),
           ],

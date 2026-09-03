@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
 
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/tts_provider.dart';
 import '../../../core/services/tts/tts_text_selection.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/ios_switch.dart';
 import '../../../shared/widgets/ios_tactile.dart';
+import '../../../shared/widgets/section_card.dart';
 
 class TtsSettingsPage extends StatelessWidget {
   const TtsSettingsPage({super.key});
@@ -47,6 +49,7 @@ class TtsSettingsContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final settings = context.watch<SettingsProvider>();
+    final tts = context.watch<TtsProvider>();
 
     return ListView(
       padding: padding ?? const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -63,6 +66,17 @@ class TtsSettingsContent extends StatelessWidget {
                 onChanged: (value) => context
                     .read<SettingsProvider>()
                     .setTtsAutoPlayAssistantReplies(value),
+              ),
+            ),
+            _SettingsRow(
+              title: l10n.ttsSettingsCacheReplayTitle,
+              subtitle: l10n.ttsSettingsCacheReplayDescription,
+              trailing: IosSwitch(
+                value: tts.cacheNetworkAudioForReplay,
+                semanticLabel: l10n.ttsSettingsCacheReplayTitle,
+                onChanged: (value) => context
+                    .read<TtsProvider>()
+                    .setCacheNetworkAudioForReplay(value),
               ),
             ),
           ],
@@ -100,10 +114,7 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final bg = isDark ? Colors.white10 : Colors.white.withValues(alpha: 0.96);
+    final cs = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,16 +130,8 @@ class _SettingsSection extends StatelessWidget {
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: isDark ? 0.08 : 0.06),
-              width: 0.6,
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
+        SectionCard(
+          padding: EdgeInsets.zero,
           child: Column(
             children: [
               for (var i = 0; i < children.length; i++) ...[

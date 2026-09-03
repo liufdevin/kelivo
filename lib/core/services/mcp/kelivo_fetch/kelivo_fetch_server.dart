@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
@@ -9,11 +10,9 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 
 /// @kelivo/fetch — In-memory MCP server engine and transport (Flutter/Dart)
 ///
-/// Provides four tools:
-/// - fetch_html     → returns raw HTML text
-/// - fetch_markdown → HTML converted to Markdown
-/// - fetch_txt      → plain text (script/style removed, whitespace collapsed)
-/// - fetch_json     → JSON stringified
+/// Provides one token-conscious `fetch` tool. HTML is simplified to Markdown
+/// by default, while raw content requires an explicit opt-in. Responses are
+/// bounded and can be continued with `start_index`.
 ///
 /// The server implements a minimal subset of MCP over JSON-RPC 2.0:
 /// initialize, tools/list, tools/call. It is intended to run in the same
@@ -21,16 +20,35 @@ import 'package:mcp_client/mcp_client.dart' as mcp;
 /// in-memory ClientTransport.
 
 class KelivoFetchRequestPayload {
-  final Uri url;
-  final Map<String, String> headers;
+  static const defaultMaxLength = 5000;
+  static const maximumMaxLength = 20000;
 
-  KelivoFetchRequestPayload({required this.url, Map<String, String>? headers})
-    : headers = headers ?? const {};
+  /// Write verbs beyond POST stay unsupported: the tool is meant for reading,
+  /// and PUT/PATCH/DELETE hand the model destructive semantics for free.
+  static const supportedMethods = <String>{'GET', 'POST'};
+
+  final Uri url;
+  final String method;
+  final String? body;
+  final Map<String, String> headers;
+  final int maxLength;
+  final int startIndex;
+  final bool raw;
+
+  KelivoFetchRequestPayload({
+    required this.url,
+    this.method = 'GET',
+    this.body,
+    Map<String, String>? headers,
+    this.maxLength = defaultMaxLength,
+    this.startIndex = 0,
+    this.raw = false,
+  }) : headers = headers ?? const {};
 
   static KelivoFetchRequestPayload parse(Object? args) {
     if (args is! Map) {
       throw ArgumentError(
-        'Invalid arguments: expected object with url[, headers]',
+        'Invalid arguments: expected an object containing url',
       );
     }
     final map = args.cast<String, dynamic>();
@@ -47,7 +65,109 @@ class KelivoFetchRequestPayload {
         headers[k.toString()] = v.toString();
       });
     }
-    return KelivoFetchRequestPayload(url: uri, headers: headers);
+    final methodAny = map['method'];
+    if (methodAny != null && methodAny is! String) {
+      throw ArgumentError('Invalid method: expected a string');
+    }
+    final method = ((methodAny as String?) ?? 'GET').trim().toUpperCase();
+    if (!supportedMethods.contains(method)) {
+      throw ArgumentError(
+        'Invalid method: $method is not supported; expected GET or POST',
+      );
+    }
+
+    final bodyAny = map['body'];
+    String? body;
+    if (bodyAny is String) {
+      body = bodyAny;
+    } else if (bodyAny is Map || bodyAny is List) {
+      // Models often pass the body as a JSON object rather than a string.
+      body = jsonEncode(bodyAny);
+    } else if (bodyAny != null) {
+      throw ArgumentError('Invalid body: expected a string or a JSON value');
+    }
+    if (body != null && method != 'POST') {
+      throw ArgumentError('Invalid body: only POST requests can carry a body');
+    }
+    if (body != null) {
+      final contentTypeKey = headers.keys.firstWhere(
+        (k) => k.toLowerCase() == 'content-type',
+        orElse: () => '',
+      );
+      if (contentTypeKey.isEmpty) {
+        headers['Content-Type'] = 'application/json; charset=utf-8';
+      } else {
+        // The body goes out as UTF-8, so a conflicting charset would silently
+        // mis-declare the bytes rather than transcode them.
+        final declared = _charsetOf(headers[contentTypeKey]!);
+        if (declared != null && declared != 'utf-8' && declared != 'utf8') {
+          throw ArgumentError(
+            'Invalid headers: request bodies are sent as UTF-8, so '
+            'Content-Type cannot declare charset=$declared',
+          );
+        }
+      }
+    }
+
+    final maxLength = _parseInteger(
+      map['max_length'],
+      name: 'max_length',
+      defaultValue: defaultMaxLength,
+    );
+    if (maxLength < 1 || maxLength > maximumMaxLength) {
+      throw ArgumentError(
+        'Invalid max_length: expected a value from 1 to $maximumMaxLength',
+      );
+    }
+    final startIndex = _parseInteger(
+      map['start_index'],
+      name: 'start_index',
+      defaultValue: 0,
+    );
+    if (startIndex < 0) {
+      throw ArgumentError('Invalid start_index: expected a non-negative value');
+    }
+    if (startIndex > 0 && method != 'GET') {
+      // Continuing would replay the whole request, and a POST may create a
+      // resource or charge the caller a second time.
+      throw ArgumentError(
+        'Invalid start_index: a $method response cannot be continued because '
+        'that would repeat the request; raise max_length instead',
+      );
+    }
+    final rawAny = map['raw'];
+    if (rawAny != null && rawAny is! bool) {
+      throw ArgumentError('Invalid raw: expected a boolean');
+    }
+
+    return KelivoFetchRequestPayload(
+      url: uri,
+      method: method,
+      body: body,
+      headers: headers,
+      maxLength: maxLength,
+      startIndex: startIndex,
+      raw: rawAny as bool? ?? false,
+    );
+  }
+
+  /// Extracts the `charset` parameter of a Content-Type header, if any.
+  static String? _charsetOf(String contentType) => RegExp(
+    r'charset\s*=\s*"?([\w-]+)',
+    caseSensitive: false,
+  ).firstMatch(contentType)?.group(1)?.toLowerCase();
+
+  static int _parseInteger(
+    Object? value, {
+    required String name,
+    required int defaultValue,
+  }) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is num && value.isFinite && value == value.roundToDouble()) {
+      return value.toInt();
+    }
+    throw ArgumentError('Invalid $name: expected an integer');
   }
 }
 
@@ -61,11 +181,16 @@ class KelivoFetcher {
         'User-Agent': _defaultUA,
         ...payload.headers,
       };
-      final resp = await http.get(payload.url, headers: merged);
-      if (resp.statusCode < 200 || resp.statusCode >= 300) {
-        throw Exception('HTTP ${resp.statusCode}');
+      if (payload.method == 'POST') {
+        // Send bytes so the caller's Content-Type header is passed through
+        // untouched instead of having its charset rewritten by `encoding`.
+        return await http.post(
+          payload.url,
+          headers: merged,
+          body: utf8.encode(payload.body ?? ''),
+        );
       }
-      return resp;
+      return await http.get(payload.url, headers: merged);
     } catch (e) {
       throw Exception(
         'Failed to fetch ${payload.url}: ${e is Exception ? e.toString() : 'Unknown error'}',
@@ -73,59 +198,132 @@ class KelivoFetcher {
     }
   }
 
-  static Future<Map<String, dynamic>> html(
+  static Future<Map<String, dynamic>> fetch(
     KelivoFetchRequestPayload payload,
   ) async {
     try {
       final resp = await _fetch(payload);
-      final text = resp.body;
-      return _ok(text);
+      final contentType = (resp.headers['content-type'] ?? '').toLowerCase();
+      final body = _decodeBody(resp, contentType: contentType);
+      final text = payload.raw
+          ? body
+          : _contentForModel(body, contentType: contentType);
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        // Custom APIs carry their error details in the 4xx/5xx body, so hand
+        // both the status and the response back instead of a bare failure.
+        final detail = text.trim().isEmpty
+            ? ''
+            : _bounded(text, payload).trim();
+        return _err(
+          detail.isEmpty
+              ? 'HTTP ${resp.statusCode}'
+              : 'HTTP ${resp.statusCode}\n\n$detail',
+        );
+      }
+      return _ok(_bounded(text, payload));
     } catch (e) {
       return _err(e.toString());
     }
   }
 
-  static Future<Map<String, dynamic>> json(
-    KelivoFetchRequestPayload payload,
-  ) async {
+  /// Without a declared charset `http` decodes as latin1 (bar
+  /// `application/json`), which mangles the UTF-8 most pages and APIs actually
+  /// serve — HTML in particular declares its charset in a meta tag, not the
+  /// header. Try strict UTF-8 first so genuinely latin1 bytes fail the decode
+  /// and fall back to `http`'s own handling.
+  static String _decodeBody(http.Response resp, {required String contentType}) {
+    if (KelivoFetchRequestPayload._charsetOf(contentType) != null) {
+      return resp.body;
+    }
     try {
-      final resp = await _fetch(payload);
-      final raw = resp.body;
-      final dynamic data = jsonDecode(raw);
-      return _ok(const JsonEncoder.withIndent('  ').convert(data));
-    } catch (e) {
-      return _err(e.toString());
+      return utf8.decode(resp.bodyBytes);
+    } catch (_) {
+      return resp.body;
     }
   }
 
-  static Future<Map<String, dynamic>> txt(
-    KelivoFetchRequestPayload payload,
-  ) async {
-    try {
-      final resp = await _fetch(payload);
-      final html = resp.body;
-      final dom.Document document = html_parser.parse(html);
-      document.querySelectorAll('script,style').forEach((el) => el.remove());
-      final text = document.body?.text ?? '';
-      final normalized = text.replaceAll(RegExp(r'\s+'), ' ').trim();
-      return _ok(normalized);
-    } catch (e) {
-      return _err(e.toString());
+  static String _contentForModel(String body, {required String contentType}) {
+    if (_isHtml(body, contentType: contentType)) {
+      return _htmlToMarkdown(body);
     }
+    if (contentType.contains('application/json') ||
+        contentType.contains('+json')) {
+      try {
+        return jsonEncode(jsonDecode(body));
+      } catch (_) {
+        // Preserve malformed or JSON-like responses instead of failing fetch.
+      }
+    }
+    return body.trim();
   }
 
-  static Future<Map<String, dynamic>> markdown(
-    KelivoFetchRequestPayload payload,
-  ) async {
-    try {
-      final resp = await _fetch(payload);
-      final html = resp.body;
-      final md = html2md.convert(html);
-      return _ok(md);
-    } catch (e) {
-      return _err(e.toString());
+  static bool _isHtml(String body, {required String contentType}) {
+    if (contentType.contains('text/html') ||
+        contentType.contains('application/xhtml+xml')) {
+      return true;
     }
+    if (contentType.isNotEmpty) return false;
+    final prefix = body.length > 256 ? body.substring(0, 256) : body;
+    return RegExp(
+      r'<\s*(?:!doctype\s+html|html)\b',
+      caseSensitive: false,
+    ).hasMatch(prefix);
   }
+
+  static String _htmlToMarkdown(String html) {
+    final dom.Document document = html_parser.parse(html);
+    document
+        .querySelectorAll(
+          'script,style,noscript,template,svg,iframe,nav,aside,footer,form',
+        )
+        .forEach((element) => element.remove());
+
+    final mainContent = document.querySelector('main,article,[role="main"]');
+    final source = mainContent?.outerHtml ?? document.body?.innerHtml ?? html;
+    final markdown = html2md.convert(source).trim();
+    if (markdown.isNotEmpty) {
+      return markdown.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    }
+    return (mainContent?.text ?? document.body?.text ?? '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  static String _bounded(String text, KelivoFetchRequestPayload payload) {
+    if (payload.startIndex >= text.length) {
+      return 'No more content available.';
+    }
+
+    var start = payload.startIndex;
+    if (start > 0 && _isLowSurrogate(text.codeUnitAt(start))) {
+      start -= 1;
+    }
+    var end = math.min(start + payload.maxLength, text.length);
+    if (end < text.length &&
+        end > start &&
+        _isHighSurrogate(text.codeUnitAt(end - 1)) &&
+        _isLowSurrogate(text.codeUnitAt(end))) {
+      end = end - start == 1 ? end + 1 : end - 1;
+    }
+
+    final content = text.substring(start, end);
+    if (end >= text.length) return content;
+    final shown =
+        '[Content truncated: showing characters $start-${end - 1} '
+        'of ${text.length}.';
+    if (payload.method != 'GET') {
+      return '$content\n\n$shown Raise max_length to see more; a '
+          '${payload.method} cannot be continued with start_index.]';
+    }
+    return '$content\n\n$shown Call kelivo_fetch with start_index=$end to '
+        'continue.]';
+  }
+
+  static bool _isHighSurrogate(int codeUnit) =>
+      codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
+
+  static bool _isLowSurrogate(int codeUnit) =>
+      codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
 
   static Map<String, dynamic> _ok(String text) => {
     'content': [
@@ -179,7 +377,7 @@ class KelivoFetchMcpServerEngine {
           return _ok(
             id,
             result: {
-              'serverInfo': {'name': '@kelivo/fetch', 'version': '0.1.0'},
+              'serverInfo': {'name': '@kelivo/fetch', 'version': '0.2.0'},
               'protocolVersion': mcp.McpProtocol.defaultVersion,
               // Only tools capability is advertised for this minimal server
               'capabilities': {
@@ -204,17 +402,8 @@ class KelivoFetchMcpServerEngine {
             return _ok(id, result: KelivoFetcher._err(e.toString()));
           }
 
-          if (name == 'fetch_html') {
-            return _ok(id, result: await KelivoFetcher.html(payload));
-          }
-          if (name == 'fetch_markdown') {
-            return _ok(id, result: await KelivoFetcher.markdown(payload));
-          }
-          if (name == 'fetch_txt') {
-            return _ok(id, result: await KelivoFetcher.txt(payload));
-          }
-          if (name == 'fetch_json') {
-            return _ok(id, result: await KelivoFetcher.json(payload));
+          if (name == 'kelivo_fetch') {
+            return _ok(id, result: await KelivoFetcher.fetch(payload));
           }
           return _error(id, code: -32101, message: 'Tool not found: $name');
 
@@ -256,10 +445,51 @@ class KelivoFetchMcpServerEngine {
     Map<String, dynamic> schema() => {
       'type': 'object',
       'properties': {
-        'url': {'type': 'string', 'description': 'URL of the website to fetch'},
+        'url': {
+          'type': 'string',
+          'description':
+              'Use the URL exactly as given; do not add www. It must include '
+              'http:// or https://: https://example.com is valid, while '
+              'example.com is invalid.',
+        },
+        'method': {
+          'type': 'string',
+          'description':
+              'HTTP method. Use POST only for an API endpoint the user asked '
+              'you to call; GET for reading web pages.',
+          'enum': ['GET', 'POST'],
+          'default': 'GET',
+        },
         'headers': {
           'type': 'object',
           'description': 'Optional headers to include in the request',
+        },
+        'body': {
+          'type': 'string',
+          'description':
+              'Request body for POST, as a string; send a JSON string for JSON '
+              'APIs. Sent as UTF-8; Content-Type defaults to application/json '
+              'when omitted.',
+        },
+        'max_length': {
+          'type': 'integer',
+          'description': 'Maximum content characters to return',
+          'default': KelivoFetchRequestPayload.defaultMaxLength,
+          'minimum': 1,
+          'maximum': KelivoFetchRequestPayload.maximumMaxLength,
+        },
+        'start_index': {
+          'type': 'integer',
+          'description':
+              'Character index used to continue truncated content; GET only',
+          'default': 0,
+          'minimum': 0,
+        },
+        'raw': {
+          'type': 'boolean',
+          'description':
+              'Return raw source instead of compact, readable Markdown',
+          'default': false,
         },
       },
       'required': ['url'],
@@ -267,24 +497,18 @@ class KelivoFetchMcpServerEngine {
 
     return [
       {
-        'name': 'fetch_html',
-        'description': 'Fetch a website and return the content as HTML',
-        'inputSchema': schema(),
-      },
-      {
-        'name': 'fetch_markdown',
-        'description': 'Fetch a website and return the content as Markdown',
-        'inputSchema': schema(),
-      },
-      {
-        'name': 'fetch_txt',
+        'name': 'kelivo_fetch',
         'description':
-            'Fetch a website, return the content as plain text (no HTML)',
-        'inputSchema': schema(),
-      },
-      {
-        'name': 'fetch_json',
-        'description': 'Fetch a JSON file from a URL',
+            'Fetch the public contents of a web page. Only fetch a URL that '
+            'already appears in the conversation: one provided by the user or '
+            'returned by a prior web_search, kelivo_fetch, or other tool. '
+            'Cannot access content that requires authentication, including private '
+            'documents or pages behind login walls. HTML is simplified to compact '
+            'Markdown with bounded output by default. Continue truncated content with '
+            'start_index; use raw=true only when exact source is required. '
+            'method=POST with a body calls an API endpoint the user has asked for; '
+            'a POST response cannot be continued with start_index, so raise '
+            'max_length when it is truncated.',
         'inputSchema': schema(),
       },
     ];
@@ -307,8 +531,8 @@ class KelivoInMemoryClientTransport implements mcp.ClientTransport {
   Future<void> get onClose => _closeCompleter.future;
 
   @override
-  void send(dynamic message) {
-    if (_closed) return;
+  mcp.TransportSendOperation send(dynamic message) {
+    if (_closed) return mcp.TransportSendOperation.completed();
     // Process asynchronously to mimic real transport
     Future.microtask(() async {
       final resp = await _server.handleMessage(message);
@@ -317,6 +541,7 @@ class KelivoInMemoryClientTransport implements mcp.ClientTransport {
         _messageController.add(resp);
       }
     });
+    return mcp.TransportSendOperation.completed();
   }
 
   @override

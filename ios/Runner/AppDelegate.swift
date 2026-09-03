@@ -1,16 +1,22 @@
-import Flutter
-import UIKit
-import BackgroundTasks
-import UserNotifications
-import ActivityKit
+ import Flutter
+ import UIKit
+ import AuthenticationServices
+ import BackgroundTasks
+ import UserNotifications
+ import ActivityKit
+ import SwiftUI
+ import Translation
 
 private let backgroundRefreshIdentifier = "psyche.kelivo.background-generation.refresh"
 private let backgroundProcessingIdentifier = "psyche.kelivo.background-generation.processing"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
-  private let fileSaveHandler = NativeFileSaveHandler()
-  private let backgroundGenerationHandler = IosBackgroundGenerationHandler()
+   private let fileSaveHandler = NativeFileSaveHandler()
+   private let backgroundGenerationHandler = IosBackgroundGenerationHandler()
+   private let mcpOAuthHandler = IosMcpOAuthHandler()
+   private let deviceLocalToolsHandler = DeviceLocalToolsHandler()
+   private let iosTranslationHandler = IosTranslationHandler()
 
   override func application(
     _ application: UIApplication,
@@ -56,6 +62,74 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
       iosBackgroundChannel.setMethodCallHandler { [weak self] call, result in
         self?.backgroundGenerationHandler.handle(call: call, result: result)
       }
+
+      let mcpOAuthChannel = FlutterMethodChannel(name: "app.mcp_oauth", binaryMessenger: controller.binaryMessenger)
+      mcpOAuthHandler.presentationAnchor = window
+      mcpOAuthChannel.setMethodCallHandler { [weak self] call, result in
+        self?.mcpOAuthHandler.handle(call: call, result: result)
+      }
+
+      let iosTranslationChannel = FlutterMethodChannel(name: "app.ios_translation", binaryMessenger: controller.binaryMessenger)
+      iosTranslationHandler.presentingViewController = controller
+      iosTranslationChannel.setMethodCallHandler { [weak self] call, result in
+        self?.iosTranslationHandler.handle(call: call, result: result)
+      }
+ 
+       let deviceToolsChannel = FlutterMethodChannel(name: "app.device_tools", binaryMessenger: controller.binaryMessenger)
+       deviceToolsChannel.setMethodCallHandler { [weak self] call, result in
+         self?.deviceLocalToolsHandler.handle(call: call, result: result)
+       }
+
+      // Free space on the volume holding the app's data. Uses the "important
+      // usage" capacity, which is what iOS will actually free up for data the
+      // app cannot regenerate -- the plain available-capacity value understates
+      // it and would make the app skip copies it could have made.
+      let storageChannel = FlutterMethodChannel(name: "app.device_storage", binaryMessenger: controller.binaryMessenger)
+      storageChannel.setMethodCallHandler { call, result in
+        switch call.method {
+        case "freeBytes":
+          guard let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            result(nil)
+            return
+          }
+          do {
+            let values = try directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+            if let capacity = values.volumeAvailableCapacityForImportantUsage {
+              result(NSNumber(value: capacity))
+              return
+            }
+          } catch {
+            // Fall through: the caller treats a missing answer as "unknown".
+          }
+          result(nil)
+
+        // Local database copies live under Documents, which iCloud backs up in
+        // full. They can reach gigabytes and are reproducible from the live
+        // database, so backing them up would bloat -- and can break -- the
+        // user's iCloud backup without protecting anything new.
+        case "excludeFromBackup":
+          guard
+            let arguments = call.arguments as? [String: Any],
+            let path = arguments["path"] as? String,
+            !path.isEmpty
+          else {
+            result(FlutterError(code: "invalid_args", message: "Missing path.", details: nil))
+            return
+          }
+          var url = URL(fileURLWithPath: path)
+          var values = URLResourceValues()
+          values.isExcludedFromBackup = true
+          do {
+            try url.setResourceValues(values)
+            result(true)
+          } catch {
+            result(FlutterError(code: "exclude_failed", message: error.localizedDescription, details: nil))
+          }
+
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
@@ -63,6 +137,185 @@ private let backgroundProcessingIdentifier = "psyche.kelivo.background-generatio
   override func applicationDidBecomeActive(_ application: UIApplication) {
     super.applicationDidBecomeActive(application)
     backgroundGenerationHandler.dismissFinishedLiveActivityIfNeeded()
+  }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if url.scheme == "kelivo" && url.host == "oauth-return" {
+      return true
+    }
+    return super.application(app, open: url, options: options)
+  }
+}
+
+private final class IosTranslationHandler {
+  weak var presentingViewController: UIViewController?
+  private var hostingController: UIViewController?
+
+  func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "isAvailable":
+      if #available(iOS 17.4, *) {
+        result(true)
+      } else {
+        result(false)
+      }
+    case "present":
+      guard #available(iOS 17.4, *) else {
+        result(false)
+        return
+      }
+      let arguments = call.arguments as? [String: Any]
+      guard
+        let text = arguments?["text"] as? String,
+        !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+        let anchorX = arguments?["anchorX"] as? Double,
+        let anchorY = arguments?["anchorY"] as? Double,
+        let presenter = presentingViewController,
+        presenter.viewIfLoaded?.window != nil
+      else {
+        result(false)
+        return
+      }
+      present(
+        text: text,
+        anchor: CGPoint(x: anchorX, y: anchorY),
+        in: presenter
+      )
+      result(true)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  @available(iOS 17.4, *)
+  private func present(text: String, anchor: CGPoint, in presenter: UIViewController) {
+    removeHostingController()
+
+    let bounds = presenter.view.bounds
+    let point = CGPoint(
+      x: min(max(anchor.x, bounds.minX + 1), bounds.maxX - 1),
+      y: min(max(anchor.y, bounds.minY + 1), bounds.maxY - 1)
+    )
+    let hostingController = UIHostingController(
+      rootView: NativeTranslationPresenter(text: text) { [weak self] in
+        self?.removeHostingController()
+      }
+    )
+    hostingController.view.backgroundColor = .clear
+    hostingController.view.frame = CGRect(
+      x: point.x - 1,
+      y: point.y - 1,
+      width: 2,
+      height: 2
+    )
+    presenter.addChild(hostingController)
+    presenter.view.addSubview(hostingController.view)
+    hostingController.didMove(toParent: presenter)
+    self.hostingController = hostingController
+  }
+
+  private func removeHostingController() {
+    guard let hostingController else { return }
+    hostingController.willMove(toParent: nil)
+    hostingController.view.removeFromSuperview()
+    hostingController.removeFromParent()
+    self.hostingController = nil
+  }
+}
+
+@available(iOS 17.4, *)
+private struct NativeTranslationPresenter: View {
+  let text: String
+  let onDismiss: () -> Void
+  @State private var isPresented = false
+
+  var body: some View {
+    Color.clear
+      .translationPresentation(isPresented: $isPresented, text: text)
+      .onAppear {
+        DispatchQueue.main.async {
+          isPresented = true
+        }
+      }
+      .onChange(of: isPresented) { visible in
+        if !visible {
+          onDismiss()
+        }
+      }
+  }
+}
+
+private final class IosMcpOAuthHandler: NSObject, ASWebAuthenticationPresentationContextProviding {
+  weak var presentationAnchor: UIWindow?
+  private var session: ASWebAuthenticationSession?
+
+  func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "authenticate":
+      guard session == nil else {
+        result(FlutterError(code: "authorization_in_progress", message: "An authorization session is already in progress.", details: nil))
+        return
+      }
+      let arguments = call.arguments as? [String: Any]
+      guard
+        let urlString = arguments?["url"] as? String,
+        let url = URL(string: urlString),
+        let callbackScheme = arguments?["callbackScheme"] as? String,
+        !callbackScheme.isEmpty
+      else {
+        result(FlutterError(code: "invalid_arguments", message: "A valid authorization URL and callback scheme are required.", details: nil))
+        return
+      }
+
+      let authenticationSession = ASWebAuthenticationSession(
+        url: url,
+        callbackURLScheme: callbackScheme
+      ) { [weak self] callbackURL, error in
+        self?.session = nil
+        if let callbackURL {
+          result(callbackURL.absoluteString)
+          return
+        }
+        let nsError = error as NSError?
+        let cancelled = nsError?.domain == ASWebAuthenticationSessionErrorDomain && nsError?.code == 1
+        result(
+          FlutterError(
+            code: cancelled ? "authorization_cancelled" : "authorization_failed",
+            message: error?.localizedDescription ?? "Authorization did not return a callback URL.",
+            details: nil
+          )
+        )
+      }
+      authenticationSession.presentationContextProvider = self
+      authenticationSession.prefersEphemeralWebBrowserSession = false
+      session = authenticationSession
+      if !authenticationSession.start() {
+        session = nil
+        result(FlutterError(code: "authorization_failed", message: "Could not start the authorization session.", details: nil))
+      }
+    case "cancel":
+      session?.cancel()
+      session = nil
+      result(nil)
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+
+  func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+    if let presentationAnchor {
+      return presentationAnchor
+    }
+    for case let scene as UIWindowScene in UIApplication.shared.connectedScenes {
+      if let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first {
+        return window
+      }
+    }
+    return UIWindow()
   }
 }
 

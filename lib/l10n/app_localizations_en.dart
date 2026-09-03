@@ -65,9 +65,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPageSearch => 'Search';
 
   @override
-  String get settingsPageImageGeneration => 'Image Generation';
-
-  @override
   String get settingsPageTts => 'TTS';
 
   @override
@@ -95,118 +92,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsPageFilesCount(int count, String size) {
     return '$count files · $size';
   }
-
-  @override
-  String get imageGenerationPageTitle => 'Image Generation';
-
-  @override
-  String get imageGenerationProviderLabel => 'Provider';
-
-  @override
-  String get imageGenerationModelLabel => 'Model';
-
-  @override
-  String get imageGenerationModeLabel => 'Mode';
-
-  @override
-  String get imageGenerationModeGenerate => 'Generate';
-
-  @override
-  String get imageGenerationModeEdit => 'Edit Image';
-
-  @override
-  String get imageGenerationPromptLabel => 'Prompt';
-
-  @override
-  String get imageGenerationPromptHint => 'Describe the image you want';
-
-  @override
-  String get imageGenerationSizeLabel => 'Size';
-
-  @override
-  String get imageGenerationQualityLabel => 'Quality';
-
-  @override
-  String get imageGenerationOutputFormatLabel => 'Format';
-
-  @override
-  String get imageGenerationCountLabel => 'Count';
-
-  @override
-  String get imageGenerationPickImages => 'Pick Images';
-
-  @override
-  String imageGenerationPickedImages(int count) {
-    return '$count selected';
-  }
-
-  @override
-  String get imageGenerationClearImages => 'Clear';
-
-  @override
-  String get imageGenerationMaskNotSelected => 'No mask selected';
-
-  @override
-  String get imageGenerationMaskSelected => 'Mask selected';
-
-  @override
-  String get imageGenerationPickMask => 'Pick Mask';
-
-  @override
-  String get imageGenerationClearMask => 'Clear Mask';
-
-  @override
-  String get imageGenerationGenerateButton => 'Generate Image';
-
-  @override
-  String get imageGenerationEditButton => 'Edit Image';
-
-  @override
-  String get imageGenerationGenerating => 'Generating…';
-
-  @override
-  String get imageGenerationNoProvider =>
-      'No enabled OpenAI-compatible provider';
-
-  @override
-  String get imageGenerationModelRequired =>
-      'Set an image model for this assistant first';
-
-  @override
-  String get imageGenerationModelUnsupported =>
-      'The selected image model is not an OpenAI-compatible image model';
-
-  @override
-  String get imageGenerationNoApiKey => 'The selected provider has no API key';
-
-  @override
-  String get imageGenerationPromptRequired => 'Enter a prompt first';
-
-  @override
-  String get imageGenerationImageRequired => 'Select at least one input image';
-
-  @override
-  String imageGenerationSuccess(int count) {
-    return '$count image(s) generated';
-  }
-
-  @override
-  String imageGenerationFailed(String error) {
-    return 'Image request failed: $error';
-  }
-
-  @override
-  String get imageGenerationEmptyResult => 'The image API returned no image';
-
-  @override
-  String get imageGenerationInvalidResponse =>
-      'The image API returned an invalid response';
-
-  @override
-  String get imageGenerationRequestFailed => 'Image request failed';
-
-  @override
-  String get imageGenerationResultTitle => 'Results';
 
   @override
   String get storageSpacePageTitle => 'Storage Space';
@@ -237,7 +122,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceCategoryFiles => 'Files';
 
   @override
+  String get storageSpaceCategoryFonts => 'Fonts';
+
+  @override
+  String get storageSpaceCategoryLocalModels => 'Local Models';
+
+  @override
+  String get storageSpaceOtherHint =>
+      'Fonts, downloaded local models, and other app files.';
+
+  @override
+  String get storageSpaceSubOtherApp => 'App files';
+
+  @override
   String get storageSpaceCategoryChatData => 'Chat Records';
+
+  @override
+  String get storageSpaceCategoryLegacyChatData => 'Chat Records (Old)';
+
+  @override
+  String get storageSpaceCategoryRestoreTraces => 'Restore Traces';
+
+  @override
+  String get storageSpaceCategoryDisplacedDatabases => 'Set-Aside Databases';
+
+  @override
+  String get storageSpaceSubDisplacedDatabases =>
+      'Kept before an automatic rebuild';
+
+  @override
+  String get storageSpaceClearDisplacedDatabasesConfirmMessage =>
+      'Delete these set-aside databases? Kelivo kept them when it rebuilt its database, and they may be the only surviving copy of those chats and settings. This cannot be undone.';
+
+  @override
+  String get storageSpaceRestoreTracesHint =>
+      'Previous data snapshots kept after completed restores. Clearing them does not affect the current app data.';
+
+  @override
+  String get storageSpaceClearRestoreTracesButton => 'Clear Restore Traces';
+
+  @override
+  String get storageSpaceClearDisplacedDatabasesButton =>
+      'Delete Set-Aside Databases';
+
+  @override
+  String get storageSpaceClearRestoreTracesConfirmMessage =>
+      'Clear completed restore snapshots? Your current database, settings, and files will not be affected.';
+
+  @override
+  String get storageSpaceSubCompletedRestoreRuns =>
+      'Completed restore snapshots';
 
   @override
   String get storageSpaceCategoryAssistantData => 'Assistants';
@@ -249,7 +183,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceCategoryLogs => 'Logs';
 
   @override
-  String get storageSpaceCategoryOther => 'App';
+  String get storageSpaceCategoryOther => 'Other';
 
   @override
   String storageSpaceFilesCount(int count) {
@@ -259,6 +193,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get storageSpaceSafeToClearHint =>
       'Safe to clear. This will not affect your chat history.';
+
+  @override
+  String get storageSpaceLegacyChatDataHint =>
+      'These are retained Hive files from before the SQLite migration. Clearing them does not delete your current chat records.';
 
   @override
   String get storageSpaceNotSafeToClearHint =>
@@ -277,6 +215,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceSubChatToolEvents => 'Tool events';
 
   @override
+  String get storageSpaceSubChatDatabase => 'Chat database';
+
+  @override
+  String get storageSpaceSubChatWriteAheadLog => 'Write-ahead log';
+
+  @override
+  String get storageSpaceSubChatSharedMemory => 'Shared memory index';
+
+  @override
   String get storageSpaceSubAssistantAvatars => 'Avatars';
 
   @override
@@ -290,6 +237,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storageSpaceSubCacheSystem => 'System cache';
+
+  @override
+  String get storageSpaceSubLogsContext => 'Context logs';
 
   @override
   String get storageSpaceSubLogsFlutter => 'Flutter logs';
@@ -331,6 +281,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storageSpaceClearLogsButton => 'Clear Logs';
 
   @override
+  String get storageSpaceClearLegacyChatDataButton => 'Clear Old Chat Records';
+
+  @override
+  String get storageSpaceExportLegacyChatFileButton => 'Export';
+
+  @override
+  String storageSpaceExportDone(Object fileName) {
+    return '$fileName exported';
+  }
+
+  @override
+  String storageSpaceExportFailed(Object error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get storageSpaceClearLegacyChatDataConfirmMessage =>
+      'Clear the retained old chat files? Your current SQLite chat records will remain available.';
+
+  @override
   String get storageSpaceViewLogsButton => 'View Logs';
 
   @override
@@ -364,6 +334,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String storageSpaceUploadsCount(int count) {
     return '$count items';
   }
+
+  @override
+  String get storageSpaceSourceLabel => 'Source';
+
+  @override
+  String get storageSpaceSourceAll => 'All';
+
+  @override
+  String get storageSpaceSourceUserUpload => 'User uploads';
+
+  @override
+  String get storageSpaceSourceAssistant => 'Assistant';
+
+  @override
+  String get storageSpaceSortLabel => 'Sort';
+
+  @override
+  String get storageSpaceSortNewest => 'Newest';
+
+  @override
+  String get storageSpaceSortOldest => 'Oldest';
+
+  @override
+  String get storageSpaceSortLargest => 'Largest';
+
+  @override
+  String get storageSpaceSortSmallest => 'Smallest';
 
   @override
   String get settingsPageAboutSection => 'About';
@@ -603,15 +600,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantProviderNewAssistantName => 'New Assistant';
 
   @override
-  String assistantProviderSampleAssistantSystemPrompt(
-    String model_name,
-    String cur_datetime,
-    String locale,
-    String timezone,
-    String device_info,
-    String system_version,
-  ) {
-    return 'You are $model_name, an AI assistant who gladly provides accurate and helpful assistance. The current time is $cur_datetime, the device language is $locale, timezone is $timezone, the user is using $device_info, version $system_version. If the user does not explicitly specify otherwise, please use the user\'s device language when replying.';
+  String assistantProviderSampleAssistantSystemPrompt(String model_name) {
+    return 'You are $model_name, a helpful AI assistant. Answer accurately and concisely; say when you are unsure. Prefer clear structure (short paragraphs or lists) when it helps. Reply in the user\'s language by default.';
   }
 
   @override
@@ -728,10 +718,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get homePagePleaseSelectModel => 'Please select a model first';
-
-  @override
-  String get homePageImageAttachmentUnsupported =>
-      'The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.';
 
   @override
   String get homePageAudioAttachmentUnsupported =>
@@ -951,16 +937,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantEditChatModelSubtitle =>
       'Default chat model for this assistant (fallback to global)';
-
-  @override
-  String get assistantEditImageModelTitle => 'Image Model';
-
-  @override
-  String get assistantEditImageModelSubtitle =>
-      'Used in chat when a message starts with /image, /img, 生图, or 画图';
-
-  @override
-  String get assistantEditImageModelUnset => 'No image model';
 
   @override
   String get assistantEditTemperatureDescription =>
@@ -1443,6 +1419,43 @@ class AppLocalizationsEn extends AppLocalizations {
   String get assistantEditPreviewTitle => 'Preview';
 
   @override
+  String get assistantEditPromptTimeVarWarning =>
+      'Using time variables in the system prompt makes the beginning of every request different, so prompt caching cannot hit and both cost and time-to-first-token go up. If the model needs to know the current time, use the \"Append current time\" switch below.';
+
+  @override
+  String get assistantEditPromptAppendTimeTitle => 'Append current time';
+
+  @override
+  String get assistantEditPromptAppendTimeSubtitle =>
+      'Append the send time to the end of each user message. Time stays at the end of the request, so prompt caching is unaffected.';
+
+  @override
+  String get assistantEditPromptAppendTimeInfoTitle => 'Appended time format';
+
+  @override
+  String assistantEditPromptAppendTimeInfoBody(String example) {
+    return 'When enabled, a blank line and then the following tag are appended at the end of each user message:\n\n$example\n\nThe timestamp is that message’s own send time, so it stays stable when you retry.';
+  }
+
+  @override
+  String get assistantEditPromptAppendTimeInfoClose => 'Got it';
+
+  @override
+  String get assistantEditPromptTimeVarDialogTitle =>
+      'System prompt contains time variables';
+
+  @override
+  String assistantEditPromptTimeVarDialogBody(String variables) {
+    return 'Your system prompt uses $variables. The system prompt is re-rendered on every request, so time variables make the beginning of every request different and prompt caching cannot hit. Consider removing these variables and using \"Append current time\" instead — it puts the time at the end of the request and does not affect the prefix.';
+  }
+
+  @override
+  String get assistantEditPromptTimeVarDialogRemove => 'Go remove';
+
+  @override
+  String get assistantEditPromptTimeVarDialogKeep => 'Enable anyway';
+
+  @override
   String get codeBlockPreviewButton => 'Preview';
 
   @override
@@ -1659,7 +1672,275 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageRestartContent =>
-      'Restore completed. Please restart the app.';
+      'Import successful. Restart Kelivo to apply it safely.';
+
+  @override
+  String backupPageRestartContentWithSkipped(int count) {
+    return 'Import completed, but $count conversations with invalid message ordering were skipped. Restart Kelivo to apply the imported data safely.';
+  }
+
+  @override
+  String get restartAppFailedMessage =>
+      'Kelivo could not restart automatically. Fully close it, then open it again.';
+
+  @override
+  String get backupRestoreRolledBackTitle => 'Restore was rolled back';
+
+  @override
+  String get backupRestoreRolledBackContent =>
+      'The restore could not be completed. Kelivo verified and kept your previous data.';
+
+  @override
+  String get backupRestoreFailureTitle => 'Restore requires attention';
+
+  @override
+  String get backupRestoreFailureContent =>
+      'Kelivo could not verify a complete old or new data set, so chat data was not opened. Close Kelivo and try again. If this repeats, keep the diagnostic code for support.';
+
+  @override
+  String get backupRestoreBusinessLeaseUnavailableTitle =>
+      'Kelivo is already running';
+
+  @override
+  String get backupRestoreBusinessLeaseUnavailableContent =>
+      'Kelivo\'s data is still in use by another app process. Close any other Kelivo window, then restart. Your chat data has not been opened by this process.';
+
+  @override
+  String get restoreProgressTitle => 'Restoring your backup';
+
+  @override
+  String get restoreProgressWarning =>
+      'Keep Kelivo open until this finishes. If you close it now, the next launch starts this over.';
+
+  @override
+  String get restoreProgressStageCheckingBackup => 'Checking the backup';
+
+  @override
+  String get restoreProgressStagePreservingCurrentData =>
+      'Preserving your current data';
+
+  @override
+  String get restoreProgressStageInstallingBackup => 'Installing the backup';
+
+  @override
+  String get restoreProgressStageVerifying => 'Verifying';
+
+  @override
+  String get restoreProgressStageRollingBack => 'Restoring your previous data';
+
+  @override
+  String get restoreProgressStageFinishing => 'Finishing up';
+
+  @override
+  String get backupRestoreFailureRestartButton => 'Restart Kelivo';
+
+  @override
+  String get backupRestoreFailureCopyButton => 'Copy diagnostic code';
+
+  @override
+  String get backupRestoreFailureCopied => 'Diagnostic code copied';
+
+  @override
+  String backupRestoreFailureDiagnostic(String code) {
+    return 'Diagnostic code: $code';
+  }
+
+  @override
+  String get startupRecoveryMoreOptions => 'More recovery options';
+
+  @override
+  String get startupRecoveryRepairButton => 'Repair and restart';
+
+  @override
+  String get startupRecoveryExportButton => 'Export a copy of my data';
+
+  @override
+  String get startupRecoveryResetButton => 'Reset data';
+
+  @override
+  String get startupRecoveryBusy => 'Working…';
+
+  @override
+  String get startupRecoveryExportSucceeded => 'A copy of your data was saved.';
+
+  @override
+  String get startupRecoveryExportFailed =>
+      'Could not export a copy of your data.';
+
+  @override
+  String get startupRecoveryRepairFailed =>
+      'Repair could not fix this. Export a copy of your data, then reset.';
+
+  @override
+  String get startupRecoveryResetFailed =>
+      'Reset failed. Fully close Kelivo, then open it again.';
+
+  @override
+  String get startupRecoveryResetDialogTitle => 'Reset all data?';
+
+  @override
+  String get startupRecoveryResetDialogContent =>
+      'This permanently deletes Kelivo\'s database on this device and starts fresh. If you might need this data, export a copy first. This cannot be undone.';
+
+  @override
+  String get startupRecoveryResetDialogConfirm => 'Reset and restart';
+
+  @override
+  String get startupRecoveryResetDialogCancel => 'Cancel';
+
+  @override
+  String get startupRecoveryWhatFailed => 'What failed';
+
+  @override
+  String get startupRecoveryStageLabel => 'Stage';
+
+  @override
+  String get startupRecoveryStageRestore => 'Restore gate';
+
+  @override
+  String get startupRecoveryStageDatabase => 'Database startup';
+
+  @override
+  String get startupRecoveryDiagnosticLabel => 'Diagnostic code';
+
+  @override
+  String get startupRecoverySchemaLabel => 'Database version';
+
+  @override
+  String startupRecoverySchemaValue(String installed, int expected) {
+    return '$installed on disk · $expected expected by this build';
+  }
+
+  @override
+  String get startupRecoveryAppVersionLabel => 'App';
+
+  @override
+  String get startupRecoveryUnknownValue => 'unknown';
+
+  @override
+  String get startupRecoveryCollecting => 'Collecting diagnostics…';
+
+  @override
+  String get startupRecoveryShowDetails => 'Show technical details';
+
+  @override
+  String get startupRecoveryHideDetails => 'Hide technical details';
+
+  @override
+  String get startupRecoveryCopyReport => 'Copy full report';
+
+  @override
+  String get startupRecoveryReportCopied => 'Full report copied';
+
+  @override
+  String get startupRecoveryShareReport => 'Export report';
+
+  @override
+  String startupRecoveryReportStored(String path) {
+    return 'A copy of this report was saved to $path';
+  }
+
+  @override
+  String startupRecoveryReportSaved(String path) {
+    return 'Report saved to $path';
+  }
+
+  @override
+  String get startupRecoveryReportShared => 'Report exported.';
+
+  @override
+  String get startupRecoveryReportSaveFailed => 'Could not export the report.';
+
+  @override
+  String get startupRecoverySectionDataTitle => 'Your data';
+
+  @override
+  String get startupRecoverySectionDataBody =>
+      'Nothing has been deleted. Save a copy somewhere safe before trying anything below.';
+
+  @override
+  String startupRecoveryExportSavedTo(String path) {
+    return 'A copy of your data was saved to $path';
+  }
+
+  @override
+  String get startupRecoverySectionRepairTitle => 'Diagnose and repair';
+
+  @override
+  String get startupRecoverySectionRepairBody =>
+      'The integrity check only reads the database. Repair clears leftover metadata from an interrupted update and retries startup; it never deletes chats.';
+
+  @override
+  String get startupRecoveryIntegrityButton => 'Check database integrity';
+
+  @override
+  String get startupRecoveryIntegrityHealthy =>
+      'SQLite found no damage in the database file.';
+
+  @override
+  String startupRecoveryIntegrityDamaged(String detail) {
+    return 'SQLite reported problems — $detail';
+  }
+
+  @override
+  String get startupRecoveryIntegrityMissing =>
+      'No database file was found in the data folder.';
+
+  @override
+  String get startupRecoveryIntegrityFailed =>
+      'The integrity check could not run.';
+
+  @override
+  String get startupRecoveryDangerZone => 'Danger zone';
+
+  @override
+  String get startupRecoveryDangerBody =>
+      'Resetting permanently deletes Kelivo\'s database on this device. Export a copy of your data first — a reset also destroys the evidence needed to fix the underlying problem.';
+
+  @override
+  String get startupRecoveryResetAcknowledge =>
+      'I exported a copy, or I do not need this data.';
+
+  @override
+  String get startupDatabaseUpdateRequiredTitle => 'Update Kelivo to continue';
+
+  @override
+  String get startupDatabaseUpdateRequiredContent =>
+      'The chat database on this device was created by a newer version of Kelivo and cannot be opened by this version. Your data has not been changed. Install the latest version of Kelivo, then open it again.';
+
+  @override
+  String get startupDatabaseUpdateRequiredDowngradeTitle =>
+      'If you need an older version';
+
+  @override
+  String get startupDatabaseUpdateRequiredDowngradeIntro =>
+      'This version cannot open the database on this device. If you must keep using an older version, follow the steps below. Do not delete or overwrite the data here until you have a backup.';
+
+  @override
+  String get startupDatabaseUpdateRequiredDowngradeStep1 =>
+      'Install and open the latest Kelivo, then export a backup from Settings → Backup.';
+
+  @override
+  String startupDatabaseUpdateRequiredDowngradeStep2(String url) {
+    return 'Open $url and convert that backup to the older version you want to use.';
+  }
+
+  @override
+  String get startupDatabaseUpdateRequiredDowngradeStep3 =>
+      'After you have confirmed the data on this device is backed up, install the older version and import the converted backup.';
+
+  @override
+  String get startupDatabaseUpdateRequiredOpenTool => 'Open conversion tool';
+
+  @override
+  String backupPageRestoreFailedMessage(String error) {
+    return 'Restore failed: $error';
+  }
+
+  @override
+  String backupPageExportFailedMessage(String error) {
+    return 'Export failed: $error';
+  }
 
   @override
   String get backupPageOK => 'OK';
@@ -1672,24 +1953,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageSelectImportModeDescription =>
-      'Choose how to import the backup data:';
+      'Choose a restore mode. The chat and file switches determine which components are included.';
 
   @override
   String get backupPageOverwriteMode => 'Complete Overwrite';
 
   @override
   String get backupPageOverwriteModeDescription =>
-      'Clear all local data and restore from backup';
+      'Replace the selected components; keep unselected components and unrelated local settings';
 
   @override
-  String get backupPageMergeMode => 'Smart Merge';
+  String get backupPageMergeMode => 'Merge';
 
   @override
   String get backupPageMergeModeDescription =>
-      'Add only non-existing data (intelligent deduplication)';
+      'Keep local data and add backup data. Identical conversations are skipped and conflicting conversations receive new IDs.';
 
   @override
   String get backupPageRestore => 'Restore';
+
+  @override
+  String get backupPageForwardCompatTitle => 'Backup is from a newer version';
+
+  @override
+  String backupPageForwardCompatBody(int backupVersion, int currentVersion) {
+    return 'This backup was created by a newer version of Kelivo (data format $backupVersion; this version supports $currentVersion), and it does not say whether older versions can read it.\n\nYou can continue: anything this version does not recognise will be skipped, and the backup file itself is not modified. But if the newer version changed how existing data is stored, some content may be imported incorrectly.\n\nUpdating Kelivo first is the safer choice.';
+  }
+
+  @override
+  String get backupPageForwardCompatContinue => 'Import anyway';
+
+  @override
+  String get backupPageForwardCompatCancel => 'Cancel';
+
+  @override
+  String get backupPageSchemaTooNewMessage =>
+      'This backup was created by a newer version of Kelivo and cannot be read by this version. Please update Kelivo and try again.';
 
   @override
   String get backupPageBackupUploaded => 'Backup uploaded';
@@ -1699,6 +1998,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageExporting => 'Exporting...';
+
+  @override
+  String get backupProgressCancel => 'Cancel';
+
+  @override
+  String get backupProgressCancelled => 'Cancelled';
+
+  @override
+  String get backupProgressPreparing => 'Preparing';
+
+  @override
+  String get backupProgressSnapshotting => 'Creating database snapshot';
+
+  @override
+  String get backupProgressPacking => 'Packing';
+
+  @override
+  String get backupProgressVerifying => 'Verifying';
+
+  @override
+  String get backupProgressUploading => 'Uploading';
+
+  @override
+  String get backupProgressDownloading => 'Downloading';
+
+  @override
+  String get backupProgressExtracting => 'Extracting';
+
+  @override
+  String get backupProgressValidating => 'Validating';
+
+  @override
+  String get backupProgressReadingSettings => 'Reading settings';
+
+  @override
+  String get backupProgressStaging => 'Staging';
+
+  @override
+  String get backupProgressCommitting => 'Committing';
+
+  @override
+  String get backupProgressImportingSessions => 'Importing sessions';
+
+  @override
+  String get backupProgressImportingMessages => 'Importing messages';
+
+  @override
+  String get backupProgressMaterializingFiles => 'Writing files';
+
+  @override
+  String get backupProgressListingRemote => 'Listing remote backups';
+
+  @override
+  String get backupProgressFinalizing => 'Finishing';
+
+  @override
+  String backupProgressBytes(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String backupProgressItems(String done, String total) {
+    return '$done / $total';
+  }
 
   @override
   String get backupPageExportToFile => 'Export to File';
@@ -1714,9 +2077,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageImportFromOtherApps => 'Import from Other Apps';
-
-  @override
-  String get backupPageImportFromRikkaHub => 'Import from RikkaHub';
 
   @override
   String get backupPageNotSupportedYet => 'Not supported yet';
@@ -1797,6 +2157,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageImportFromCherryStudio => 'Import from Cherry Studio';
+
+  @override
+  String backupPageCherryStudioUnsupportedBackupVersion(String version) {
+    return 'This backup uses Cherry Studio format version $version, which Kelivo cannot import yet. Export from Cherry Studio v1 instead, or wait for a Kelivo update that supports Cherry Studio v2 backups.';
+  }
 
   @override
   String get backupPageImportFromChatbox => 'Import from Chatbox';
@@ -2029,6 +2394,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compressContextStartButton => 'Compress';
 
   @override
+  String get compressContextModelLabel => 'Model';
+
+  @override
+  String get compressContextModelUnset => 'Select a model';
+
+  @override
+  String get compressContextKeepRecentMessages => 'Keep N';
+
+  @override
+  String get compressContextKeepCountLabel => 'Keep recent messages';
+
+  @override
+  String get compressContextKeepAllMessages =>
+      'Keeping that many covers all messages — nothing to compress';
+
+  @override
+  String compressContextEstimatePreview(
+    int summarized,
+    int kept,
+    int minTokens,
+    int maxTokens,
+    int totalTokens,
+  ) {
+    return 'Summarize $summarized chars, keep $kept chars verbatim → about $minTokens–$maxTokens tokens (original about $totalTokens tokens)';
+  }
+
+  @override
   String get bottomToolsSheetLearningMode => 'Learning Mode';
 
   @override
@@ -2187,6 +2579,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetOpenLinkError => 'Failed to open link';
 
   @override
+  String get chatMessageWidgetAttachmentUnavailable => 'Attachment unavailable';
+
+  @override
   String chatMessageWidgetCitationsTitle(int count) {
     return 'Citations ($count)';
   }
@@ -2234,15 +2629,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatMessageWidgetDeepThinking => 'Deep Thinking';
 
   @override
-  String get chatMessageWidgetCreateMemory => 'Create Memory';
-
-  @override
-  String get chatMessageWidgetEditMemory => 'Edit Memory';
-
-  @override
-  String get chatMessageWidgetDeleteMemory => 'Delete Memory';
-
-  @override
   String chatMessageWidgetWebSearch(String query) {
     return 'Web Search: $query';
   }
@@ -2265,6 +2651,30 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get chatMessageWidgetMemoryRead => 'Read Memory';
+
+  @override
+  String get chatMessageWidgetMemoryUpdate => 'Update Memory';
+
+  @override
+  String get chatMessageWidgetMemorySearchProfile => 'Search Memory';
+
+  @override
+  String get chatMessageWidgetMemoryEdit => 'Edit Memory';
+
+  @override
+  String get chatMessageWidgetMemoryDelete => 'Delete Memory';
+
+  @override
+  String get chatMessageWidgetUpdateUserProfile => 'Update User Profile';
+
+  @override
+  String get chatMessageWidgetChatSearch => 'Search Past Chats';
+
+  @override
+  String get chatMessageWidgetCreateMemory => 'Create Memory';
+
+  @override
   String chatMessageWidgetToolCall(String name) {
     return 'Tool Call: $name';
   }
@@ -2285,9 +2695,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMessageWidgetImages => 'Images';
-
-  @override
-  String get chatMessageWidgetContinueImageGeneration => 'Edit image';
 
   @override
   String chatMessageWidgetCitationsCount(int count) {
@@ -2470,10 +2877,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sideDrawerMenuRegenerateTitle => 'Regenerate Title';
 
   @override
+  String get sideDrawerMenuCopy => 'Copy';
+
+  @override
   String get sideDrawerMenuMoveTo => 'Move to';
 
   @override
   String get sideDrawerMenuDelete => 'Delete';
+
+  @override
+  String get sideDrawerMenuSelect => 'Select';
+
+  @override
+  String sideDrawerSelectionTitle(int count) {
+    return 'Selected $count items';
+  }
+
+  @override
+  String get sideDrawerSelectionSelectAll => 'Select all';
+
+  @override
+  String get sideDrawerSelectionDeselectAll => 'Deselect all';
+
+  @override
+  String get sideDrawerSelectionPin => 'Pin';
+
+  @override
+  String get sideDrawerSelectionUnpin => 'Unpin';
+
+  @override
+  String get sideDrawerSelectionMove => 'Move';
+
+  @override
+  String get sideDrawerSelectionDelete => 'Delete';
+
+  @override
+  String get sideDrawerSelectionDeleteConfirmTitle => 'Delete conversations';
+
+  @override
+  String sideDrawerSelectionDeleteConfirmContent(int count) {
+    return 'Delete $count conversations?';
+  }
+
+  @override
+  String sideDrawerDeleteSelectedSnackbar(int count) {
+    return 'Deleted $count conversations';
+  }
+
+  @override
+  String sideDrawerMoveSelectedSnackbar(int count) {
+    return 'Moved $count conversations';
+  }
 
   @override
   String sideDrawerDeleteSnackbar(String title) {
@@ -2669,9 +3123,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatInputBarSelectModelTooltip => 'Select Model';
 
   @override
-  String get chatInputBarImageGenerationTooltip => 'Image Generation';
-
-  @override
   String get chatInputBarOnlineSearchTooltip => 'Online Search';
 
   @override
@@ -2682,6 +3133,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarMoreTooltip => 'Add';
+
+  @override
+  String get chatInputBarVoiceInputTooltip => 'Voice input';
+
+  @override
+  String get chatInputBarVoiceCancelTooltip => 'Discard recording';
+
+  @override
+  String get chatInputBarVoiceStopTooltip => 'Stop and transcribe to input';
+
+  @override
+  String get chatInputBarVoiceSendTooltip => 'Transcribe and send';
+
+  @override
+  String get chatInputBarVoiceTranscribing => 'Recognizing…';
+
+  @override
+  String get chatInputBarImageProcessing => 'Processing image';
 
   @override
   String get chatInputBarImageMode => 'Image mode';
@@ -2735,7 +3204,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mcpPageStatusDisconnected => 'Disconnected';
 
   @override
+  String get mcpPageStatusAuthorizationRequired => 'Authorization required';
+
+  @override
+  String get mcpPageStatusAuthorizing => 'Authorizing…';
+
+  @override
   String get mcpPageStatusDisabled => 'Disabled';
+
+  @override
+  String get mcpPageOAuthRequired => 'OAuth sign-in is required';
+
+  @override
+  String get mcpPageOAuthSignIn => 'Sign in with OAuth';
 
   @override
   String mcpPageToolsCount(int enabled, int total) {
@@ -2871,7 +3352,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultModelPageTitleModelSubtitle =>
-      'Used for summarizing conversation titles; prefer fast & cheap models';
+      'Summarizes conversation titles using the current chat model by default, or a selected model.';
 
   @override
   String get titleModelThinkingTitle => 'Enable Thinking';
@@ -2888,7 +3369,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultModelPageSuggestionModelSubtitle =>
-      'Used for follow-up suggestion bubbles after assistant replies. Disabled until a model is selected.';
+      'Generates follow-up suggestion bubbles using the current chat model or a selected model. Disabled by default.';
 
   @override
   String get assistantEditRecentChatsSummaryFrequencyTitle =>
@@ -2937,6 +3418,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultModelPageOcrModelTitle => 'OCR Model';
 
   @override
+  String backgroundTaskFailed(String task, String error) {
+    return '$task failed: $error';
+  }
+
+  @override
   String get defaultModelPageOcrModelSubtitle =>
       'Used for extracting text and descriptions from images';
 
@@ -2969,6 +3455,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get defaultModelPageResetDefault => 'Reset to default';
+
+  @override
+  String get defaultModelPageDisable => 'Disable';
 
   @override
   String get defaultModelPageSave => 'Save';
@@ -3121,11 +3610,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelDetailSheetBuiltinToolsDescription =>
-      'Built-in tools only support official APIs.';
-
-  @override
-  String get modelDetailSheetBuiltinToolsUnsupportedHint =>
-      'Current provider does not support these built-in tools.';
+      'Built-in tools depend on the provider and API mode.';
 
   @override
   String get modelDetailSheetSearchTool => 'Search';
@@ -3158,6 +3643,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get modelDetailSheetOpenaiBuiltinToolsResponsesOnlyHint =>
       'Requires OpenAI Responses API.';
+
+  @override
+  String get modelDetailSheetWebFetchTool => 'Web Fetch';
+
+  @override
+  String get modelDetailSheetOpenrouterWebFetchToolDescription =>
+      'Enable OpenRouter web fetch server tool';
+
+  @override
+  String get modelDetailSheetClaudeWebFetchToolDescription =>
+      'Let Claude fetch pages and PDFs from URLs in the conversation';
+
+  @override
+  String get modelDetailSheetClaudeCodeExecutionToolDescription =>
+      'Let Claude run Python and Bash in Anthropic\'s sandbox';
+
+  @override
+  String get modelDetailSheetOpenrouterShellTool => 'Shell';
+
+  @override
+  String get modelDetailSheetOpenrouterShellToolDescription =>
+      'Run Shell commands in a hosted, isolated sandbox';
 
   @override
   String get modelDetailSheetOpenaiCodeInterpreterTool => 'Code Interpreter';
@@ -3208,6 +3715,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modelSelectSheetFavoritesSection => 'Favorites';
 
   @override
+  String get modelSelectSheetFollowAssistant => 'Follow assistant';
+
+  @override
   String get modelSelectSheetFavoriteTooltip => 'Favorite';
 
   @override
@@ -3245,94 +3755,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageModelsTab => 'Models';
 
   @override
+  String get providerDetailPageCustomRequestTitle => 'Custom Request';
+
+  @override
+  String get providerDetailPageCustomRequestDescription =>
+      'Applies to every model from this provider. Model settings override these values; these values override assistant settings.';
+
+  @override
   String get providerDetailPageNetworkTab => 'Network';
-
-  @override
-  String get localModelManagementEntryTitle => 'Local Model Management';
-
-  @override
-  String get localModelManagementTitle => 'Local Models';
-
-  @override
-  String get localModelManagementModeLabel => 'Mode';
-
-  @override
-  String get localModelManagementLiteRtMode => 'LiteRT-LM file';
-
-  @override
-  String get localModelManagementGgufMode => 'GGUF file';
-
-  @override
-  String get localModelManagementOllamaMode => 'Ollama / OpenAI-compatible';
-
-  @override
-  String get localModelManagementModelFileLabel => 'Model file';
-
-  @override
-  String get localModelManagementFileStatusLabel => 'File status';
-
-  @override
-  String get localModelManagementFileMissing => 'File missing';
-
-  @override
-  String localModelManagementFileSizeBytes(int bytes) {
-    return '$bytes bytes';
-  }
-
-  @override
-  String get localModelManagementBaseUrlLabel => 'Base URL';
-
-  @override
-  String get localModelManagementModelIdLabel => 'Model ID';
-
-  @override
-  String get localModelManagementImportButton => 'Import';
-
-  @override
-  String get localModelManagementDiscoverButton => 'Discover';
-
-  @override
-  String get localModelManagementTestButton => 'Test';
-
-  @override
-  String get localModelManagementTesting => 'Testing...';
-
-  @override
-  String get localModelManagementDiscovering => 'Discovering...';
-
-  @override
-  String get localModelManagementNoModelsFound => 'No local models found.';
-
-  @override
-  String get localModelManagementDiscoveredModels => 'Models';
-
-  @override
-  String localModelManagementModelsUpdated(int count) {
-    return 'Updated $count model(s)';
-  }
-
-  @override
-  String get localModelManagementTestSuccess => 'Test succeeded';
-
-  @override
-  String localModelManagementTestFailed(String error) {
-    return 'Test failed: $error';
-  }
-
-  @override
-  String localModelManagementDiscoverFailed(String error) {
-    return 'Discovery failed: $error';
-  }
-
-  @override
-  String localModelManagementImportSuccess(String fileName) {
-    return 'Imported $fileName';
-  }
-
-  @override
-  String localModelManagementImportFailed(String error) {
-    return 'Import failed: $error';
-  }
 
   @override
   String get providerDetailPageEnabledTitle => 'Enabled';
@@ -3638,37 +4068,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addProviderSheetTitle => 'Add Provider';
 
   @override
-  String get addProviderSheetOpenAiTab => 'OpenAI';
-
-  @override
-  String get addProviderSheetGoogleTab => 'Google';
-
-  @override
-  String get addProviderSheetClaudeTab => 'Claude';
-
-  @override
-  String get addProviderSheetLocalTab => 'Local';
-
-  @override
   String get addProviderSheetEnabledLabel => 'Enabled';
 
   @override
   String get addProviderSheetNameLabel => 'Name';
 
   @override
-  String get addProviderSheetApiKeyLabel => 'API Key';
-
-  @override
-  String get addProviderSheetBaseUrlLabel => 'Base URL';
-
-  @override
   String get addProviderSheetApiPathLabel => 'API Path';
-
-  @override
-  String get addProviderSheetResponsesApiLabel => 'Responses API';
-
-  @override
-  String get addProviderSheetVertexAiLabel => 'Vertex AI';
 
   @override
   String get addProviderSheetVertexAiLocationLabel => 'Location';
@@ -3682,82 +4088,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addProviderSheetImportJsonButton => 'Import JSON';
-
-  @override
-  String get addProviderSheetLocalDefaultName => 'Local Model';
-
-  @override
-  String get addProviderSheetLocalModeLiteRt => 'LiteRT file';
-
-  @override
-  String get addProviderSheetLocalModeGguf => 'GGUF file';
-
-  @override
-  String get addProviderSheetLocalModeOpenAICompatible =>
-      'Ollama / OpenAI-compatible';
-
-  @override
-  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM model file';
-
-  @override
-  String get addProviderSheetLocalModelPathHint =>
-      'Import or paste a .litertlm model path';
-
-  @override
-  String get addProviderSheetImportLitertButton => 'Import .litertlm';
-
-  @override
-  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF model file';
-
-  @override
-  String get addProviderSheetLocalGgufModelPathHint =>
-      'Import or paste a .gguf model path';
-
-  @override
-  String get addProviderSheetImportGgufButton => 'Import .gguf';
-
-  @override
-  String get addProviderSheetLocalNoModelFile =>
-      'Choose a .litertlm model file first.';
-
-  @override
-  String get addProviderSheetLocalNoGgufModelFile =>
-      'Choose a .gguf model file first.';
-
-  @override
-  String addProviderSheetLocalImported(String fileName) {
-    return 'Imported $fileName';
-  }
-
-  @override
-  String get addProviderSheetLocalImporting => 'Importing model...';
-
-  @override
-  String addProviderSheetLocalImportingProgress(String percent) {
-    return 'Importing model... $percent';
-  }
-
-  @override
-  String get addProviderSheetLocalImportNotLiteRt =>
-      'Please choose a .litertlm model file.';
-
-  @override
-  String get addProviderSheetLocalImportNotGguf =>
-      'Please choose a .gguf model file.';
-
-  @override
-  String get addProviderSheetLocalImportEmptyFile =>
-      'The selected model file is empty.';
-
-  @override
-  String get addProviderSheetLocalImportUnreadable =>
-      'Could not read the selected model file.';
-
-  @override
-  String get addProviderSheetLocalImportFailed => 'Model import failed.';
-
-  @override
-  String get addProviderSheetLocalModelIdLabel => 'Model ID';
 
   @override
   String get addProviderSheetCancelButton => 'Cancel';
@@ -3917,6 +4247,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get miniMapScrollToBottomTooltip => 'Scroll to bottom';
 
   @override
+  String miniMapSearchMatchCount(int count) {
+    return '$count';
+  }
+
+  @override
+  String get miniMapSearchNoResults => 'No matching messages';
+
+  @override
   String get searchServicesPageApiKeyRequiredStatus => 'API Key Required';
 
   @override
@@ -3938,23 +4276,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesAddDialogAdd => 'Add';
 
   @override
-  String get searchServicesFieldApiKey => 'API Key';
-
-  @override
   String get searchServicesAddDialogApiKeyRequired => 'API Key is required';
 
   @override
   String get searchServicesFieldCustomUrlOptional => 'Custom URL (optional)';
-
-  @override
-  String get searchServicesFieldSearchEngineId => 'Search engine ID';
-
-  @override
-  String get searchServicesFieldModelOptional => 'Model (optional)';
-
-  @override
-  String get searchServicesAddDialogSearchEngineIdRequired =>
-      'Search engine ID is required';
 
   @override
   String get searchServicesDialogApiKey => 'API Key';
@@ -4004,10 +4329,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServicesEditDialogApiKeyRequired => 'API Key is required';
 
   @override
-  String get searchServicesEditDialogSearchEngineIdRequired =>
-      'Search engine ID is required';
-
-  @override
   String get searchServicesEditDialogInstanceUrl => 'Instance URL';
 
   @override
@@ -4030,6 +4351,133 @@ class AppLocalizationsEn extends AppLocalizations {
       'Region (optional, default: us-en)';
 
   @override
+  String get searchServiceEditorProviderTypeTitle => 'Search provider';
+
+  @override
+  String get searchServiceEditorConfigurationTitle => 'Configuration';
+
+  @override
+  String get searchServiceEditorNoConfiguration =>
+      'This provider does not require additional configuration.';
+
+  @override
+  String get searchServiceEditorMultiKeyTitle => 'Multi-key rotation';
+
+  @override
+  String get searchServiceEditorMultiKeyNone => 'Not configured';
+
+  @override
+  String get searchApiKeysPageDescription =>
+      'Keys rotate in the order listed; the first is the primary key. Usage is not queried to avoid provider rate limiting.';
+
+  @override
+  String get searchApiKeysPagePrimaryBadge => 'Primary';
+
+  @override
+  String get searchApiKeysPageBatchHint =>
+      'Paste one or more keys — one per line or comma-separated';
+
+  @override
+  String searchApiKeysPageBatchResult(String added, String skipped) {
+    return 'Added $added, skipped $skipped duplicate(s)';
+  }
+
+  @override
+  String get searchApiKeysPageAdd => 'Add';
+
+  @override
+  String get searchApiKeysPageEmpty => 'No keys configured yet.';
+
+  @override
+  String searchServiceEditorMultiKeyCount(String count) {
+    return '$count keys';
+  }
+
+  @override
+  String get searchServiceEditorUsageTitle => 'Account usage';
+
+  @override
+  String get searchServiceEditorUsageNotQueried =>
+      'Usage has not been queried yet.';
+
+  @override
+  String get searchServiceEditorUsageQuery => 'Check usage';
+
+  @override
+  String get searchServiceEditorUsageQuerying => 'Checking…';
+
+  @override
+  String searchServiceEditorUsageRemaining(String remaining) {
+    return '$remaining credits remaining';
+  }
+
+  @override
+  String searchServiceEditorUsageBalance(String balance) {
+    return 'Balance: $balance';
+  }
+
+  @override
+  String searchServiceEditorUsageUsed(String used, String limit) {
+    return '$used of $limit credits used';
+  }
+
+  @override
+  String searchServiceEditorUsageFailed(String message) {
+    return 'Could not query usage: $message';
+  }
+
+  @override
+  String get searchServiceEditorTestTitle => 'Test search';
+
+  @override
+  String get searchServiceEditorTestQueryHint => 'Enter a query';
+
+  @override
+  String get searchServiceEditorTestRun => 'Run test search';
+
+  @override
+  String get searchServiceEditorTestRunning => 'Searching…';
+
+  @override
+  String get searchServiceEditorTestNoResults =>
+      'The provider returned no results.';
+
+  @override
+  String searchServiceEditorTestFailed(String message) {
+    return 'Search failed: $message';
+  }
+
+  @override
+  String get searchServiceEditorResultOpenTooltip => 'Open result';
+
+  @override
+  String get searchServiceEditorDeleteTooltip => 'Delete search service';
+
+  @override
+  String get searchServiceEditorDeleteTitle => 'Delete search service?';
+
+  @override
+  String searchServiceEditorDeleteMessage(String provider) {
+    return 'Delete $provider? This cannot be undone.';
+  }
+
+  @override
+  String get searchServiceEditorDeleteConfirm => 'Delete';
+
+  @override
+  String get searchServiceEditorDiscardTitle => 'Discard changes?';
+
+  @override
+  String get searchServiceEditorDiscardMessage =>
+      'Your unsaved search service settings will be lost.';
+
+  @override
+  String get searchServiceEditorKeepEditing => 'Keep editing';
+
+  @override
+  String get searchServiceEditorDiscard => 'Discard';
+
+  @override
   String get searchSettingsSheetTitle => 'Search Settings';
 
   @override
@@ -4040,12 +4488,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enable model\'s built-in search';
 
   @override
-  String get searchSettingsSheetClaudeDynamicSearchTitle =>
-      'Built-in Search (New)';
+  String get searchSettingsSheetClaudeDynamicSearchTitle => 'Dynamic filtering';
 
   @override
   String get searchSettingsSheetClaudeDynamicSearchDescription =>
-      'Use `web_search_20260209` with dynamic filtering on supported official Claude models.';
+      'Filter results to save tokens';
 
   @override
   String get searchSettingsSheetWebSearchTitle => 'Web Search';
@@ -4068,6 +4515,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutPageEasterEggButton => 'Nice!';
+
+  @override
+  String get aboutPageKelivoSearchUnlocked =>
+      'An unnamed door opened a crack. You might find it in Settings.';
+
+  @override
+  String get aboutPageKelivoSearchAlreadyUnlocked =>
+      'You\'ve already been through this door.';
 
   @override
   String get aboutPageAppName => 'Kelivo';
@@ -4132,6 +4587,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get aboutPageQQGroupTwo => 'Kelivo Group 2';
+
+  @override
+  String get aboutPageQQGroupThree => 'Kelivo Group 3';
 
   @override
   String get aboutPageJoinDiscord => 'Join us on Discord';
@@ -4204,6 +4662,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Show token usage and message count';
 
   @override
+  String get displaySettingsPageShowThinkingCardsTitle => 'Show Thinking Cards';
+
+  @override
+  String get displaySettingsPageShowThinkingCardsSubtitle =>
+      'When off, thinking-process cards are hidden in chat.';
+
+  @override
+  String get displaySettingsPageShowToolCardsTitle => 'Show Tool Cards';
+
+  @override
+  String get displaySettingsPageShowToolCardsSubtitle =>
+      'When off, tool-use cards are hidden in chat.';
+
+  @override
   String get displaySettingsPageAutoCollapseThinkingTitle =>
       'Auto-collapse Thinking';
 
@@ -4232,12 +4704,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Display the summary text below tool steps';
 
   @override
+  String get displaySettingsPageHideToolResultImagesTitle =>
+      'Hide images in tool results';
+
+  @override
   String get displaySettingsPageRegenerateDeleteTrailingMessagesTitle =>
       'Delete messages below when regenerating';
 
   @override
   String get displaySettingsPageShowRegenerateConfirmDialogTitle =>
       'Confirm before regenerating';
+
+  @override
+  String get displaySettingsPageForkKeepMessageVersionsTitle =>
+      'Keep Message Versions When Forking';
+
+  @override
+  String get displaySettingsPageEditAssistantKeepThinkingToolCardsTitle =>
+      'Keep thinking and tool cards when editing assistant';
+
+  @override
+  String get displaySettingsPageEditAssistantKeepThinkingToolCardsSubtitle =>
+      'When off, the edited version keeps only the assistant text. Switching back still shows previous thinking and tool cards.';
 
   @override
   String chainOfThoughtExpandSteps(Object count) {
@@ -4280,6 +4768,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get displaySettingsPageShowUpdatesSubtitle =>
       'Show app update notifications';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
+      'Keep Screen On While Generating';
+
+  @override
+  String get displaySettingsPageKeepScreenOnDuringGenerationSubtitle =>
+      'Prevents the lock screen from interrupting generation. Increases battery use.';
 
   @override
   String get displaySettingsPageMessageNavButtonsTitle =>
@@ -4351,6 +4847,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get displaySettingsPageEnterToSendTitle => 'Enter Key to Send';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileTitle =>
+      'Paste long text as file';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdTitle =>
+      'Conversion threshold';
+
+  @override
+  String get displaySettingsPageLongPasteAsFileThresholdUnit => 'characters';
 
   @override
   String get displaySettingsPageSendShortcutTitle => 'Send Shortcut';
@@ -4451,12 +4958,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fontPickerChooseLocalFile => 'Choose Local File';
 
   @override
-  String get fontPickerGetFromGoogleFonts => 'Browse Google Fonts';
-
-  @override
-  String get fontPickerFilterHint => 'Filter fonts...';
-
-  @override
   String get desktopFontLoading => 'Loading fonts…';
 
   @override
@@ -4486,19 +4987,268 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bubbles and accents follow theme.';
 
   @override
+  String get themeAdvancedSettingsPageTitle => 'Theme Advanced';
+
+  @override
+  String get themeAdvancedSettingsPageUseLayeredSurfacesTitle =>
+      'Layered surfaces (experimental)';
+
+  @override
+  String get themeAdvancedSettingsPageUseLayeredSurfacesSubtitle =>
+      'Darker page, brighter cards; both keep theme hue. Turn off to restore the previous look.';
+
+  @override
+  String get themeAdvancedSettingsPageUseLayeredSheetTilesTitle =>
+      'Layered sheet tiles';
+
+  @override
+  String get themeAdvancedSettingsPageUseLayeredSheetTilesSubtitle =>
+      'By default, tiles match the sheet background.';
+
+  @override
   String get themeSettingsPageColorPalettesSection => 'Color Palettes';
+
+  @override
+  String get themeSettingsPageCustomPaletteName => 'Custom';
+
+  @override
+  String get themeSettingsPageCustomColorReset => 'Reset';
+
+  @override
+  String get themeSettingsPageCustomThemesSection => 'Custom Themes';
+
+  @override
+  String get customThemeNewTheme => 'New Theme';
+
+  @override
+  String get customThemeEditTheme => 'Edit Theme';
+
+  @override
+  String get customThemeImportTheme => 'Import Theme';
+
+  @override
+  String get customThemeNameLabel => 'Theme name';
+
+  @override
+  String get customThemePrimaryColor => 'Primary';
+
+  @override
+  String get customThemeSecondaryColor => 'Secondary';
+
+  @override
+  String get customThemeTertiaryColor => 'Tertiary';
+
+  @override
+  String get customThemeColorAuto => 'Auto';
+
+  @override
+  String get customThemeSave => 'Save';
+
+  @override
+  String get customThemeCancel => 'Cancel';
+
+  @override
+  String get customThemeDelete => 'Delete';
+
+  @override
+  String get customThemeDeleteConfirm => 'Delete this theme?';
+
+  @override
+  String get customThemeCopied => 'Theme JSON copied to clipboard';
+
+  @override
+  String get customThemeCopyAction => 'Copy';
+
+  @override
+  String get customThemeImportHint => 'Paste the theme JSON here';
+
+  @override
+  String get customThemeImportInvalid => 'Invalid theme JSON';
+
+  @override
+  String get customThemeHexLabel => 'Hex';
 
   @override
   String get ttsServicesPageBackButton => 'Back';
 
   @override
-  String get ttsServicesPageTitle => 'Text-to-Speech';
+  String get ttsServicesPageTitle => 'Voice Services';
+
+  @override
+  String get ttsServicesSectionTitle => 'Text-to-Speech';
 
   @override
   String get ttsServicesPageSettingsTooltip => 'TTS settings';
 
   @override
   String get ttsServicesPageAddTooltip => 'Add';
+
+  @override
+  String get asrServicesSectionTitle => 'Speech Recognition';
+
+  @override
+  String get asrServicesSectionDescription =>
+      'Turn speech into text with an on-device, system, or cloud service.';
+
+  @override
+  String get asrServicesAddTooltip => 'Add speech recognition service';
+
+  @override
+  String get asrServicesEmptyTitle => 'No speech recognition service';
+
+  @override
+  String get asrServicesEmptySubtitle =>
+      'Add one to show the microphone in the chat input.';
+
+  @override
+  String get asrServicesOnDeviceGroup => 'On-device';
+
+  @override
+  String get asrServicesCloudGroup => 'Cloud';
+
+  @override
+  String get asrServicesSystemTitle => 'System';
+
+  @override
+  String get asrServicesSystemSubtitle =>
+      'Uses the device\'s built-in recognizer';
+
+  @override
+  String get asrServicesLocalTitle => 'Offline Model';
+
+  @override
+  String get asrServicesLocalSubtitle =>
+      'Runs offline on this device after download';
+
+  @override
+  String get asrServicesOpenAiTitle => 'OpenAI Realtime';
+
+  @override
+  String get asrServicesOpenAiSubtitle => 'Low-latency streaming transcription';
+
+  @override
+  String get asrServicesDashScopeTitle => 'DashScope';
+
+  @override
+  String get asrServicesDashScopeSubtitle => 'Qwen real-time transcription';
+
+  @override
+  String get asrServicesVolcengineTitle => 'Volcengine';
+
+  @override
+  String get asrServicesVolcengineSubtitle => 'Doubao streaming transcription';
+
+  @override
+  String get asrServicesMimoTitle => 'MiMo';
+
+  @override
+  String get asrServicesMimoSubtitle => 'Segmented cloud transcription';
+
+  @override
+  String get asrServicesStepTitle => 'Step';
+
+  @override
+  String get asrServicesStepSubtitle => 'Step Audio segmented transcription';
+
+  @override
+  String get asrServicesAddTitle => 'Add Speech Recognition';
+
+  @override
+  String get asrServicesEditTitle => 'Edit Speech Recognition';
+
+  @override
+  String get asrServicesSelectedLabel => 'Selected';
+
+  @override
+  String get asrServicesUnavailableLabel => 'Unavailable';
+
+  @override
+  String get asrServicesEditAction => 'Edit';
+
+  @override
+  String get asrServicesDeleteAction => 'Delete';
+
+  @override
+  String get asrServicesCancelAction => 'Cancel';
+
+  @override
+  String get asrServicesAddAction => 'Add';
+
+  @override
+  String get asrServicesSaveAction => 'Save';
+
+  @override
+  String get asrServicesNameLabel => 'Name';
+
+  @override
+  String get asrServicesApiKeyLabel => 'API Key';
+
+  @override
+  String get asrServicesEndpointLabel => 'Endpoint';
+
+  @override
+  String get asrServicesModelLabel => 'Model';
+
+  @override
+  String get asrServicesResourceIdLabel => 'Resource ID';
+
+  @override
+  String get asrServicesLanguageLabel => 'Language';
+
+  @override
+  String get asrServicesAutomaticLabel => 'Automatic';
+
+  @override
+  String get asrServicesApiKeyRequired =>
+      'Enter an API key to use this service.';
+
+  @override
+  String get asrServicesChooseModelTitle => 'Model';
+
+  @override
+  String get asrServicesModelDownloadAction => 'Download';
+
+  @override
+  String get asrServicesModelUseAction => 'Use model';
+
+  @override
+  String get asrServicesModelDeleteAction => 'Remove download';
+
+  @override
+  String get asrServicesModelDownloadedLabel => 'Downloaded';
+
+  @override
+  String get asrServicesModelDownloadingLabel => 'Downloading…';
+
+  @override
+  String get asrServicesModelNotDownloadedLabel => 'Not downloaded';
+
+  @override
+  String asrServicesDownloadFailed(String error) {
+    return 'Model download failed: $error';
+  }
+
+  @override
+  String get asrServicesSystemChecking => 'Checking…';
+
+  @override
+  String get asrServicesSystemAvailable => 'Available';
+
+  @override
+  String get asrServicesSystemCheckFailed =>
+      'System speech recognition is unavailable on this device.';
+
+  @override
+  String get asrServicesMicrophonePermissionDenied =>
+      'Microphone permission was not granted.';
+
+  @override
+  String get asrServicesNoSpeechDetected => 'No speech was detected.';
+
+  @override
+  String asrServicesRecognitionFailed(String error) {
+    return 'Speech recognition failed: $error';
+  }
 
   @override
   String get ttsServicesPageAddNotImplemented =>
@@ -4614,7 +5364,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ttsServicesFieldLanguageLabel => 'Language';
 
   @override
+  String get ttsServicesFieldWorkspaceIdLabel => 'Workspace ID';
+
+  @override
+  String get ttsServicesFieldRegionLabel => 'Region';
+
+  @override
+  String get ttsServicesFieldFormatLabel => 'Audio format';
+
+  @override
+  String get ttsServicesFieldOutputFormatLabel => 'Output format';
+
+  @override
+  String get ttsServicesFieldSampleRateLabel => 'Sample rate';
+
+  @override
+  String get ttsServicesFieldVolumeLabel => 'Volume';
+
+  @override
+  String get ttsServicesFieldPitchLabel => 'Pitch';
+
+  @override
+  String get ttsServicesFieldLanguageBoostLabel => 'Language boost';
+
+  @override
+  String get ttsServicesFieldBitrateLabel => 'Bitrate';
+
+  @override
+  String get ttsServicesFieldChannelLabel => 'Channels';
+
+  @override
+  String get ttsServicesFieldSubtitlesLabel => 'Generate subtitles';
+
+  @override
+  String get ttsServicesFieldPronunciationDictionaryLabel =>
+      'Pronunciation dictionary (one entry per line)';
+
+  @override
+  String get ttsServicesFieldInstructionLabel => 'Style / voice description';
+
+  @override
+  String get ttsServicesFieldStreamingLabel => 'Streaming';
+
+  @override
+  String get ttsServicesFieldOptimizeTextPreviewLabel =>
+      'Optimize text preview';
+
+  @override
+  String get ttsServicesFieldReferenceAudioLabel =>
+      'Reference audio (WAV/MP3 data URI)';
+
+  @override
+  String get ttsServicesFieldChooseReferenceAudioButton =>
+      'Choose reference audio';
+
+  @override
+  String get ttsServicesFieldTemperatureLabel => 'Temperature';
+
+  @override
+  String get ttsServicesFieldTopPLabel => 'Top P';
+
+  @override
+  String get ttsServicesFieldLatencyLabel => 'Latency';
+
+  @override
+  String get ttsServicesEmotionAutoLabel => 'Auto match';
+
+  @override
   String get ttsServicesValidationApiKeyRequired => 'API Key is required';
+
+  @override
+  String get ttsServicesValidationReferenceIdRequired =>
+      'Voice/reference ID is required';
+
+  @override
+  String get ttsServicesValidationInstructionRequired =>
+      'A voice description is required';
+
+  @override
+  String ttsServicesValidationSampleRate(String format, String rates) {
+    return '$format requires $rates Hz.';
+  }
 
   @override
   String get ttsServicesViewDetailsButton => 'View details';
@@ -4637,6 +5467,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get ttsSettingsAutoPlayDescription =>
       'Start TTS automatically after an assistant reply finishes.';
+
+  @override
+  String get ttsSettingsCacheReplayTitle => 'Reuse Audio for Replay';
+
+  @override
+  String get ttsSettingsCacheReplayDescription =>
+      'Replay generated network audio without requesting the TTS service again.';
 
   @override
   String get ttsSettingsTextSelectionSection => 'Text Selection';
@@ -4710,6 +5547,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ttsFloatingCollapseTooltip => 'Collapse playback controls';
+
+  @override
+  String get ttsFloatingSaveTooltip => 'Save audio';
+
+  @override
+  String get ttsSaveDialogTitle => 'Save TTS audio';
+
+  @override
+  String get ttsSaveSuccess => 'Audio saved successfully.';
+
+  @override
+  String get ttsSaveNothing => 'No audio is available to save.';
+
+  @override
+  String ttsSaveFailed(String message) {
+    return 'Failed to save audio: $message';
+  }
 
   @override
   String imageViewerPageShareFailedOpenFile(String message) {
@@ -4797,14 +5651,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Independent search engine by Brave. Privacy-focused with no tracking or profiling.';
 
   @override
-  String get searchProviderGoogleDescription =>
-      'Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.';
-
-  @override
-  String get searchProviderGrokDescription =>
-      'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.';
-
-  @override
   String get searchProviderExaDescription =>
       'Neural search with semantic understanding. Great for research and finding specific content.';
 
@@ -4861,12 +5707,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchServiceNameBrave => 'Brave Search';
 
   @override
-  String get searchServiceNameGoogle => 'Google';
-
-  @override
-  String get searchServiceNameGrok => 'Grok';
-
-  @override
   String get searchServiceNameMetaso => 'Metaso';
 
   @override
@@ -4890,6 +5730,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Bocha web search API. Accurate web results with optional summaries.';
 
   @override
+  String get searchServiceNameDoubao => 'Doubao';
+
+  @override
+  String get searchProviderDoubaoDescription =>
+      'Doubao web search API by Volcano Engine.';
+
+  @override
   String get searchServiceNameSerper => 'Serper';
 
   @override
@@ -4902,6 +5749,83 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get searchProviderQueritDescription =>
       'Querit Search API for LLM applications. Returns real-time web results with site, time, country, and language filters.';
+
+  @override
+  String get searchServiceNameGrok => 'Grok';
+
+  @override
+  String get searchProviderGrokDescription =>
+      'Grok search via xAI Responses API. Uses web and X search tools and returns cited sources.';
+
+  @override
+  String get searchServiceNameStepFun => 'StepFun';
+
+  @override
+  String get searchProviderStepFunDescription =>
+      'StepFun web search via POST /v1/search.';
+
+  @override
+  String get searchServiceNameFirecrawl => 'Firecrawl';
+
+  @override
+  String get searchProviderFirecrawlDescription =>
+      'Firecrawl Search API v2. API key is optional. Scrape is not supported here.';
+
+  @override
+  String get searchServiceNameTinyFish => 'TinyFish';
+
+  @override
+  String get searchProviderTinyFishDescription =>
+      'TinyFish Search API with region/language filters. Requires an API key. Fetch/Scrape is not supported here.';
+
+  @override
+  String get searchServiceNameAnySearch => 'AnySearch';
+
+  @override
+  String get searchProviderAnySearchDescription =>
+      'Unified search for AI agents with automatic routing across web and specialist data sources. API key is optional.';
+
+  @override
+  String get searchServiceNameParallel => 'Parallel';
+
+  @override
+  String get searchProviderParallelDescription =>
+      'Parallel Search API. Returns LLM-optimized web excerpts with turbo, fast, basic, and advanced modes.';
+
+  @override
+  String get searchServicesDialogSearchMode => 'Search mode';
+
+  @override
+  String get searchServiceNameYou => 'You.com';
+
+  @override
+  String get searchProviderYouDescription =>
+      'You.com Search API. Returns web and news results with highlights or snippets.';
+
+  @override
+  String get searchServicesDialogContentMode => 'Content mode';
+
+  @override
+  String get searchServicesDialogHighlights => 'Highlights';
+
+  @override
+  String get searchServicesDialogSnippets => 'Snippets';
+
+  @override
+  String get searchServicesDialogWebSearch => 'Web Search';
+
+  @override
+  String get searchServicesDialogLlmContext => 'LLM Context';
+
+  @override
+  String get searchServicesDialogMaximumTokens => 'Maximum tokens';
+
+  @override
+  String get searchServicesDialogMaximumTokensInvalid =>
+      'Maximum tokens must be between 1024 and 32768.';
+
+  @override
+  String get searchServiceNameKelivo => 'Kelivo';
 
   @override
   String get searchServicesDialogCountryOptional => 'Country/region (optional)';
@@ -4950,10 +5874,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get generationInterrupted => 'Generation interrupted';
-
-  @override
-  String get localLiteRtModelTooLargeForDevice =>
-      'This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.';
 
   @override
   String get titleForLocale => 'New Chat';
@@ -5132,7 +6052,233 @@ class AppLocalizationsEn extends AppLocalizations {
       'Evaluate mathematical expressions, supports + - * / power sqrt sin cos etc.';
 
   @override
-  String get assistantEditMemorySwitchTitle => 'Memory';
+  String get assistantEditLocalToolScreenTimeTitle => 'Screen Time';
+
+  @override
+  String get assistantEditLocalToolScreenTimeSubtitle =>
+      'Query app screen usage on this device, requires the Usage access permission.';
+
+  @override
+  String get chatMessageWidgetScreenTimeTotal => 'Total screen time';
+
+  @override
+  String get chatMessageWidgetScreenTimePermissionRequired =>
+      'Usage access permission is not granted. Please enable it in system settings and try again.';
+
+  @override
+  String get assistantEditLocalToolCalendarQueryTitle => 'Query Calendar';
+
+  @override
+  String get assistantEditLocalToolCalendarQuerySubtitle =>
+      'Read calendar events on this device, requires the calendar permission.';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateTitle => 'Create Event';
+
+  @override
+  String get assistantEditLocalToolCalendarCreateSubtitle =>
+      'Create calendar events on this device with your confirmation, requires the calendar permission.';
+
+  @override
+  String get assistantEditLocalToolLocationTitle => 'Current Location';
+
+  @override
+  String get assistantEditLocalToolLocationSubtitle =>
+      'Read a one-shot location from this device, requires the location permission.';
+
+  @override
+  String get assistantEditLocalToolWeatherTitle => 'Weather';
+
+  @override
+  String get assistantEditLocalToolWeatherSubtitle =>
+      'Get Apple Weather for the current or a specified location. WeatherKit attribution is shown in the result.';
+
+  @override
+  String get assistantEditLocalToolHealthTitle => 'Health Summary';
+
+  @override
+  String get assistantEditLocalToolHealthSubtitle =>
+      'Read a privacy-preserving activity summary from Apple Health, requires Health access.';
+
+  @override
+  String assistantEditLocalToolHealthSelectedCount(int selected, int total) {
+    return '$selected/$total selected';
+  }
+
+  @override
+  String get healthDataSettingsTitle => 'Health Data';
+
+  @override
+  String get healthDataSettingsDescription =>
+      'HealthKit signals available to the current assistant in daily conversation. Switches control what Kelivo may try to read; iOS still manages actual Health access.';
+
+  @override
+  String healthDataSettingsBadge(int selected, int total) {
+    return '$selected/$total on';
+  }
+
+  @override
+  String get healthDataSettingsIosReadTitle => 'iOS Health Read';
+
+  @override
+  String get healthDataSettingsIosReadSubtitle =>
+      'Device available, read range managed by iOS';
+
+  @override
+  String get healthDataSettingsOpenSystemSettings => 'Open system settings';
+
+  @override
+  String get healthDataSettingsEnableAll => 'Enable all';
+
+  @override
+  String get healthDataSettingsDisableAll => 'Disable all';
+
+  @override
+  String get healthDataSettingsCategoryActivity => 'Activity';
+
+  @override
+  String get healthDataSettingsCategoryRest => 'Rest';
+
+  @override
+  String get healthDataSettingsCategoryHeart => 'Heart';
+
+  @override
+  String get healthDataSettingsCategoryBody => 'Body';
+
+  @override
+  String get healthDataSettingsTypeStepsTitle => 'Steps';
+
+  @override
+  String get healthDataSettingsTypeStepsSubtitle => 'Walking steps summary';
+
+  @override
+  String get healthDataSettingsTypeDaylightTitle => 'Sunlight';
+
+  @override
+  String get healthDataSettingsTypeDaylightSubtitle => 'Outdoor daylight time';
+
+  @override
+  String get healthDataSettingsTypeActiveEnergyTitle => 'Energy';
+
+  @override
+  String get healthDataSettingsTypeActiveEnergySubtitle =>
+      'Active energy burned';
+
+  @override
+  String get healthDataSettingsTypeExerciseMinutesTitle => 'Exercise';
+
+  @override
+  String get healthDataSettingsTypeExerciseMinutesSubtitle =>
+      'Apple exercise minutes';
+
+  @override
+  String get healthDataSettingsTypeStandTimeTitle => 'Stand';
+
+  @override
+  String get healthDataSettingsTypeStandTimeSubtitle => 'Stand time';
+
+  @override
+  String get healthDataSettingsTypeDistanceTitle => 'Distance';
+
+  @override
+  String get healthDataSettingsTypeDistanceSubtitle =>
+      'Walking and running distance';
+
+  @override
+  String get healthDataSettingsTypeWorkoutsTitle => 'Workouts';
+
+  @override
+  String get healthDataSettingsTypeWorkoutsSubtitle =>
+      'Workout records: type, duration, distance, and energy';
+
+  @override
+  String get healthDataSettingsTypeSleepTitle => 'Sleep';
+
+  @override
+  String get healthDataSettingsTypeSleepSubtitle => 'Sleep duration last night';
+
+  @override
+  String get healthDataSettingsTypeMindfulnessTitle => 'Resting';
+
+  @override
+  String get healthDataSettingsTypeMindfulnessSubtitle =>
+      'Mindfulness or resting periods';
+
+  @override
+  String get healthDataSettingsTypeHeartRateTitle => 'Heart Rate';
+
+  @override
+  String get healthDataSettingsTypeHeartRateSubtitle =>
+      'Latest heart rate sample';
+
+  @override
+  String get healthDataSettingsTypeRestingHeartRateTitle =>
+      'Resting Heart Rate';
+
+  @override
+  String get healthDataSettingsTypeRestingHeartRateSubtitle =>
+      'Resting heart rate sample';
+
+  @override
+  String get healthDataSettingsTypeBloodOxygenTitle => 'Blood Oxygen';
+
+  @override
+  String get healthDataSettingsTypeBloodOxygenSubtitle =>
+      'Blood oxygen saturation';
+
+  @override
+  String get healthDataSettingsTypeDietaryEnergyTitle => 'Dietary Energy';
+
+  @override
+  String get healthDataSettingsTypeDietaryEnergySubtitle =>
+      'Dietary calorie record';
+
+  @override
+  String get healthDataSettingsTypeWaterTitle => 'Water';
+
+  @override
+  String get healthDataSettingsTypeWaterSubtitle => 'Water intake record';
+
+  @override
+  String get healthDataSettingsTypeWeightTitle => 'Weight';
+
+  @override
+  String get healthDataSettingsTypeWeightSubtitle => 'Body weight sample';
+
+  @override
+  String get healthDataSettingsTypeBmiTitle => 'BMI';
+
+  @override
+  String get healthDataSettingsTypeBmiSubtitle => 'Body mass index';
+
+  @override
+  String get healthDataSettingsTypeBloodGlucoseTitle => 'Blood Glucose';
+
+  @override
+  String get healthDataSettingsTypeBloodGlucoseSubtitle =>
+      'Blood glucose sample';
+
+  @override
+  String get assistantEditLocalToolRemindersQueryTitle => 'Query Reminders';
+
+  @override
+  String get assistantEditLocalToolRemindersQuerySubtitle =>
+      'Read reminders on this device, requires full reminders access.';
+
+  @override
+  String get assistantEditLocalToolRemindersCreateTitle => 'Create Reminder';
+
+  @override
+  String get assistantEditLocalToolRemindersCreateSubtitle =>
+      'Create a reminder on this device with your confirmation, requires full reminders access.';
+
+  @override
+  String get assistantEditLocalToolRemindersCompleteTitle =>
+      'Complete Reminder';
+
+  @override
+  String get assistantEditLocalToolRemindersCompleteSubtitle =>
+      'Mark a reminder as done with your confirmation, requires full reminders access.';
 
   @override
   String get assistantEditMemorySwitchDescription =>
@@ -5144,9 +6290,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get assistantEditRecentChatsSwitchDescription =>
       'Include recent conversation titles to help with context.';
-
-  @override
-  String get assistantEditManageMemoryTitle => 'Manage Memories';
 
   @override
   String get assistantEditAddMemoryButton => 'Add Memory';
@@ -5338,6 +6481,57 @@ class AppLocalizationsEn extends AppLocalizations {
       'When both global and provider proxies are enabled, provider-level proxy takes priority.';
 
   @override
+  String get settingsPageAutoRetry => 'Auto Retry';
+
+  @override
+  String get autoRetryEnableLabel => 'Enable auto-retry';
+
+  @override
+  String get autoRetryMaxRetries => 'Max retries';
+
+  @override
+  String get autoRetryInitialDelay => 'Initial delay (ms)';
+
+  @override
+  String get autoRetryMultiplier => 'Backoff multiplier';
+
+  @override
+  String get autoRetryMaxDelay => 'Max delay (ms)';
+
+  @override
+  String get autoRetryJitter => 'Jitter';
+
+  @override
+  String get autoRetryJitterSubtitle => 'Randomize each wait by ±20%';
+
+  @override
+  String get autoRetryOnNetworkError => 'Retry on network errors';
+
+  @override
+  String get autoRetryStatusCodes => 'Retry status codes';
+
+  @override
+  String get autoRetryKeywords => 'Retry keywords';
+
+  @override
+  String get autoRetryStopKeywords => 'Stop keywords';
+
+  @override
+  String get autoRetryAddHint => 'Add';
+
+  @override
+  String get autoRetryRestoreDefaults => 'Restore defaults';
+
+  @override
+  String get autoRetryFooter =>
+      'Auto-retry only runs if this request has not produced any output yet.';
+
+  @override
+  String autoRetryCountdown(int seconds, int attempt, int maxRetries) {
+    return '${seconds}s until retry ($attempt/$maxRetries)';
+  }
+
+  @override
   String get desktopShowProviderInModelCapsule =>
       'Show provider in model capsule';
 
@@ -5429,6 +6623,83 @@ class AppLocalizationsEn extends AppLocalizations {
       'When enabled, Flutter errors and print output are written to logs/flutter_logs.txt (rotated daily).';
 
   @override
+  String get contextLogSettingTitle => 'Context Logging';
+
+  @override
+  String get contextLogSettingSubtitle =>
+      'When enabled, the exact messages sent to the model are written to logs/context_logs.txt (rotated daily).';
+
+  @override
+  String get contextLogViewerTitle => 'Context';
+
+  @override
+  String contextLogSnapshotMessages(int count) {
+    return '$count messages';
+  }
+
+  @override
+  String contextLogSnapshotTokens(int count) {
+    return '$count tokens';
+  }
+
+  @override
+  String get contextLogSourceSystemPrompt => 'System prompt';
+
+  @override
+  String get contextLogSourceMemoryRules => 'Memory rules';
+
+  @override
+  String get contextLogSourceSearchPrompt => 'Search prompt';
+
+  @override
+  String get contextLogSourceInstructionInjection => 'Instruction';
+
+  @override
+  String get contextLogSourceWorldBook => 'World book';
+
+  @override
+  String get contextLogSourceMemorySnapshot => 'Memory snapshot';
+
+  @override
+  String get contextLogSourceChatHistory => 'Chat history';
+
+  @override
+  String get contextLogSourceToolCall => 'Tool call';
+
+  @override
+  String get contextLogSourceToolResult => 'Tool result';
+
+  @override
+  String get contextLogTokensEstimateHint =>
+      'Token counts are estimates only; use the model\'s actual usage as the source of truth.';
+
+  @override
+  String contextLogSnapshotsCount(int count) {
+    return '$count snapshots';
+  }
+
+  @override
+  String get contextLogSnapshotFallbackTitle => 'Snapshot';
+
+  @override
+  String get contextLogKindFull => 'Full snapshot';
+
+  @override
+  String get contextLogKindUpdate => 'Incremental update';
+
+  @override
+  String get contextLogSectionComposition => 'Composition';
+
+  @override
+  String get contextLogLoadOlder => 'Load earlier logs';
+
+  @override
+  String get contextLogLoading => 'Loading...';
+
+  @override
+  String get contextLogAllLoaded => 'All logs loaded';
+
+  @override
   String get logViewerTitle => 'Request Logs';
 
   @override
@@ -5496,6 +6767,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get logViewerSectionAttachments => 'Attachments';
+
+  @override
+  String get logViewerPayloadOmitted => 'omitted';
+
+  @override
+  String get logViewerShowMore => 'Show more';
+
+  @override
   String get logSettingsTitle => 'Log Settings';
 
   @override
@@ -5503,7 +6783,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logSettingsSaveOutputSubtitle =>
-      'Log response body content (may use significant storage)';
+      'Log every streaming chunk (can slow generation). HTTP error bodies are always recorded.';
+
+  @override
+  String get logSettingsElidePayloads => 'Omit Large Payloads';
+
+  @override
+  String get logSettingsElidePayloadsSubtitle =>
+      'Replace inline base64 images and files with a placeholder. Keeps logs small and the viewer fast.';
 
   @override
   String get logSettingsAutoDelete => 'Auto-delete';
@@ -5552,21 +6839,921 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homePageProcessingFiles => 'Processing files...';
 
   @override
-  String get fileUploadDuplicateTitle => 'File already exists';
+  String get settingsPageWorldBook => 'World Book';
 
   @override
-  String fileUploadDuplicateContent(String fileName) {
-    return 'A file named $fileName already exists. Use the existing file?';
+  String get settingsPageMemory => 'Memory';
+
+  @override
+  String get memorySettingsPageTitle => 'Memory';
+
+  @override
+  String get memorySettingsGlobalSubtitle => 'Memory mode, model, and prompts';
+
+  @override
+  String get memorySettingsModeSection => 'Memory mode';
+
+  @override
+  String get memorySettingsModelSection => 'Memory model';
+
+  @override
+  String get memorySettingsModelTitle => 'Processing model';
+
+  @override
+  String get memorySettingsModelUnset => 'Not selected';
+
+  @override
+  String get memorySettingsModelTip =>
+      'After Auto-organize memory is enabled, this model is called frequently in the background. Prefer a cheap, fast model.';
+
+  @override
+  String get memorySettingsAboutTitle => 'About memory';
+
+  @override
+  String get memorySettingsAboutSubtitle => 'How memory works and when it runs';
+
+  @override
+  String get memoryAboutQuickstartTitle => 'Get started';
+
+  @override
+  String get memoryAboutQuickstartBody =>
+      '1. In Settings → Memory, choose a processing model.\n2. On the assistant Memory tab, turn on long-term memory and Auto-organize.\n3. Chat for a few turns or tap Organize, then open All memories to see what was saved.';
+
+  @override
+  String get memoryAboutTypesTitle => 'Memory types';
+
+  @override
+  String get memoryAboutTypesBody =>
+      'Identity: stable facts about the user, such as how to address them, role, language, and long-term preferences. Write complete third-person statements.\n\nWorkflow: how they like to get work done — tools, formats, and review habits.\n\nVoice: how they want the assistant to sound — tone, length, and language style.\n\nInstruction: standing rules the assistant should follow, not one-off tasks from this chat.';
+
+  @override
+  String get memoryAboutScopeTitle => 'Global vs assistant';
+
+  @override
+  String get memoryAboutScopeBody =>
+      'Global memories are injected for every assistant. Assistant-scope memories are only visible to that assistant. Use global for facts that should follow the user everywhere; use assistant scope for rules or context that belong to one persona.';
+
+  @override
+  String get memoryAboutInjectionTitle => 'How memories are injected';
+
+  @override
+  String get memoryAboutInjectionBody =>
+      'At the start of a chat, the newest items of each type are placed in the model context. If a type exceeds the injection limit, the block is marked mode=\"summary\" with total and shown counts; the rest can be fetched with memory_search_profile. Raise the limit in Settings → Memory for more completeness at a higher token cost.';
+
+  @override
+  String get memoryAboutPipelineTitle => 'Background pipeline';
+
+  @override
+  String get memoryAboutPipelineBody =>
+      'Auto-organize runs after chats: decide whether anything is worth remembering, extract candidates, dedupe and merge, then distill identity items into the user profile when needed. You can also tap Organize on the assistant Memory tab. That is why the processing model is called often.';
+
+  @override
+  String get memoryAboutCacheTitle => 'Keep caching healthy';
+
+  @override
+  String get memoryAboutCacheBody =>
+      'The injected memory prefix is kept stable so unchanged chats can reuse the prompt cache, lowering cost and latency. Avoid pointless bulk edits or reshuffles. Day-to-day single-entry edits usually have limited impact.';
+
+  @override
+  String get memoryAboutFaqTitle => 'FAQ';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedTitle =>
+      'Why wasn\'t this remembered?';
+
+  @override
+  String get memoryAboutFaqWhyNotRememberedBody =>
+      'Organize is skipped when there are not enough new messages to organize, no new messages to organize, or no memory processing model selected. Temporary chats are not saved to memory. You can also turn memory or Auto-organize off per assistant.';
+
+  @override
+  String get memorySettingsThinkingTitle => 'Enable thinking';
+
+  @override
+  String get memorySettingsThinkingSubtitle =>
+      'Allow the memory model to use reasoning when supported';
+
+  @override
+  String get memorySettingsInjectionSection => 'Memory injection';
+
+  @override
+  String get memorySettingsInjectionMaxItemsTitle => 'Items injected per type';
+
+  @override
+  String get memorySettingsInjectionMaxItemsSubtitle =>
+      'When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.';
+
+  @override
+  String memorySettingsInjectionMaxItemsOption(int n) {
+    return '$n';
   }
 
   @override
-  String get fileUploadDuplicateUseExisting => 'Use existing';
+  String get memorySettingsInjectionMaxItemsCustomButton => 'Custom';
 
   @override
-  String get fileUploadDuplicateUploadNew => 'Upload new';
+  String get memorySettingsInjectionMaxItemsCustomTitle =>
+      'Custom injection count';
 
   @override
-  String get settingsPageWorldBook => 'World Book';
+  String get memorySettingsInjectionMaxItemsCustomDescription =>
+      'Enter a number between 1 and 100.';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomLabel => 'Count';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomHint => '1–100';
+
+  @override
+  String get memorySettingsInjectionMaxItemsCustomInvalid =>
+      'Enter a number between 1 and 100';
+
+  @override
+  String get memorySettingsPromptLangSection => 'Prompt language';
+
+  @override
+  String get memorySettingsPromptLangAuto => 'Auto';
+
+  @override
+  String get memorySettingsPromptLangAutoSubtitle =>
+      'Follow the UI language (Chinese → zh, otherwise en)';
+
+  @override
+  String get memorySettingsPromptLangZh => 'Chinese';
+
+  @override
+  String get memorySettingsPromptLangZhSubtitle =>
+      'Always use Chinese memory prompts and tool descriptions';
+
+  @override
+  String get memorySettingsPromptLangEn => 'English';
+
+  @override
+  String get memorySettingsPromptLangEnSubtitle =>
+      'Always use English memory prompts and tool descriptions';
+
+  @override
+  String get memorySettingsPromptsSection => 'Prompt templates';
+
+  @override
+  String get memorySettingsLegacyPromptTitle => 'Legacy memory rules';
+
+  @override
+  String get memoryPromptEditRulesTitle => 'Memory rules';
+
+  @override
+  String get memoryPromptEditRulesSubtitle =>
+      'Injected into the main chat system prompt';
+
+  @override
+  String get memoryPromptEditGateTitle => 'Gatekeeper';
+
+  @override
+  String get memoryPromptEditGateSubtitle =>
+      'Decides whether a turn is worth remembering';
+
+  @override
+  String get memoryPromptEditExtractTitle => 'Extract';
+
+  @override
+  String get memoryPromptEditExtractSubtitle =>
+      'Extracts candidate memory items from a conversation';
+
+  @override
+  String get memoryPromptEditSmartAddTitle => 'Smart Add';
+
+  @override
+  String get memoryPromptEditSmartAddSubtitle =>
+      'NEW / MERGE / CONFLICT / SKIP dedupe judge';
+
+  @override
+  String get memoryPromptEditDistillTitle => 'Profile Distiller';
+
+  @override
+  String get memoryPromptEditDistillSubtitle =>
+      'Distills identity memories into profile fields';
+
+  @override
+  String get memoryPromptEditMigrateTitle => 'Legacy migration';
+
+  @override
+  String get memoryPromptEditMigrateSubtitle =>
+      'Used when migration rewrites memory wording';
+
+  @override
+  String get memoryPromptEditReset => 'Reset to default';
+
+  @override
+  String get memoryPromptEditSave => 'Save';
+
+  @override
+  String get memoryPromptEditSectionPerItem => 'Per-item prompt';
+
+  @override
+  String get memoryPromptEditSectionBatch => 'Batched prompt';
+
+  @override
+  String get memorySettingsEntriesSection => 'All memories';
+
+  @override
+  String get memorySettingsLegacySection => 'Legacy memory';
+
+  @override
+  String get memorySettingsEntriesTitle => 'Memory list';
+
+  @override
+  String get memorySettingsEntriesSubtitle =>
+      'Browse, edit, archive, and delete memories';
+
+  @override
+  String get memorySettingsProfileTitle => 'User profile';
+
+  @override
+  String get memorySettingsProfileSubtitle =>
+      'Structured identity fields for the model';
+
+  @override
+  String get memorySettingsLegacyTitle => 'Legacy memories (read-only)';
+
+  @override
+  String get memorySettingsLegacySubtitle =>
+      'Old memories from previous versions';
+
+  @override
+  String get memoryEntryTypeIdentity => 'Identity';
+
+  @override
+  String get memoryEntryTypeWorkflow => 'Workflow';
+
+  @override
+  String get memoryEntryTypeVoice => 'Voice';
+
+  @override
+  String get memoryEntryTypeInstruction => 'Instruction';
+
+  @override
+  String get memoryEntryScopeGlobal => 'Global';
+
+  @override
+  String get memoryEntryScopeAssistant => 'This assistant';
+
+  @override
+  String memoryEntryScopeAssistantNamed(String name) {
+    return '$name';
+  }
+
+  @override
+  String get memoryEntrySourceManual => 'Manual';
+
+  @override
+  String get memoryEntrySourceTool => 'Tool';
+
+  @override
+  String get memoryEntrySourceExtracted => 'Extracted';
+
+  @override
+  String get memoryEntrySourceDistilled => 'Distilled';
+
+  @override
+  String get memoryEntryStatusActive => 'Active';
+
+  @override
+  String get memoryEntryStatusArchived => 'Archived';
+
+  @override
+  String memoryEntryUpdatedAt(String date) {
+    return 'Updated $date';
+  }
+
+  @override
+  String get memoryEntryActionEdit => 'Edit';
+
+  @override
+  String get memoryEntryActionDelete => 'Delete';
+
+  @override
+  String get memoryEntryActionArchive => 'Archive';
+
+  @override
+  String get memoryEntryActionRestore => 'Restore';
+
+  @override
+  String get memoryEntryActionSwitchScope => 'Change scope';
+
+  @override
+  String get memoryEntryActionBatchDelete => 'Delete selected';
+
+  @override
+  String get memoryEntryActionAdd => 'Add memory';
+
+  @override
+  String get memoryEntryDeleteConfirmTitle => 'Delete memory?';
+
+  @override
+  String get memoryEntryDeleteConfirmContent =>
+      'This permanently deletes the memory. This cannot be undone.';
+
+  @override
+  String memoryEntryBatchDeleteConfirmTitle(int count) {
+    return 'Delete $count memories?';
+  }
+
+  @override
+  String get memoryEntryBatchDeleteConfirmContent =>
+      'Selected memories will be permanently deleted.';
+
+  @override
+  String get memoryEntrySwitchScopeConfirmTitle => 'Change memory scope?';
+
+  @override
+  String get memoryEntrySwitchScopeToGlobal =>
+      'Make this memory global (shared across assistants)?';
+
+  @override
+  String get memoryEntrySwitchScopeToAssistant =>
+      'Limit this memory to the current assistant?';
+
+  @override
+  String get memoryEntryArchivedSection => 'Archived';
+
+  @override
+  String get memoryEntryEmpty => 'No memories yet';
+
+  @override
+  String get memoryEntryEmptyDisabled =>
+      'Long-term memory is off for this assistant';
+
+  @override
+  String get memoryEntryEditTitle => 'Edit memory';
+
+  @override
+  String get memoryEntryCreateTitle => 'New memory';
+
+  @override
+  String get memoryEntryContentHint => 'Enter memory content';
+
+  @override
+  String get memoryEntryTypeLabel => 'Type';
+
+  @override
+  String get memoryEntryScopeLabel => 'Scope';
+
+  @override
+  String get memoryFilterScopeAll => 'All scopes';
+
+  @override
+  String get memoryFilterScopeGlobal => 'Global only';
+
+  @override
+  String get memoryFilterScopeAssistant => 'Assistant';
+
+  @override
+  String get memoryFilterTypeAll => 'All types';
+
+  @override
+  String get memoryFilterStatusAll => 'All statuses';
+
+  @override
+  String get memoryFilterStatusActive => 'Active';
+
+  @override
+  String get memoryFilterStatusArchived => 'Archived';
+
+  @override
+  String get memorySearchHint => 'Search memories';
+
+  @override
+  String get memorySearchEmpty => 'No matching memories';
+
+  @override
+  String memoryOrphanBanner(int count) {
+    return '$count orphaned assistant memories (assistant deleted)';
+  }
+
+  @override
+  String get memoryOrphanCleanupButton => 'Clean up';
+
+  @override
+  String get memoryOrphanConfirmTitle => 'Clean up orphaned memories?';
+
+  @override
+  String memoryOrphanConfirmContent(int count) {
+    return 'Permanently delete $count memories whose assistant no longer exists.';
+  }
+
+  @override
+  String get memoryOrganizeButton => 'Organize';
+
+  @override
+  String get memoryOrganizeNeedsConversation =>
+      'Open a chat with this assistant to organize memories';
+
+  @override
+  String get memoryOrganizeNeedsModel =>
+      'Select a memory model in Settings → Memory first';
+
+  @override
+  String get memoryOrganizeStatusNever => 'Not organized yet';
+
+  @override
+  String memoryOrganizeStatusLast(String when) {
+    return 'Last organized: $when';
+  }
+
+  @override
+  String memoryOrganizeStatusExtracted(int count) {
+    return 'extracted $count';
+  }
+
+  @override
+  String get memoryOrganizeStatusSkipped => 'nothing to remember';
+
+  @override
+  String memoryOrganizeStatusFailed(String reason) {
+    return 'Failed: $reason';
+  }
+
+  @override
+  String memoryOrganizeStatusSkippedReason(String reason) {
+    return 'skipped: $reason';
+  }
+
+  @override
+  String get memoryOutcomeTemporaryConversation =>
+      'Temporary chats are not saved to memory';
+
+  @override
+  String get memoryOutcomeMemoryDisabled => 'Memory is off for this assistant';
+
+  @override
+  String get memoryOutcomeAutoOrganizeOff => 'Auto-organize is off';
+
+  @override
+  String get memoryOutcomeStreaming =>
+      'Skipped while a reply is still streaming';
+
+  @override
+  String get memoryOutcomeBelowThreshold =>
+      'Not enough new messages to organize';
+
+  @override
+  String get memoryOutcomeEmptyWindow => 'No new messages to organize';
+
+  @override
+  String get memoryOutcomeMemoryModelUnset =>
+      'No memory processing model selected';
+
+  @override
+  String get memoryOutcomeMemoryModelMissing =>
+      'The selected memory model is no longer available';
+
+  @override
+  String get memoryOutcomeAssistantMissing => 'Assistant not found';
+
+  @override
+  String get memoryOutcomeConversationMissing => 'Conversation not found';
+
+  @override
+  String get memoryOutcomeQueueOverflow =>
+      'The organize queue was full, so this run was dropped';
+
+  @override
+  String get memoryOutcomeGateRequestFailed =>
+      'Could not reach the memory model for the remember/skip check';
+
+  @override
+  String get memoryOutcomeGateParseFailed =>
+      'The remember/skip check returned an unreadable reply';
+
+  @override
+  String get memoryOutcomeExtractRequestFailed =>
+      'Could not reach the memory model to extract memories';
+
+  @override
+  String get memoryOutcomeExtractParseFailed =>
+      'The memory extract reply could not be parsed';
+
+  @override
+  String get memoryOutcomeDistillFailed => 'Could not distill the user profile';
+
+  @override
+  String get memoryOutcomeMemoryExecutionError => 'A memory tool failed to run';
+
+  @override
+  String get memoryOutcomeUnsupportedTool => 'Unsupported memory tool';
+
+  @override
+  String get memoryOutcomeInvalidMemoryType => 'Invalid memory type';
+
+  @override
+  String get memoryOutcomeInvalidMemoryContent => 'Invalid memory content';
+
+  @override
+  String get memoryOutcomeInvalidQuery => 'Invalid search query';
+
+  @override
+  String get memoryOutcomeInvalidMemoryId => 'Invalid memory id';
+
+  @override
+  String get memoryOutcomeMemoryNotFound => 'Memory not found';
+
+  @override
+  String get memoryOutcomeInvalidProfileFields => 'Invalid profile fields';
+
+  @override
+  String get memoryOutcomeChatSearchUnavailable => 'Chat search is unavailable';
+
+  @override
+  String get memoryOrganizeJustNow => 'just now';
+
+  @override
+  String memoryOrganizeMinutesAgo(int n) {
+    return '$n min ago';
+  }
+
+  @override
+  String memoryOrganizeHoursAgo(int n) {
+    return '$n h ago';
+  }
+
+  @override
+  String memoryOrganizeDaysAgo(int n) {
+    return '$n d ago';
+  }
+
+  @override
+  String get memoryModelMissingNotice =>
+      'Select a memory processing model in Settings → Memory first.';
+
+  @override
+  String get memoryModelMissingGoSelect => 'Choose model';
+
+  @override
+  String get memoryEntriesPageTitle => 'All memories';
+
+  @override
+  String get userProfilePageTitle => 'User profile';
+
+  @override
+  String get userProfilePreferredName => 'Preferred name';
+
+  @override
+  String get userProfilePreferredNameHint =>
+      'How the model should address you — unrelated to the sidebar display name';
+
+  @override
+  String get userProfileGender => 'Gender';
+
+  @override
+  String get userProfilePronouns => 'Pronouns';
+
+  @override
+  String get userProfilePreferredLanguage => 'Preferred language';
+
+  @override
+  String get userProfileTimezone => 'Timezone';
+
+  @override
+  String get userProfileOccupation => 'Occupation';
+
+  @override
+  String get userProfileLocation => 'Location';
+
+  @override
+  String get userProfileCustomSection => 'Custom fields';
+
+  @override
+  String get userProfileAddCustom => 'Add custom field';
+
+  @override
+  String get userProfileCustomKeyHint => 'Key (custom.name)';
+
+  @override
+  String get userProfileCustomValueHint => 'Value';
+
+  @override
+  String get userProfileInvalidKey =>
+      'Key must be custom. followed by 1–32 letters, digits, _ or -';
+
+  @override
+  String get userProfileClear => 'Clear';
+
+  @override
+  String get userProfileSave => 'Save';
+
+  @override
+  String get userProfileEmptyValue => 'Not set';
+
+  @override
+  String get legacyMemoryPageTitle => 'Legacy memories';
+
+  @override
+  String get legacyMemoryBanner =>
+      'These memories came from an older version and are not used in chats. You can migrate them into the current memory system.';
+
+  @override
+  String get legacyMemoryEmpty => 'No legacy memories';
+
+  @override
+  String get legacyMemoryCopy => 'Copy';
+
+  @override
+  String get legacyMemoryCopied => 'Copied';
+
+  @override
+  String get legacyMemoryExport => 'Export';
+
+  @override
+  String get legacyMemoryExportTitle => 'Kelivo legacy memory export';
+
+  @override
+  String legacyMemoryAssistantHeader(String name) {
+    return 'Assistant: $name';
+  }
+
+  @override
+  String get legacyMemorySearchHint => 'Search legacy memories';
+
+  @override
+  String get legacyMemoryMigrate => 'Migrate';
+
+  @override
+  String get legacyMemoryMigrationTitle => 'Migrate legacy memories';
+
+  @override
+  String legacyMemoryMigrationSubtitle(int count) {
+    return 'Use a model to classify and clean up $count legacy memories. The originals stay unchanged.';
+  }
+
+  @override
+  String get legacyMemoryMigrationModel => 'Migration model';
+
+  @override
+  String get legacyMemoryMigrationChooseModel => 'Choose a model';
+
+  @override
+  String get legacyMemoryMigrationTarget => 'Save to';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobal => 'Global';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistant => 'Current assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalAssistants =>
+      'Original assistants';
+
+  @override
+  String get legacyMemoryMigrationTargetGlobalDescription =>
+      'Available to every assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetAssistantDescription =>
+      'Only available to this assistant';
+
+  @override
+  String get legacyMemoryMigrationTargetOriginalDescription =>
+      'Keep each memory with its original assistant';
+
+  @override
+  String get legacyMemoryMigrationStart => 'Start migration';
+
+  @override
+  String get legacyMemoryMigrationAnalyzing => 'Analyzing with model';
+
+  @override
+  String get legacyMemoryMigrationWriting => 'Saving memories';
+
+  @override
+  String legacyMemoryMigrationProgress(int current, int total) {
+    return '$current of $total';
+  }
+
+  @override
+  String get legacyMemoryMigrationComplete => 'Migration complete';
+
+  @override
+  String legacyMemoryMigrationResult(int created, int skipped) {
+    return '$created migrated · $skipped already existed';
+  }
+
+  @override
+  String get legacyMemoryMigrationFailed =>
+      'Migration stopped. You can retry; memories already saved will be skipped.';
+
+  @override
+  String get legacyMemoryMigrationRetry => 'Retry';
+
+  @override
+  String get legacyMemoryMigrationClose => 'Done';
+
+  @override
+  String get legacyMemoryMigrationContentMode => 'Content';
+
+  @override
+  String get legacyMemoryMigrationContentPreserve => 'Keep original';
+
+  @override
+  String get legacyMemoryMigrationContentOrganize => 'Rewrite with model';
+
+  @override
+  String get legacyMemoryMigrationContentPreserveDescription =>
+      'The model only assigns a type. The original wording is saved as-is.';
+
+  @override
+  String get legacyMemoryMigrationContentOrganizeDescription =>
+      'The model classifies and rewrites each memory using the editable migrate prompt.';
+
+  @override
+  String get legacyMemoryMigrationBatchSize => 'Batch size';
+
+  @override
+  String legacyMemoryMigrationPartial(int created, int skipped, int failed) {
+    return '$created migrated · $skipped skipped · $failed failed';
+  }
+
+  @override
+  String get legacyMemoryMigrationContinue => 'Continue migration';
+
+  @override
+  String get legacyMemoryMigrationErrorNetwork =>
+      'Network error. Check the connection and try again.';
+
+  @override
+  String get legacyMemoryMigrationErrorFormat =>
+      'The model returned an invalid response.';
+
+  @override
+  String get legacyMemoryMigrationErrorAuth =>
+      'Authentication failed. Check the API key.';
+
+  @override
+  String legacyMemoryMigrationErrorOther(String message) {
+    return 'Migration failed: $message';
+  }
+
+  @override
+  String get legacyMemoryModeTitle => 'Use legacy memory';
+
+  @override
+  String get legacyMemoryModeSubtitle => 'Global setting for all assistants';
+
+  @override
+  String legacyMemoryModeCacheWarning(String token) {
+    return 'The default template injects the current time via $token, which affects cache hit rate. Remove it if you do not need it.';
+  }
+
+  @override
+  String get memoryUiContentLabel => 'Content';
+
+  @override
+  String get memoryUiValueLabel => 'Value';
+
+  @override
+  String get memoryUiCustomKeyLabel => 'Key';
+
+  @override
+  String get memoryUiStatusLabel => 'Status';
+
+  @override
+  String get memoryUiAssistantLabel => 'Assistant';
+
+  @override
+  String get memoryUiAssistantAll => 'All assistants';
+
+  @override
+  String get memoryUiSearchClear => 'Clear search';
+
+  @override
+  String get memoryUiAssistantLegacyTitle => 'Legacy memories (read-only)';
+
+  @override
+  String get memoryUiAssistantLegacySubtitle =>
+      'Old memories of this assistant from previous versions';
+
+  @override
+  String get assistantEditMemorySwitchTitle => 'Use long-term memory';
+
+  @override
+  String get assistantEditMemorySwitchSubtitle =>
+      'Inject saved memories into chats and let this assistant write new ones';
+
+  @override
+  String get assistantEditAutoOrganizeTitle => 'Auto-organize memory';
+
+  @override
+  String get assistantEditAutoOrganizeSubtitle =>
+      'Run the memory pipeline after chats';
+
+  @override
+  String get assistantEditAllowPastRecallTitle => 'Allow recalling past chats';
+
+  @override
+  String get assistantEditAllowPastRecallSubtitle =>
+      'Enable chat search across past conversations';
+
+  @override
+  String get assistantEditGenerateSummaryTitle =>
+      'Generate conversation summaries';
+
+  @override
+  String get assistantEditGenerateSummarySubtitle =>
+      'Summaries are only used by chat search';
+
+  @override
+  String get assistantEditManageMemoryTitle =>
+      'Memories visible to this assistant';
+
+  @override
+  String get assistantEditWriteScopeTitle => 'Memory write scope';
+
+  @override
+  String get assistantEditWriteScopeSubtitle =>
+      'Where new memories are stored by default';
+
+  @override
+  String get assistantEditWriteScopeAlwaysGlobal => 'Always global';
+
+  @override
+  String get assistantEditWriteScopeAlwaysGlobalSubtitle =>
+      'New memories are shared with every assistant';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistant => 'Always this assistant';
+
+  @override
+  String get assistantEditWriteScopeAlwaysAssistantSubtitle =>
+      'New memories stay private to this assistant';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultGlobal =>
+      'Model chooses (default global)';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultGlobalSubtitle =>
+      'The model may pick global or this assistant; default is global';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistant =>
+      'Model chooses (default assistant)';
+
+  @override
+  String get assistantEditWriteScopeToolDefaultAssistantSubtitle =>
+      'The model may pick global or this assistant; default is this assistant';
+
+  @override
+  String get assistantEditDedupeModeTitle => 'Dedupe mode';
+
+  @override
+  String get assistantEditDedupeModeSubtitle =>
+      'How candidates are judged against existing memories';
+
+  @override
+  String get assistantEditDedupeModeBatched => 'Batched';
+
+  @override
+  String get assistantEditDedupeModeBatchedSubtitle =>
+      'Judge all new candidates in one request. Faster and cheaper; less precise when many items arrive at once.';
+
+  @override
+  String get assistantEditDedupeModePerItem => 'Per item';
+
+  @override
+  String get assistantEditDedupeModePerItemSubtitle =>
+      'Judge each candidate in its own request. More accurate; uses more model calls.';
+
+  @override
+  String get assistantEditOrganizeFrequencyTitle => 'Organize every N turns';
+
+  @override
+  String get assistantEditOrganizeFrequencySubtitle =>
+      'Run auto-organize after this many assistant replies';
+
+  @override
+  String assistantEditOrganizeFrequencyOption(int n) {
+    return 'Every $n';
+  }
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomButton => 'Custom';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomTitle => 'Custom frequency';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomDescription =>
+      'Enter a number between 1 and 20.';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomLabel => 'Turns';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomHint => '1–20';
+
+  @override
+  String get assistantEditOrganizeFrequencyCustomInvalid =>
+      'Enter a number between 1 and 20';
 
   @override
   String get worldBookTitle => 'World Book';
@@ -5887,6 +8074,1286 @@ class AppLocalizationsEn extends AppLocalizations {
   String debugPageManyMessagesSeedText(String role, int index) {
     return '$role message #$index: quick random debug sample for testing list rendering, scrolling stability, message grouping, and conversation history performance.';
   }
+
+  @override
+  String get migrationIntroTitle => 'Upgrade Chat Storage';
+
+  @override
+  String get migrationIntroSubtitle =>
+      'Kelivo is moving chat history to a faster SQLite database. The upgrade runs before the app opens so your data stays consistent.';
+
+  @override
+  String get migrationBackupNote =>
+      'Before migration starts, Kelivo exports a ZIP backup with settings, chat history, and local files.';
+
+  @override
+  String get migrationPerformanceNote =>
+      'After migration, startup, history loading, and search use SQLite indexes for smoother long-chat performance.';
+
+  @override
+  String get migrationSourceDatabaseLabel => 'Hive';
+
+  @override
+  String get migrationTargetDatabaseLabel => 'SQLite';
+
+  @override
+  String get migrationChooseFolderButton => 'Choose Folder and Back Up';
+
+  @override
+  String get migrationSaveBackupButton => 'Save Backup ZIP';
+
+  @override
+  String get migrationStartWithoutBackupButton => 'Migrate Without Backing Up';
+
+  @override
+  String get migrationSkipChatsJsonOption => 'Skip chats.json';
+
+  @override
+  String get migrationSkipChatsJsonDescription =>
+      'Still backs up the original Hive files, settings, and local files. Recommended for very large histories.';
+
+  @override
+  String get migrationSkipBackupOption => 'Skip this backup';
+
+  @override
+  String get migrationSkipBackupDescription =>
+      'Only select this if you already have a verified backup. Migration will start immediately.';
+
+  @override
+  String get migrationBackingUpTitle => 'Backing Up';
+
+  @override
+  String get migrationBackingUpSubtitle =>
+      'Exporting settings, chat history, uploaded files, images, and fonts. Keep Kelivo open until this finishes.';
+
+  @override
+  String get migrationMigratingTitle => 'Migrating to SQLite';
+
+  @override
+  String get migrationMigratingSubtitle =>
+      'Writing conversations and messages in batches so large histories do not overload memory. Keep Kelivo in the foreground until migration finishes.';
+
+  @override
+  String migrationBackingUpDetail(String fileName) {
+    return 'Backing up $fileName';
+  }
+
+  @override
+  String migrationMigratingDetail(int count) {
+    return 'Migrated $count messages';
+  }
+
+  @override
+  String get migrationMigratingPrepareDetail => 'Preparing SQLite database';
+
+  @override
+  String get migrationMigratingToolEventsDetail => 'Migrating tool records';
+
+  @override
+  String get migrationMigratingValidateDetail => 'Validating migrated data';
+
+  @override
+  String get migrationBackupReadyDetail => 'Backup ZIP is ready';
+
+  @override
+  String get migrationSavingBackupZipDetail => 'Saving backup ZIP';
+
+  @override
+  String get migrationBackupFileSavedTitle => 'Backup ZIP saved';
+
+  @override
+  String get migrationChecklistBackupFiles => 'Export Hive backup ZIP';
+
+  @override
+  String get migrationChecklistPrepareSqlite => 'Prepare SQLite database';
+
+  @override
+  String get migrationChecklistMigrateMessages =>
+      'Migrate conversations and messages';
+
+  @override
+  String get migrationChecklistMigrateToolEvents => 'Migrate tool records';
+
+  @override
+  String get migrationChecklistValidate => 'Validate migrated data';
+
+  @override
+  String get migrationStepBackup => 'Backup';
+
+  @override
+  String get migrationStepMigrate => 'Migrate';
+
+  @override
+  String get migrationStepComplete => 'Done';
+
+  @override
+  String get migrationCompleteTitle => 'Upgrade Complete';
+
+  @override
+  String get migrationCompleteSubtitle =>
+      'Your chat history is now stored in SQLite. Restart Kelivo to enter the upgraded app.';
+
+  @override
+  String get migrationConversationCount => 'Conversations';
+
+  @override
+  String get migrationMessageCount => 'Messages';
+
+  @override
+  String get migrationConvertedCount => 'Converted';
+
+  @override
+  String get migrationMalformedCount => 'Malformed';
+
+  @override
+  String get migrationMissingFilesCount => 'Missing files';
+
+  @override
+  String get migrationRestartButton => 'Restart Kelivo';
+
+  @override
+  String get migrationFailedTitle => 'Migration Failed';
+
+  @override
+  String get migrationFailedSubtitle =>
+      'The original Hive data is still intact. Any backup that finished earlier is unchanged. Review the reason below, then retry.';
+
+  @override
+  String get migrationUnknownError => 'Unknown migration error.';
+
+  @override
+  String get migrationFailureLogTitle => 'Failure log';
+
+  @override
+  String get migrationRetryButton => 'Retry Migration';
+
+  @override
+  String get migrationSkipButton => 'Skip Migration and Start Fresh';
+
+  @override
+  String get migrationSkipDialogTitle => 'Skip migration?';
+
+  @override
+  String get migrationSkipDialogMessage =>
+      'Kelivo will start with an empty chat database. Your old chat history stays on disk (renamed with a .retired suffix) but will NOT be migrated and will not appear in the app. Use your backup ZIP if you need to recover it later.';
+
+  @override
+  String get migrationSkipDialogCancel => 'Cancel';
+
+  @override
+  String get migrationSkipDialogConfirm => 'Skip and Start Fresh';
+
+  @override
+  String get migrationChatsExportDegradedNote =>
+      'The chats.json export was skipped because of an error. The backup ZIP still contains the raw Hive files with your complete chat history.';
+
+  @override
+  String get timelineJumpToLatest => 'Jump to latest';
+
+  @override
+  String largeContentShowMore(int count) {
+    return 'Show $count more';
+  }
+
+  @override
+  String get largeContentCollapse => 'Collapse';
+
+  @override
+  String get imageSettingsPageTitle => 'Image Processing';
+
+  @override
+  String get imageSettingsPageEditSectionTitle => 'Editing';
+
+  @override
+  String get imageSettingsPageQualitySectionTitle => 'Upload Image Quality';
+
+  @override
+  String get imageSettingsPageQualityOriginal => 'Original';
+
+  @override
+  String get imageSettingsPageQualityOriginalSubtitle =>
+      'Don\'t compress; upload as-is';
+
+  @override
+  String get imageSettingsPageQualityHigh => 'High Quality';
+
+  @override
+  String get imageSettingsPageQualityHighSubtitle =>
+      'Long edge 2048 px · quality 90';
+
+  @override
+  String get imageSettingsPageQualityBalanced => 'Balanced';
+
+  @override
+  String get imageSettingsPageQualityBalancedSubtitle =>
+      'Long edge 1568 px · quality 85';
+
+  @override
+  String get imageSettingsPageQualitySaver => 'Data Saver';
+
+  @override
+  String get imageSettingsPageQualitySaverSubtitle =>
+      'Long edge 1024 px · quality 70';
+
+  @override
+  String get imageSettingsPageQualityCustom => 'Custom';
+
+  @override
+  String get imageSettingsPageQualityCustomSubtitle =>
+      'Choose the compression quality';
+
+  @override
+  String get imageSettingsPageCustomQualityTitle => 'Compression Quality';
+
+  @override
+  String get imageSettingsPageCompressTransparentTitle =>
+      'Compress Transparent & Animated Images';
+
+  @override
+  String get imageSettingsPageCompressTransparentSubtitle =>
+      'When enabled, transparent PNG, GIF, and similar formats are compressed; transparent areas become white and animations keep only the first frame.';
+
+  @override
+  String get imageSettingsPageFooter =>
+      'Compression happens when images are added. Previously saved or sent images are not affected. Compressed images are sent as JPEG files.';
+
+  @override
+  String get imageSettingsPageSendSectionTitle => 'Sending';
+
+  @override
+  String get imageSettingsPageMarkdownImageLinksTitle =>
+      'Send Markdown image links as images';
+
+  @override
+  String get imageSettingsPageMarkdownImageLinksSubtitle =>
+      'When enabled, an ![alt](url) link in your message text is sent to vision models as an image. When off it stays plain text. Images you attach yourself are always sent as images.';
+
+  @override
+  String get memoryTraceSettingsTitle => 'Pipeline Traces';
+
+  @override
+  String get memoryTraceSettingsSubtitle =>
+      'Inspect every background memory run step by step';
+
+  @override
+  String get memoryTracePageTitle => 'Memory Pipeline Traces';
+
+  @override
+  String get memoryTraceRecordingSection => 'Recording';
+
+  @override
+  String get memoryTraceToggleTitle => 'Record pipeline traces';
+
+  @override
+  String get memoryTraceToggleSubtitle =>
+      'Keeps prompts, responses and changes of recent background runs in memory only';
+
+  @override
+  String get memoryTraceRunsSection => 'Recent runs';
+
+  @override
+  String get memoryTraceEmptyTitle => 'No traces yet';
+
+  @override
+  String get memoryTraceEmptySubtitle =>
+      'Traces appear here after the background memory pipeline runs.';
+
+  @override
+  String get memoryTraceDisabledTitle => 'Recording is off';
+
+  @override
+  String get memoryTraceDisabledSubtitle =>
+      'Turn recording on to capture the next background memory run.';
+
+  @override
+  String get memoryTraceClearAction => 'Clear';
+
+  @override
+  String get memoryTraceClearSheetTitle => 'Clear traces';
+
+  @override
+  String get memoryTraceClearSheetMessage =>
+      'This removes every recorded trace. Traces are never written to disk, so nothing else is affected.';
+
+  @override
+  String get memoryTraceClearConfirm => 'Clear traces';
+
+  @override
+  String get memoryTraceCancel => 'Cancel';
+
+  @override
+  String get memoryTraceClearedToast => 'Traces cleared';
+
+  @override
+  String get memoryTraceCopyAction => 'Copy';
+
+  @override
+  String get memoryTraceCopiedToast => 'Copied to clipboard';
+
+  @override
+  String get memoryTraceTriggerAuto => 'Auto';
+
+  @override
+  String get memoryTraceTriggerManual => 'Manual';
+
+  @override
+  String get memoryTraceTriggerTool => 'Tool call';
+
+  @override
+  String get memoryTraceTriggerSummary => 'Summary';
+
+  @override
+  String get memoryTraceScopeAssistant => 'Assistant';
+
+  @override
+  String get memoryTraceScopeGlobal => 'Global';
+
+  @override
+  String get memoryTraceStepGatekeeper => 'Gatekeeper';
+
+  @override
+  String get memoryTraceStepExtract => 'Extract';
+
+  @override
+  String get memoryTraceStepSmartAdd => 'Smart Add';
+
+  @override
+  String get memoryTraceStepDistiller => 'Profile Distiller';
+
+  @override
+  String get memoryTraceStepSummary => 'Conversation Summary';
+
+  @override
+  String get memoryTraceStepChatSearch => 'Past Conversation Recall';
+
+  @override
+  String get memoryTraceStepTool => 'Memory Tool';
+
+  @override
+  String get memoryTraceStatusSuccess => 'Success';
+
+  @override
+  String get memoryTraceStatusFailed => 'Failed';
+
+  @override
+  String get memoryTraceStatusSkipped => 'Skipped';
+
+  @override
+  String get memoryTraceStatusRunning => 'Running';
+
+  @override
+  String get memoryTraceOutcomeAdvanced => 'Watermark advanced';
+
+  @override
+  String get memoryTraceOutcomeHeld => 'Watermark held';
+
+  @override
+  String get memoryTraceOutcomeForced => 'Forced advance';
+
+  @override
+  String get memoryTraceDetailTitle => 'Trace detail';
+
+  @override
+  String get memoryTraceSectionOverview => 'Overview';
+
+  @override
+  String get memoryTraceSectionPrompt => 'Prompt';
+
+  @override
+  String get memoryTraceSectionResponse => 'Raw response';
+
+  @override
+  String get memoryTraceSectionParsed => 'Parsed result';
+
+  @override
+  String get memoryTraceSectionMutations => 'Changes applied';
+
+  @override
+  String get memoryTraceFieldTime => 'Started';
+
+  @override
+  String get memoryTraceFieldDuration => 'Duration';
+
+  @override
+  String get memoryTraceFieldTrigger => 'Trigger';
+
+  @override
+  String get memoryTraceFieldScope => 'Scope';
+
+  @override
+  String get memoryTraceFieldConversation => 'Chat';
+
+  @override
+  String get memoryTraceFieldAssistant => 'Assistant';
+
+  @override
+  String get memoryTraceFieldWindow => 'Window';
+
+  @override
+  String get memoryTraceFieldWatermark => 'Watermark';
+
+  @override
+  String get memoryTraceFieldOutcome => 'Outcome';
+
+  @override
+  String get memoryTraceFieldError => 'Error';
+
+  @override
+  String get memoryTraceMutationCreated => 'Created';
+
+  @override
+  String get memoryTraceMutationMerged => 'Merged';
+
+  @override
+  String get memoryTraceMutationEdited => 'Edited';
+
+  @override
+  String get memoryTraceMutationArchived => 'Archived';
+
+  @override
+  String get memoryTraceMutationLinked => 'Linked';
+
+  @override
+  String get memoryTraceMutationProfileWritten => 'Profile field written';
+
+  @override
+  String get memoryTraceMutationProfileCleared => 'Profile field cleared';
+
+  @override
+  String get memoryTraceMutationSummary => 'Chat summary written';
+
+  @override
+  String get memoryTraceBefore => 'Before';
+
+  @override
+  String get memoryTraceAfter => 'After';
+
+  @override
+  String get memoryTraceEmptyValue => '(empty)';
+
+  @override
+  String memoryTraceStepsCount(int count) {
+    return '$count steps';
+  }
+
+  @override
+  String memoryTraceMutationsCount(int count) {
+    return '$count changes';
+  }
+
+  @override
+  String memoryTraceRepeatCount(int count) {
+    return 'repeated $count×';
+  }
+
+  @override
+  String memoryTraceWindowValue(int size, int start, int end) {
+    return '$size messages · #$start–#$end';
+  }
+
+  @override
+  String get memoryTraceShowMore => 'Show full text';
+
+  @override
+  String get memoryTraceShowLess => 'Collapse';
+
+  @override
+  String get messageStyleSettingsPageTitle => 'Message Style';
+
+  @override
+  String get messageStyleSettingsPageReset => 'Reset';
+
+  @override
+  String get messageStyleSettingsPageResetConfirm =>
+      'Reset all message style customizations?';
+
+  @override
+  String get messageStyleSettingsPageCancel => 'Cancel';
+
+  @override
+  String get messageStyleSettingsPageLight => 'Light';
+
+  @override
+  String get messageStyleSettingsPageDark => 'Dark';
+
+  @override
+  String get messageStyleSettingsPageDefaultHint =>
+      'Default style follows the current theme and has no extra controls.';
+
+  @override
+  String get messageStyleSettingsPageStyleDefaultSubtitle =>
+      'Follows the theme; not customizable';
+
+  @override
+  String get messageStyleSettingsPageAssistantFitContent =>
+      'Fit assistant bubble to content';
+
+  @override
+  String get messageStyleSettingsPageAssistantFitContentSubtitle =>
+      'Assistant bubbles hug their text instead of filling the row';
+
+  @override
+  String get messageStyleSettingsPageAssistantSplitParagraphs =>
+      'Split paragraphs into bubbles';
+
+  @override
+  String get messageStyleSettingsPageAssistantSplitParagraphsSubtitle =>
+      'Blank lines break an assistant reply into one bubble per paragraph';
+
+  @override
+  String get messageStyleSettingsPageStyleFrostedSubtitle =>
+      'Translucent frosted glass';
+
+  @override
+  String get messageStyleSettingsPageStyleSolidSubtitle => 'Opaque solid fill';
+
+  @override
+  String get messageStyleSettingsPageBlur => 'Blur';
+
+  @override
+  String get messageStyleSettingsPageBlurHint =>
+      'Blur applies to content behind the bubble. It is barely visible without a chat wallpaper.';
+
+  @override
+  String get messageStyleSettingsPageBackgroundColor => 'Background';
+
+  @override
+  String get messageStyleSettingsPageBackgroundOpacity => 'Background Opacity';
+
+  @override
+  String get messageStyleSettingsPageBorderColor => 'Border';
+
+  @override
+  String get messageStyleSettingsPageBorderOpacity => 'Border Opacity';
+
+  @override
+  String get messageStyleSettingsPageBorderWidth => 'Border Width';
+
+  @override
+  String get messageStyleSettingsPageTextColor => 'Text';
+
+  @override
+  String get messageStyleSettingsPageCornerRadius => 'Corner Radius';
+
+  @override
+  String get messageStyleSettingsPagePreviewUser => 'This is a user message';
+
+  @override
+  String get messageStyleSettingsPagePreviewAssistant =>
+      'This is an assistant reply.';
+
+  @override
+  String get messageStyleSettingsPagePreviewThinking => 'Thinking';
+
+  @override
+  String get messageStyleSettingsPageRoleUser => 'User';
+
+  @override
+  String get messageStyleSettingsPageRoleAssistant => 'Assistant';
+
+  @override
+  String get messageStyleSettingsPageRoleAssistantHint =>
+      'Assistant settings also apply to thinking, tool-call, and translation cards.';
+
+  @override
+  String get localSnapshotSectionTitle => 'Local Copies';
+
+  @override
+  String get localSnapshotEnabledTitle => 'Keep local copies';
+
+  @override
+  String get localSnapshotEnabledSubtitle =>
+      'Kelivo periodically saves a copy of its database on this device, so it is never the only one.';
+
+  @override
+  String get localSnapshotIntervalTitle => 'How often';
+
+  @override
+  String get localSnapshotIntervalAutomatic => 'Automatic';
+
+  @override
+  String get localSnapshotIntervalAutomaticDetail =>
+      'Daily, less often as the database grows';
+
+  @override
+  String localSnapshotIntervalDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Every $days days',
+      one: 'Every day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get localSnapshotKeepTitle => 'Copies to keep';
+
+  @override
+  String localSnapshotKeepValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count copies',
+      one: '1 copy',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get localSnapshotKeepSubtitle =>
+      'Plus one from last week and one from last month, so a problem that went unnoticed is still recoverable.';
+
+  @override
+  String get localSnapshotKeepWeekly => 'Keep one from last week';
+
+  @override
+  String get localSnapshotKeepMonthly => 'Keep one from last month';
+
+  @override
+  String get localSnapshotKeepProtectedNote =>
+      'The most recent copy that still contains data is never removed automatically, whatever this is set to.';
+
+  @override
+  String get localSnapshotMaximumTitle => 'Space limit';
+
+  @override
+  String get localSnapshotMaximumUnlimited => 'No limit';
+
+  @override
+  String get localSnapshotAnnounceTitle => 'Notify when a copy is saved';
+
+  @override
+  String get localSnapshotAnnounceSubtitle =>
+      'Failures are always reported. This only adds a brief message on success.';
+
+  @override
+  String get localSnapshotTakeNow => 'Save a copy now';
+
+  @override
+  String get localSnapshotManageCopies => 'Manage copies';
+
+  @override
+  String localSnapshotUsage(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count copies',
+      one: '1 copy',
+      zero: 'No copies',
+    );
+    return '$_temp0 · $size';
+  }
+
+  @override
+  String get localSnapshotStatusNever => 'No copy saved yet';
+
+  @override
+  String localSnapshotStatusSuccess(String when) {
+    return 'Last copy $when';
+  }
+
+  @override
+  String localSnapshotStatusFailure(String when, String reason) {
+    return 'Last attempt failed $when: $reason';
+  }
+
+  @override
+  String get localSnapshotStatusSkippedSpace =>
+      'Skipped: not enough free space on this device';
+
+  @override
+  String get localSnapshotStatusUnchanged =>
+      'Nothing has changed since the last copy';
+
+  @override
+  String get localSnapshotCopiesTitle => 'Local Copies';
+
+  @override
+  String get localSnapshotCopiesEmpty => 'No local copies yet';
+
+  @override
+  String get localSnapshotCopiesEmptyHint =>
+      'A copy is saved automatically as your data changes, and one is always saved before a restore.';
+
+  @override
+  String get localSnapshotCopiesScopeNote =>
+      'Local copies live on this device only. They protect against damage to your data inside the app, not against losing the device or uninstalling Kelivo — use WebDAV or S3 backup for that.';
+
+  @override
+  String get localSnapshotOriginAutomatic => 'Automatic';
+
+  @override
+  String get localSnapshotOriginManual => 'Saved by you';
+
+  @override
+  String get localSnapshotOriginBeforeRestore => 'Before a restore';
+
+  @override
+  String get localSnapshotKindRecovered => 'Set aside by recovery';
+
+  @override
+  String localSnapshotCopyContents(int conversations, int messages) {
+    String _temp0 = intl.Intl.pluralLogic(
+      conversations,
+      locale: localeName,
+      other: '$conversations chats',
+      one: '1 chat',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      messages,
+      locale: localeName,
+      other: '$messages messages',
+      one: '1 message',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get localSnapshotCopyContentsUnknown =>
+      'Contents unknown until restored';
+
+  @override
+  String get localSnapshotCopyPinned => 'Kept';
+
+  @override
+  String get localSnapshotActionRestore => 'Restore';
+
+  @override
+  String get localSnapshotActionExport => 'Export';
+
+  @override
+  String get localSnapshotActionDelete => 'Delete';
+
+  @override
+  String get localSnapshotActionPin => 'Keep this copy';
+
+  @override
+  String get localSnapshotActionUnpin => 'Stop keeping';
+
+  @override
+  String get localSnapshotRestoreTitle => 'Restore this copy?';
+
+  @override
+  String localSnapshotRestoreMessage(String when) {
+    return 'Your current chats and settings will be replaced by this copy from $when. A copy of what you have now is saved first, so this can be undone.';
+  }
+
+  @override
+  String get localSnapshotRestorePreparing => 'Preparing copy';
+
+  @override
+  String get localSnapshotDeleteTitle => 'Delete this copy?';
+
+  @override
+  String get localSnapshotDeleteMessage =>
+      'This copy will be removed from the device permanently. Any data it holds that is not in your current database will be gone.';
+
+  @override
+  String get localSnapshotDeleteLastWarning =>
+      'This is the only copy that still contains data.';
+
+  @override
+  String get localSnapshotExportPreparing => 'Preparing export';
+
+  @override
+  String get localSnapshotExportDone => 'Copy exported';
+
+  @override
+  String localSnapshotExportFailed(String reason) {
+    return 'Could not export the copy: $reason';
+  }
+
+  @override
+  String get localSnapshotTakeDone => 'Copy saved';
+
+  @override
+  String localSnapshotTakeFailed(String reason) {
+    return 'Could not save a copy: $reason';
+  }
+
+  @override
+  String get localSnapshotDeleteDone => 'Copy deleted';
+
+  @override
+  String get localSnapshotBusyMessage =>
+      'Another backup task is already running';
+
+  @override
+  String get localSnapshotRunInBackground => 'Continue in background';
+
+  @override
+  String get localSnapshotRunningInBackground =>
+      'Saving a copy in the background';
+
+  @override
+  String startupRecoveryLocalCopiesAvailable(int count, String when) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count local copies',
+      one: '1 local copy',
+    );
+    return 'This device still holds $_temp0, the most recent from $when. Resetting does not delete them — after restarting you can restore one from Settings › Backup › Local Copies.';
+  }
+
+  @override
+  String startupRecoveryRecoveredCopiesDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count database copies',
+      one: '1 database copy',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'those',
+      one: 'it',
+    );
+    String _temp2 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'them',
+      one: 'it',
+    );
+    return 'It also holds $_temp0 set aside by an earlier repair, and resetting DOES delete $_temp1 permanently. Export your data first if you want to keep $_temp2.';
+  }
+
+  @override
+  String get toolSchemaSettingsPageTitle => 'Tool Descriptions';
+
+  @override
+  String get toolSchemaSettingsGroupSearch => 'Search';
+
+  @override
+  String get toolSchemaSettingsGroupMemory => 'Memory';
+
+  @override
+  String get toolSchemaSettingsGroupLocal => 'Device tools';
+
+  @override
+  String get toolSchemaSettingsModified => 'Modified';
+
+  @override
+  String get toolSchemaSettingsResetDefault => 'Restore default';
+
+  @override
+  String get toolSchemaSettingsResetAll => 'Restore all defaults';
+
+  @override
+  String get toolSchemaSettingsResetAllTitle => 'Restore all defaults?';
+
+  @override
+  String get toolSchemaSettingsResetAllMessage =>
+      'This restores every built-in tool description to the app default. Your custom wording will be lost.';
+
+  @override
+  String get toolSchemaSettingsResetAllConfirm => 'Restore';
+
+  @override
+  String toolSchemaSettingsParamDescriptions(int count) {
+    return 'Parameter descriptions ($count)';
+  }
+
+  @override
+  String get toolSchemaSettingsMemoryLangNote =>
+      'Memory tool defaults follow the memory prompt language. A custom description is stored once per tool and will not switch when you change that language.';
+
+  @override
+  String get toolSchemaSettingsDescriptionLabel => 'Description';
+
+  @override
+  String get toolSchemaSettingsToolName => 'Tool name';
+
+  @override
+  String get toolSchemaEditorPageTitle => 'Edit description';
+
+  @override
+  String get toolSchemaSettingsCancel => 'Cancel';
+
+  @override
+  String get settingsPageImageGeneration => 'Image Generation';
+
+  @override
+  String get imageGenerationPageTitle => 'Image Generation';
+
+  @override
+  String get imageGenerationProviderLabel => 'Provider';
+
+  @override
+  String get imageGenerationModelLabel => 'Model';
+
+  @override
+  String get imageGenerationModeLabel => 'Mode';
+
+  @override
+  String get imageGenerationModeGenerate => 'Generate';
+
+  @override
+  String get imageGenerationModeEdit => 'Edit Image';
+
+  @override
+  String get imageGenerationPromptLabel => 'Prompt';
+
+  @override
+  String get imageGenerationPromptHint => 'Describe the image you want';
+
+  @override
+  String get imageGenerationSizeLabel => 'Size';
+
+  @override
+  String get imageGenerationQualityLabel => 'Quality';
+
+  @override
+  String get imageGenerationOutputFormatLabel => 'Format';
+
+  @override
+  String get imageGenerationCountLabel => 'Count';
+
+  @override
+  String get imageGenerationPickImages => 'Pick Images';
+
+  @override
+  String imageGenerationPickedImages(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get imageGenerationClearImages => 'Clear';
+
+  @override
+  String get imageGenerationMaskNotSelected => 'No mask selected';
+
+  @override
+  String get imageGenerationMaskSelected => 'Mask selected';
+
+  @override
+  String get imageGenerationPickMask => 'Pick Mask';
+
+  @override
+  String get imageGenerationClearMask => 'Clear Mask';
+
+  @override
+  String get imageGenerationGenerateButton => 'Generate Image';
+
+  @override
+  String get imageGenerationEditButton => 'Edit Image';
+
+  @override
+  String get imageGenerationGenerating => 'Generating…';
+
+  @override
+  String get imageGenerationNoProvider =>
+      'No enabled OpenAI-compatible provider';
+
+  @override
+  String get imageGenerationModelRequired =>
+      'Set an image model for this assistant first';
+
+  @override
+  String get imageGenerationModelUnsupported =>
+      'The selected image model is not an OpenAI-compatible image model';
+
+  @override
+  String get imageGenerationNoApiKey => 'The selected provider has no API key';
+
+  @override
+  String get imageGenerationPromptRequired => 'Enter a prompt first';
+
+  @override
+  String get imageGenerationImageRequired => 'Select at least one input image';
+
+  @override
+  String imageGenerationSuccess(int count) {
+    return '$count image(s) generated';
+  }
+
+  @override
+  String imageGenerationFailed(String error) {
+    return 'Image request failed: $error';
+  }
+
+  @override
+  String get imageGenerationEmptyResult => 'The image API returned no image';
+
+  @override
+  String get imageGenerationInvalidResponse =>
+      'The image API returned an invalid response';
+
+  @override
+  String get imageGenerationRequestFailed => 'Image request failed';
+
+  @override
+  String get imageGenerationResultTitle => 'Results';
+
+  @override
+  String get homePageImageAttachmentUnsupported =>
+      'The current model does not support image attachments. Switch to a model that supports image input or remove the image and try again.';
+
+  @override
+  String get assistantEditImageModelTitle => 'Image Model';
+
+  @override
+  String get assistantEditImageModelSubtitle =>
+      'Used in chat when a message starts with /image, /img, 生图, or 画图';
+
+  @override
+  String get assistantEditImageModelUnset => 'No image model';
+
+  @override
+  String get backupPageImportFromRikkaHub => 'Import from RikkaHub';
+
+  @override
+  String get chatMessageWidgetEditMemory => 'Edit Memory';
+
+  @override
+  String get chatMessageWidgetDeleteMemory => 'Delete Memory';
+
+  @override
+  String get chatMessageWidgetContinueImageGeneration => 'Edit image';
+
+  @override
+  String get chatInputBarImageGenerationTooltip => 'Image Generation';
+
+  @override
+  String get modelDetailSheetBuiltinToolsUnsupportedHint =>
+      'Current provider does not support these built-in tools.';
+
+  @override
+  String get localModelManagementEntryTitle => 'Local Model Management';
+
+  @override
+  String get localModelManagementTitle => 'Local Models';
+
+  @override
+  String get localModelManagementModeLabel => 'Mode';
+
+  @override
+  String get localModelManagementLiteRtMode => 'LiteRT-LM file';
+
+  @override
+  String get localModelManagementGgufMode => 'GGUF file';
+
+  @override
+  String get localModelManagementOllamaMode => 'Ollama / OpenAI-compatible';
+
+  @override
+  String get localModelManagementModelFileLabel => 'Model file';
+
+  @override
+  String get localModelManagementFileStatusLabel => 'File status';
+
+  @override
+  String get localModelManagementFileMissing => 'File missing';
+
+  @override
+  String localModelManagementFileSizeBytes(int bytes) {
+    return '$bytes bytes';
+  }
+
+  @override
+  String get localModelManagementBaseUrlLabel => 'Base URL';
+
+  @override
+  String get localModelManagementModelIdLabel => 'Model ID';
+
+  @override
+  String get localModelManagementImportButton => 'Import';
+
+  @override
+  String get localModelManagementDiscoverButton => 'Discover';
+
+  @override
+  String get localModelManagementTestButton => 'Test';
+
+  @override
+  String get localModelManagementTesting => 'Testing...';
+
+  @override
+  String get localModelManagementDiscovering => 'Discovering...';
+
+  @override
+  String get localModelManagementNoModelsFound => 'No local models found.';
+
+  @override
+  String get localModelManagementDiscoveredModels => 'Models';
+
+  @override
+  String localModelManagementModelsUpdated(int count) {
+    return 'Updated $count model(s)';
+  }
+
+  @override
+  String get localModelManagementTestSuccess => 'Test succeeded';
+
+  @override
+  String localModelManagementTestFailed(String error) {
+    return 'Test failed: $error';
+  }
+
+  @override
+  String localModelManagementDiscoverFailed(String error) {
+    return 'Discovery failed: $error';
+  }
+
+  @override
+  String localModelManagementImportSuccess(String fileName) {
+    return 'Imported $fileName';
+  }
+
+  @override
+  String localModelManagementImportFailed(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String get addProviderSheetOpenAiTab => 'OpenAI';
+
+  @override
+  String get addProviderSheetGoogleTab => 'Google';
+
+  @override
+  String get addProviderSheetClaudeTab => 'Claude';
+
+  @override
+  String get addProviderSheetLocalTab => 'Local';
+
+  @override
+  String get addProviderSheetApiKeyLabel => 'API Key';
+
+  @override
+  String get addProviderSheetBaseUrlLabel => 'Base URL';
+
+  @override
+  String get addProviderSheetResponsesApiLabel => 'Responses API';
+
+  @override
+  String get addProviderSheetVertexAiLabel => 'Vertex AI';
+
+  @override
+  String get addProviderSheetLocalDefaultName => 'Local Model';
+
+  @override
+  String get addProviderSheetLocalModeLiteRt => 'LiteRT file';
+
+  @override
+  String get addProviderSheetLocalModeGguf => 'GGUF file';
+
+  @override
+  String get addProviderSheetLocalModeOpenAICompatible =>
+      'Ollama / OpenAI-compatible';
+
+  @override
+  String get addProviderSheetLocalModelPathLabel => 'LiteRT-LM model file';
+
+  @override
+  String get addProviderSheetLocalModelPathHint =>
+      'Import or paste a .litertlm model path';
+
+  @override
+  String get addProviderSheetImportLitertButton => 'Import .litertlm';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathLabel => 'GGUF model file';
+
+  @override
+  String get addProviderSheetLocalGgufModelPathHint =>
+      'Import or paste a .gguf model path';
+
+  @override
+  String get addProviderSheetImportGgufButton => 'Import .gguf';
+
+  @override
+  String get addProviderSheetLocalNoModelFile =>
+      'Choose a .litertlm model file first.';
+
+  @override
+  String get addProviderSheetLocalNoGgufModelFile =>
+      'Choose a .gguf model file first.';
+
+  @override
+  String addProviderSheetLocalImported(String fileName) {
+    return 'Imported $fileName';
+  }
+
+  @override
+  String get addProviderSheetLocalImporting => 'Importing model...';
+
+  @override
+  String addProviderSheetLocalImportingProgress(String percent) {
+    return 'Importing model... $percent';
+  }
+
+  @override
+  String get addProviderSheetLocalImportNotLiteRt =>
+      'Please choose a .litertlm model file.';
+
+  @override
+  String get addProviderSheetLocalImportNotGguf =>
+      'Please choose a .gguf model file.';
+
+  @override
+  String get addProviderSheetLocalImportEmptyFile =>
+      'The selected model file is empty.';
+
+  @override
+  String get addProviderSheetLocalImportUnreadable =>
+      'Could not read the selected model file.';
+
+  @override
+  String get addProviderSheetLocalImportFailed => 'Model import failed.';
+
+  @override
+  String get addProviderSheetLocalModelIdLabel => 'Model ID';
+
+  @override
+  String get searchServicesFieldApiKey => 'API Key';
+
+  @override
+  String get searchServicesFieldSearchEngineId => 'Search engine ID';
+
+  @override
+  String get searchServicesFieldModelOptional => 'Model (optional)';
+
+  @override
+  String get searchServicesAddDialogSearchEngineIdRequired =>
+      'Search engine ID is required';
+
+  @override
+  String get searchServicesEditDialogSearchEngineIdRequired =>
+      'Search engine ID is required';
+
+  @override
+  String get fontPickerGetFromGoogleFonts => 'Browse Google Fonts';
+
+  @override
+  String get fontPickerFilterHint => 'Filter fonts...';
+
+  @override
+  String get searchProviderGoogleDescription =>
+      'Google Programmable Search Engine through the Custom Search JSON API. Requires an API key and search engine ID.';
+
+  @override
+  String get searchServiceNameGoogle => 'Google';
+
+  @override
+  String get localLiteRtModelTooLargeForDevice =>
+      'This local model is too large for this device. Use a smaller LiteRT-LM model, such as Gemma E2B.';
+
+  @override
+  String get fileUploadDuplicateTitle => 'File already exists';
+
+  @override
+  String fileUploadDuplicateContent(String fileName) {
+    return 'A file named $fileName already exists. Use the existing file?';
+  }
+
+  @override
+  String get fileUploadDuplicateUseExisting => 'Use existing';
+
+  @override
+  String get fileUploadDuplicateUploadNew => 'Upload new';
 
   @override
   String get settingsPageMusic => 'Music';

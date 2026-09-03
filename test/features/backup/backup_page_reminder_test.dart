@@ -1,18 +1,28 @@
+import '../../support/business_test_harness.dart';
+
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:Kelivo/core/database/business_preferences.dart';
+import 'package:Kelivo/core/database/business_repository.dart';
 import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
+import 'package:Kelivo/core/providers/local_snapshot_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
 import 'package:Kelivo/features/backup/pages/backup_page.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
 
 Future<BackupReminderProvider> _createReminderProvider({
+  required BusinessPreferences preferences,
   bool enabled = false,
 }) async {
-  final provider = BackupReminderProvider(autoLoad: false);
+  final provider = BackupReminderProvider(
+    preferences: preferences,
+    autoLoad: false,
+  );
   await provider.load(startTimer: false);
   if (enabled) {
     await provider.saveSchedule(
@@ -28,12 +38,27 @@ Future<BackupReminderProvider> _createReminderProvider({
 Widget _buildHarness({
   required SettingsProvider settings,
   required BackupReminderProvider reminder,
+  required BusinessRepository businessRepository,
+  required BusinessPreferences businessPreferences,
 }) {
   return MultiProvider(
     providers: [
+      Provider<BusinessRepository>.value(value: businessRepository),
+      Provider<BusinessPreferences>.value(value: businessPreferences),
       ChangeNotifierProvider<SettingsProvider>.value(value: settings),
       ChangeNotifierProvider<ChatService>(create: (_) => ChatService()),
       ChangeNotifierProvider<BackupReminderProvider>.value(value: reminder),
+      ChangeNotifierProvider<LocalSnapshotProvider>(
+        create: (context) => LocalSnapshotProvider(
+          appDataDirectory: Directory.systemTemp.createTempSync(
+            'kelivo_backup_page_',
+          ),
+          chatService: context.read<ChatService>(),
+          businessRepository: businessRepository,
+          businessPreferences: businessPreferences,
+          autoLoad: false,
+        ),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -48,12 +73,20 @@ void main() {
 
   group('BackupPage reminder settings', () {
     testWidgets('shows reminder switch while disabled', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final settings = SettingsProvider();
-      final reminder = await _createReminderProvider();
+      final business = await createBusinessTestHarness();
+      final settings = SettingsProvider(business.preferences);
+      await settings.loaded;
+      final reminder = await _createReminderProvider(
+        preferences: business.preferences,
+      );
 
       await tester.pumpWidget(
-        _buildHarness(settings: settings, reminder: reminder),
+        _buildHarness(
+          settings: settings,
+          reminder: reminder,
+          businessRepository: business.repository,
+          businessPreferences: business.preferences,
+        ),
       );
       await tester.pump();
 
@@ -65,12 +98,21 @@ void main() {
     testWidgets('shows frequency and reminder status when enabled', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({});
-      final settings = SettingsProvider();
-      final reminder = await _createReminderProvider(enabled: true);
+      final business = await createBusinessTestHarness();
+      final settings = SettingsProvider(business.preferences);
+      await settings.loaded;
+      final reminder = await _createReminderProvider(
+        preferences: business.preferences,
+        enabled: true,
+      );
 
       await tester.pumpWidget(
-        _buildHarness(settings: settings, reminder: reminder),
+        _buildHarness(
+          settings: settings,
+          reminder: reminder,
+          businessRepository: business.repository,
+          businessPreferences: business.preferences,
+        ),
       );
       await tester.pump();
 

@@ -31,11 +31,18 @@ class BrandAssets {
       <MapEntry<RegExp, String>>[
         MapEntry(RegExp(r'openai|gpt|o\d'), 'openai.svg'),
         MapEntry(RegExp(r'gemini'), 'gemini-color.svg'),
+        MapEntry(
+          RegExp(r'^azure(?: (?:tts|speech(?: services?)?))?$'),
+          'azure-speech.svg',
+        ),
         MapEntry(RegExp(r'google'), 'google-color.svg'),
         MapEntry(RegExp(r'claude'), 'claude-color.svg'),
         MapEntry(RegExp(r'anthropic'), 'anthropic.svg'),
         MapEntry(RegExp(r'deepseek'), 'deepseek-color.svg'),
         MapEntry(RegExp(r'grok'), 'grok.svg'),
+        MapEntry(RegExp(r'firecrawl'), 'firecrawl-color.svg'),
+        MapEntry(RegExp(r'tinyfish'), 'tinyfish-color.svg'),
+        MapEntry(RegExp(r'fish.?audio|fishaudio'), 'fish-audio.svg'),
         MapEntry(RegExp(r'qwen|qwq|qvq'), 'qwen-color.svg'),
         MapEntry(RegExp(r'doubao'), 'doubao-color.svg'),
         MapEntry(RegExp(r'openrouter'), 'openrouter.svg'),
@@ -59,16 +66,20 @@ class BrandAssets {
         MapEntry(RegExp(r'juhenext'), 'juhenext.png'),
         MapEntry(RegExp(r'kimi|moonshot|月之暗面'), 'kimi-color.svg'),
         MapEntry(RegExp(r'302'), '302ai-color.svg'),
-        MapEntry(RegExp(r'step|阶跃'), 'stepfun-color.svg'),
+        MapEntry(RegExp(r'step|阶跃'), 'stepfun.svg'),
         MapEntry(RegExp(r'internlm|书生'), 'internlm-color.svg'),
         MapEntry(RegExp(r'cohere|command-.+'), 'cohere-color.svg'),
         MapEntry(RegExp(r'kelivo'), 'kelivo.png'),
         MapEntry(RegExp(r'tensdaq'), 'tensdaq-color.svg'),
+        MapEntry(RegExp(r'marucode|muteki'), 'marucode.png'),
         MapEntry(RegExp(r'longcat'), 'longcat.png'),
         MapEntry(RegExp(r'iflow|心流'), 'iflow-color.svg'),
         MapEntry(RegExp(r'sora'), 'sora-color.svg'),
         MapEntry(RegExp(r'bing|必应'), 'bing-color.svg'),
         MapEntry(RegExp(r'tavily'), 'tavily-color.svg'),
+        MapEntry(RegExp(r'anysearch'), 'anysearch.svg'),
+        MapEntry(RegExp(r'parallel'), 'parallel.svg'),
+        MapEntry(RegExp(r'^you(?:\.com)?(?:\s+search)?$'), 'you.svg'),
         MapEntry(RegExp(r'exa'), 'exa-color.svg'),
         MapEntry(RegExp(r'linkup'), 'linkup.svg'),
         MapEntry(RegExp(r'brave'), 'brave-color.svg'),
@@ -230,7 +241,17 @@ class BrandAssets {
     BrandIconOption(
       id: 'stepfun',
       label: 'StepFun',
-      asset: 'assets/icons/stepfun-color.svg',
+      asset: 'assets/icons/stepfun.svg',
+    ),
+    BrandIconOption(
+      id: 'firecrawl',
+      label: 'Firecrawl',
+      asset: 'assets/icons/firecrawl-color.svg',
+    ),
+    BrandIconOption(
+      id: 'tinyfish',
+      label: 'TinyFish',
+      asset: 'assets/icons/tinyfish-color.svg',
     ),
     BrandIconOption(
       id: 'internlm',
@@ -251,6 +272,11 @@ class BrandAssets {
       id: 'tensdaq',
       label: 'Tensdaq',
       asset: 'assets/icons/tensdaq-color.svg',
+    ),
+    BrandIconOption(
+      id: 'marucode',
+      label: 'MaruCode',
+      asset: 'assets/icons/marucode.png',
     ),
     BrandIconOption(
       id: 'longcat',
@@ -277,6 +303,17 @@ class BrandAssets {
       label: 'Tavily',
       asset: 'assets/icons/tavily-color.svg',
     ),
+    BrandIconOption(
+      id: 'anysearch',
+      label: 'AnySearch',
+      asset: 'assets/icons/anysearch.svg',
+    ),
+    BrandIconOption(
+      id: 'parallel',
+      label: 'Parallel',
+      asset: 'assets/icons/parallel.svg',
+    ),
+    BrandIconOption(id: 'you', label: 'You.com', asset: 'assets/icons/you.svg'),
     BrandIconOption(
       id: 'exa',
       label: 'Exa',
@@ -346,16 +383,27 @@ class BrandAssets {
   }
 
   static bool assetNeedsDarkInvert(String asset) {
-    return asset.contains('openai') ||
-        asset.contains('anthropic') ||
-        asset.contains('grok') ||
-        asset.contains('xai') ||
-        asset.contains('openrouter') ||
-        asset.contains('ollama') ||
-        asset.contains('github') ||
-        asset.contains('codex') ||
-        asset.contains('mimo');
+    final fileName = asset.trim().toLowerCase().split('/').last;
+    return _darkAdaptiveAssets.contains(fileName);
   }
+
+  static const Set<String> _darkAdaptiveAssets = <String>{
+    'openai.svg',
+    'anthropic.svg',
+    'grok.svg',
+    'xai.svg',
+    'openrouter.svg',
+    'ollama.svg',
+    'github.svg',
+    'linkup.svg',
+    'mimo.svg',
+    'codex.svg',
+    'firecrawl.svg',
+    'stepfun.svg',
+    'fish-audio.svg',
+    'anysearch.svg',
+    'parallel.svg',
+  };
 
   // Build the LobeHub static SVG CDN URL from an icon name (e.g. 'openai').
   static String lobehubIconUrl(String name) {

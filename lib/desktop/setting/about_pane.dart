@@ -3,13 +3,18 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../icons/lucide_adapter.dart' as lucide;
 import '../../l10n/app_localizations.dart';
+import '../../core/providers/settings_provider.dart';
+import '../../core/services/haptics.dart';
 import '../../features/settings/pages/debug_page.dart';
 import '../../shared/widgets/qq_group_join_sheet.dart';
+import '../../shared/widgets/snackbar.dart';
 import '../../theme/app_font_weights.dart';
+import 'package:Kelivo/theme/app_semantic_colors.dart';
 
 class DesktopAboutPane extends StatefulWidget {
   const DesktopAboutPane({super.key});
@@ -25,6 +30,8 @@ class _DesktopAboutPaneState extends State<DesktopAboutPane> {
   String _buildNumber = '';
   String _systemInfo = '';
   _InfoLoadState _infoLoadState = _InfoLoadState.loading;
+  int _appNameTapCount = 0;
+  DateTime? _lastAppNameTap;
 
   @override
   void initState() {
@@ -72,6 +79,30 @@ class _DesktopAboutPaneState extends State<DesktopAboutPane> {
     } catch (_) {
       await launchUrl(uri);
     }
+  }
+
+  Future<void> _onAppNameTap() async {
+    final now = DateTime.now();
+    if (_lastAppNameTap == null ||
+        now.difference(_lastAppNameTap!) > const Duration(seconds: 2)) {
+      _appNameTapCount = 0;
+    }
+    _lastAppNameTap = now;
+    _appNameTapCount++;
+    if (_appNameTapCount < 7) return;
+
+    _appNameTapCount = 0;
+    Haptics.medium();
+    final added = await context.read<SettingsProvider>().unlockKelivoSearch();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    showAppSnackBar(
+      context,
+      message: added
+          ? l10n.aboutPageKelivoSearchUnlocked
+          : l10n.aboutPageKelivoSearchAlreadyUnlocked,
+      type: NotificationType.success,
+    );
   }
 
   @override
@@ -138,6 +169,7 @@ class _DesktopAboutPaneState extends State<DesktopAboutPane> {
               // App header
               _AppHeaderCard(
                 description: l10n.aboutPageAppDescription,
+                onNameTap: _onAppNameTap,
                 onIconLongPress: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(builder: (_) => const DebugPage()),
@@ -213,10 +245,15 @@ class _DesktopAboutPaneState extends State<DesktopAboutPane> {
 }
 
 class _AppHeaderCard extends StatefulWidget {
-  const _AppHeaderCard({required this.description, this.onIconLongPress});
+  const _AppHeaderCard({
+    required this.description,
+    this.onIconLongPress,
+    this.onNameTap,
+  });
 
   final String description;
   final VoidCallback? onIconLongPress;
+  final VoidCallback? onNameTap;
 
   @override
   State<_AppHeaderCard> createState() => _AppHeaderCardState();
@@ -231,10 +268,8 @@ class _AppHeaderCardState extends State<_AppHeaderCard> {
     final cs = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseBg = isDark ? const Color(0xFF1C1C1E) : Colors.white;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
+    final baseBg = Theme.of(context).colorScheme.surfaceContainerHigh;
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.04);
     final overlay = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -257,7 +292,7 @@ class _AppHeaderCardState extends State<_AppHeaderCard> {
                 side: BorderSide(
                   width: 0.5,
                   color: isDark
-                      ? Colors.white.withValues(alpha: 0.06)
+                      ? cs.onSurface.withValues(alpha: 0.06)
                       : cs.outlineVariant.withValues(alpha: 0.12),
                 ),
               ),
@@ -287,11 +322,16 @@ class _AppHeaderCardState extends State<_AppHeaderCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          l10n.aboutPageAppName,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: AppFontWeights.emphasis,
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: widget.onNameTap,
+                          child: Text(
+                            l10n.aboutPageAppName,
+                            key: const ValueKey('about-page-app-name'),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: AppFontWeights.emphasis,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -327,13 +367,13 @@ class _DeskCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
         side: BorderSide(
           width: 0.5,
           color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
+              ? cs.onSurface.withValues(alpha: 0.06)
               : cs.outlineVariant.withValues(alpha: 0.12),
         ),
       ),
@@ -446,9 +486,7 @@ class _DeskNavRowState extends State<_DeskNavRow> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final bg = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -517,9 +555,7 @@ class _DeskNavRowSvgState extends State<_DeskNavRowSvg> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hoverBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.05);
+    final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.06 : 0.05);
     final bg = _hover ? hoverBg : Colors.transparent;
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -599,7 +635,7 @@ Future<void> _showSponsorDesktopDialog(BuildContext context) async {
     builder: (ctx) {
       final isDark = Theme.of(ctx).brightness == Brightness.dark;
       return Dialog(
-        backgroundColor: cs.surface,
+        backgroundColor: context.overlaySurface,
         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
