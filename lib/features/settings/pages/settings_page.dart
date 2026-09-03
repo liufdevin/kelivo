@@ -21,6 +21,7 @@ import '../../world_book/pages/world_book_page.dart';
 import 'network_proxy_page.dart';
 import 'storage_space_page.dart';
 import '../../stats/pages/stats_page.dart';
+import '../../music/pages/music_page.dart';
 import '../../../core/services/storage/storage_usage_service.dart';
 import '../../../core/services/haptics.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -248,6 +249,17 @@ class SettingsPage extends StatelessWidget {
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const TtsServicesPage()),
                   );
+                },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.AudioWaveform,
+                label: l10n.settingsPageMusic,
+                onTap: () {
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const MusicPage()));
                 },
               ),
               _iosDivider(context),

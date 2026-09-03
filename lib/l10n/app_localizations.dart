@@ -10807,6 +10807,630 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{role} message #{index}: quick random debug sample for testing list rendering, scrolling stability, message grouping, and conversation history performance.'**
   String debugPageManyMessagesSeedText(String role, int index);
+
+  /// No description provided for @settingsPageMusic.
+  ///
+  /// In en, this message translates to:
+  /// **'Music'**
+  String get settingsPageMusic;
+
+  /// No description provided for @musicPageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'LF Music'**
+  String get musicPageTitle;
+
+  /// No description provided for @musicPageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Search, play, and download music'**
+  String get musicPageSubtitle;
+
+  /// No description provided for @musicNotificationChannelName.
+  ///
+  /// In en, this message translates to:
+  /// **'Kelivo music playback'**
+  String get musicNotificationChannelName;
+
+  /// No description provided for @musicInitializing.
+  ///
+  /// In en, this message translates to:
+  /// **'Initializing the music player…'**
+  String get musicInitializing;
+
+  /// No description provided for @musicInitializationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not initialize the music player'**
+  String get musicInitializationFailed;
+
+  /// No description provided for @musicRetry.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get musicRetry;
+
+  /// No description provided for @musicSearchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Music search'**
+  String get musicSearchTitle;
+
+  /// No description provided for @musicSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a song, artist, or album'**
+  String get musicSearchHint;
+
+  /// No description provided for @musicSearchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Search history'**
+  String get musicSearchHistory;
+
+  /// No description provided for @musicSearchHistoryCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Search history cleared'**
+  String get musicSearchHistoryCleared;
+
+  /// No description provided for @musicSearchHistoryClearFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not clear search history'**
+  String get musicSearchHistoryClearFailed;
+
+  /// No description provided for @musicSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Music source'**
+  String get musicSource;
+
+  /// No description provided for @musicQuality.
+  ///
+  /// In en, this message translates to:
+  /// **'Quality'**
+  String get musicQuality;
+
+  /// No description provided for @musicPageNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Page'**
+  String get musicPageNumber;
+
+  /// No description provided for @musicCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Count'**
+  String get musicCount;
+
+  /// No description provided for @musicSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get musicSearch;
+
+  /// No description provided for @musicSearching.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching'**
+  String get musicSearching;
+
+  /// No description provided for @musicSearchingNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching'**
+  String get musicSearchingNow;
+
+  /// No description provided for @musicPreviousPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous'**
+  String get musicPreviousPage;
+
+  /// No description provided for @musicNextPage.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get musicNextPage;
+
+  /// No description provided for @musicPageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Page {page}'**
+  String musicPageLabel(int page);
+
+  /// No description provided for @musicSearchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a keyword to start searching'**
+  String get musicSearchPrompt;
+
+  /// No description provided for @musicNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get musicNoResults;
+
+  /// No description provided for @musicEnterSearchKeyword.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a search keyword'**
+  String get musicEnterSearchKeyword;
+
+  /// No description provided for @musicSearchFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Search failed'**
+  String get musicSearchFailed;
+
+  /// No description provided for @musicFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Found'**
+  String get musicFound;
+
+  /// No description provided for @musicDataSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Data source: GD Music (music.gdstudio.xyz)'**
+  String get musicDataSource;
+
+  /// No description provided for @musicPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get musicPlay;
+
+  /// No description provided for @musicPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get musicPause;
+
+  /// No description provided for @musicPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get musicPaused;
+
+  /// No description provided for @musicPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get musicPlaying;
+
+  /// No description provided for @musicReplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Replay'**
+  String get musicReplay;
+
+  /// No description provided for @musicLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
+  String get musicLoading;
+
+  /// No description provided for @musicDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get musicDownload;
+
+  /// No description provided for @musicDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get musicDownloading;
+
+  /// No description provided for @musicDownloadSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Download selected'**
+  String get musicDownloadSelected;
+
+  /// No description provided for @musicDownloadCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Download current song'**
+  String get musicDownloadCurrent;
+
+  /// No description provided for @musicSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get musicSelectAll;
+
+  /// No description provided for @musicClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get musicClear;
+
+  /// No description provided for @musicSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected'**
+  String get musicSelected;
+
+  /// No description provided for @musicTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get musicTotal;
+
+  /// No description provided for @musicFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed'**
+  String get musicFailed;
+
+  /// No description provided for @musicTrackUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'tracks'**
+  String get musicTrackUnit;
+
+  /// No description provided for @musicLineUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'lines'**
+  String get musicLineUnit;
+
+  /// No description provided for @musicCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover'**
+  String get musicCover;
+
+  /// No description provided for @musicSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get musicSave;
+
+  /// No description provided for @musicChooseSaveDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose save folder'**
+  String get musicChooseSaveDirectory;
+
+  /// No description provided for @musicAudioFileType.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get musicAudioFileType;
+
+  /// No description provided for @musicBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get musicBack;
+
+  /// No description provided for @musicNowPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Now playing'**
+  String get musicNowPlaying;
+
+  /// No description provided for @musicPlayerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Album art, progress, and lyrics'**
+  String get musicPlayerSubtitle;
+
+  /// No description provided for @musicNoTrackPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing is playing'**
+  String get musicNoTrackPlaying;
+
+  /// No description provided for @musicChooseTrackFromHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a song from the music page'**
+  String get musicChooseTrackFromHome;
+
+  /// No description provided for @musicLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyrics'**
+  String get musicLyrics;
+
+  /// No description provided for @musicLyricsFollowProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights automatically with playback'**
+  String get musicLyricsFollowProgress;
+
+  /// No description provided for @musicNoLyrics.
+  ///
+  /// In en, this message translates to:
+  /// **'No lyrics'**
+  String get musicNoLyrics;
+
+  /// No description provided for @musicUnknownTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown song'**
+  String get musicUnknownTrack;
+
+  /// No description provided for @musicUnknownArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown artist'**
+  String get musicUnknownArtist;
+
+  /// No description provided for @musicUnknownAlbum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown album'**
+  String get musicUnknownAlbum;
+
+  /// No description provided for @musicUnknownSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown source'**
+  String get musicUnknownSource;
+
+  /// No description provided for @musicUnknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get musicUnknownError;
+
+  /// No description provided for @musicBitrate24BitLossless.
+  ///
+  /// In en, this message translates to:
+  /// **'24-bit lossless'**
+  String get musicBitrate24BitLossless;
+
+  /// No description provided for @musicBitrate16BitLossless.
+  ///
+  /// In en, this message translates to:
+  /// **'16-bit lossless'**
+  String get musicBitrate16BitLossless;
+
+  /// No description provided for @musicBitrateKbps.
+  ///
+  /// In en, this message translates to:
+  /// **'Kbps'**
+  String get musicBitrateKbps;
+
+  /// No description provided for @musicSourceKuwo.
+  ///
+  /// In en, this message translates to:
+  /// **'Kuwo'**
+  String get musicSourceKuwo;
+
+  /// No description provided for @musicSourceNetease.
+  ///
+  /// In en, this message translates to:
+  /// **'NetEase'**
+  String get musicSourceNetease;
+
+  /// No description provided for @musicSourceTencent.
+  ///
+  /// In en, this message translates to:
+  /// **'QQ'**
+  String get musicSourceTencent;
+
+  /// No description provided for @musicSourceTidal.
+  ///
+  /// In en, this message translates to:
+  /// **'Tidal'**
+  String get musicSourceTidal;
+
+  /// No description provided for @musicSourceQobuz.
+  ///
+  /// In en, this message translates to:
+  /// **'Qobuz'**
+  String get musicSourceQobuz;
+
+  /// No description provided for @musicSourceJoox.
+  ///
+  /// In en, this message translates to:
+  /// **'JOOX'**
+  String get musicSourceJoox;
+
+  /// No description provided for @musicSourceBilibili.
+  ///
+  /// In en, this message translates to:
+  /// **'Bilibili'**
+  String get musicSourceBilibili;
+
+  /// No description provided for @musicSourceApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Apple Music'**
+  String get musicSourceApple;
+
+  /// No description provided for @musicSourceYouTube.
+  ///
+  /// In en, this message translates to:
+  /// **'YouTube Music'**
+  String get musicSourceYouTube;
+
+  /// No description provided for @musicSourceSpotify.
+  ///
+  /// In en, this message translates to:
+  /// **'Spotify'**
+  String get musicSourceSpotify;
+
+  /// No description provided for @musicStatusReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a song and start listening'**
+  String get musicStatusReady;
+
+  /// No description provided for @musicStatusGettingPlaybackUrl.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting playback URL'**
+  String get musicStatusGettingPlaybackUrl;
+
+  /// No description provided for @musicStatusBuffering.
+  ///
+  /// In en, this message translates to:
+  /// **'Buffering'**
+  String get musicStatusBuffering;
+
+  /// No description provided for @musicStatusPlaying.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing'**
+  String get musicStatusPlaying;
+
+  /// No description provided for @musicStatusPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused'**
+  String get musicStatusPaused;
+
+  /// No description provided for @musicStatusPlayFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback failed'**
+  String get musicStatusPlayFailed;
+
+  /// No description provided for @musicStatusPlayerError.
+  ///
+  /// In en, this message translates to:
+  /// **'Player error'**
+  String get musicStatusPlayerError;
+
+  /// No description provided for @musicStatusSeekFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Seek failed'**
+  String get musicStatusSeekFailed;
+
+  /// No description provided for @musicStatusSelectTrackFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a song first'**
+  String get musicStatusSelectTrackFirst;
+
+  /// No description provided for @musicStatusPreparingDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing download'**
+  String get musicStatusPreparingDownload;
+
+  /// No description provided for @musicStatusDownloading.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get musicStatusDownloading;
+
+  /// No description provided for @musicStatusDownloadCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Download canceled'**
+  String get musicStatusDownloadCancelled;
+
+  /// No description provided for @musicStatusSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get musicStatusSaved;
+
+  /// No description provided for @musicStatusDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get musicStatusDownloadFailed;
+
+  /// No description provided for @musicStatusSelectTracks.
+  ///
+  /// In en, this message translates to:
+  /// **'Select songs to download'**
+  String get musicStatusSelectTracks;
+
+  /// No description provided for @musicStatusBatchCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch download canceled'**
+  String get musicStatusBatchCancelled;
+
+  /// No description provided for @musicStatusBatchPreparing.
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing batch download'**
+  String get musicStatusBatchPreparing;
+
+  /// No description provided for @musicStatusBatchComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Batch download complete'**
+  String get musicStatusBatchComplete;
+
+  /// No description provided for @musicStatusLyricsFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load lyrics'**
+  String get musicStatusLyricsFailed;
+
+  /// No description provided for @musicStatusPlaybackComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Playback complete'**
+  String get musicStatusPlaybackComplete;
+
+  /// No description provided for @musicErrorRequestFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Request failed'**
+  String get musicErrorRequestFailed;
+
+  /// No description provided for @musicErrorCoverDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover download failed'**
+  String get musicErrorCoverDownloadFailed;
+
+  /// No description provided for @musicErrorEmptyResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The service returned an empty response'**
+  String get musicErrorEmptyResponse;
+
+  /// No description provided for @musicErrorInvalidJson.
+  ///
+  /// In en, this message translates to:
+  /// **'The service returned invalid JSON'**
+  String get musicErrorInvalidJson;
+
+  /// No description provided for @musicErrorInvalidResponse.
+  ///
+  /// In en, this message translates to:
+  /// **'The service returned an unexpected response'**
+  String get musicErrorInvalidResponse;
+
+  /// No description provided for @musicErrorSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This source may not currently support search; try NetEase or Kuwo'**
+  String get musicErrorSourceUnavailable;
+
+  /// No description provided for @musicErrorSearchNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Search request failed; check your network and try again'**
+  String get musicErrorSearchNetwork;
+
+  /// No description provided for @musicErrorUnexpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected error'**
+  String get musicErrorUnexpected;
+
+  /// No description provided for @musicErrorAndroidSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not save to Download/kelivo_music'**
+  String get musicErrorAndroidSave;
 }
 
 class _AppLocalizationsDelegate

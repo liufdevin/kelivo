@@ -5655,6 +5655,320 @@ class AppLocalizationsZh extends AppLocalizations {
   String debugPageManyMessagesSeedText(String role, int index) {
     return '$role 消息 #$index：快速随机调试样例，用于测试列表渲染、滚动稳定性、消息分组和会话历史性能。';
   }
+
+  @override
+  String get settingsPageMusic => '音乐';
+
+  @override
+  String get musicPageTitle => 'LF Music';
+
+  @override
+  String get musicPageSubtitle => '搜索、播放和下载音乐';
+
+  @override
+  String get musicNotificationChannelName => 'Kelivo 音乐播放';
+
+  @override
+  String get musicInitializing => '正在初始化音乐播放器…';
+
+  @override
+  String get musicInitializationFailed => '音乐播放器初始化失败';
+
+  @override
+  String get musicRetry => '重试';
+
+  @override
+  String get musicSearchTitle => '音乐搜索';
+
+  @override
+  String get musicSearchHint => '输入歌曲名、歌手或专辑';
+
+  @override
+  String get musicSearchHistory => '搜索记录';
+
+  @override
+  String get musicSearchHistoryCleared => '已清空搜索记录';
+
+  @override
+  String get musicSearchHistoryClearFailed => '搜索记录清空失败';
+
+  @override
+  String get musicSource => '音乐源';
+
+  @override
+  String get musicQuality => '音质';
+
+  @override
+  String get musicPageNumber => '页';
+
+  @override
+  String get musicCount => '数量';
+
+  @override
+  String get musicSearch => '搜索';
+
+  @override
+  String get musicSearching => '搜索中';
+
+  @override
+  String get musicSearchingNow => '正在搜索';
+
+  @override
+  String get musicPreviousPage => '上一页';
+
+  @override
+  String get musicNextPage => '下一页';
+
+  @override
+  String musicPageLabel(int page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String get musicSearchPrompt => '输入关键字后开始搜索';
+
+  @override
+  String get musicNoResults => '没有搜索结果';
+
+  @override
+  String get musicEnterSearchKeyword => '请输入搜索关键字';
+
+  @override
+  String get musicSearchFailed => '搜索失败';
+
+  @override
+  String get musicFound => '找到';
+
+  @override
+  String get musicDataSource => '数据来源：GD音乐台（music.gdstudio.xyz）';
+
+  @override
+  String get musicPlay => '播放';
+
+  @override
+  String get musicPause => '暂停';
+
+  @override
+  String get musicPaused => '已暂停';
+
+  @override
+  String get musicPlaying => '播放中';
+
+  @override
+  String get musicReplay => '重播';
+
+  @override
+  String get musicLoading => '加载中';
+
+  @override
+  String get musicDownload => '下载';
+
+  @override
+  String get musicDownloading => '下载中';
+
+  @override
+  String get musicDownloadSelected => '下载所选';
+
+  @override
+  String get musicDownloadCurrent => '下载当前歌曲';
+
+  @override
+  String get musicSelectAll => '全选';
+
+  @override
+  String get musicClear => '清空';
+
+  @override
+  String get musicSelected => '已选';
+
+  @override
+  String get musicTotal => '共';
+
+  @override
+  String get musicFailed => '失败';
+
+  @override
+  String get musicTrackUnit => '首';
+
+  @override
+  String get musicLineUnit => '行';
+
+  @override
+  String get musicCover => '封面';
+
+  @override
+  String get musicSave => '保存';
+
+  @override
+  String get musicChooseSaveDirectory => '选择保存目录';
+
+  @override
+  String get musicAudioFileType => '音频';
+
+  @override
+  String get musicBack => '返回';
+
+  @override
+  String get musicNowPlaying => '正在播放';
+
+  @override
+  String get musicPlayerSubtitle => '专辑封面、进度和歌词';
+
+  @override
+  String get musicNoTrackPlaying => '还没有播放歌曲';
+
+  @override
+  String get musicChooseTrackFromHome => '从音乐首页选择歌曲播放';
+
+  @override
+  String get musicLyrics => '歌词';
+
+  @override
+  String get musicLyricsFollowProgress => '跟随播放进度自动高亮';
+
+  @override
+  String get musicNoLyrics => '暂无歌词';
+
+  @override
+  String get musicUnknownTrack => '未知歌曲';
+
+  @override
+  String get musicUnknownArtist => '未知歌手';
+
+  @override
+  String get musicUnknownAlbum => '未知专辑';
+
+  @override
+  String get musicUnknownSource => '未知音乐源';
+
+  @override
+  String get musicUnknownError => '未知错误';
+
+  @override
+  String get musicBitrate24BitLossless => '24bit无损';
+
+  @override
+  String get musicBitrate16BitLossless => '16bit无损';
+
+  @override
+  String get musicBitrateKbps => 'Kbps';
+
+  @override
+  String get musicSourceKuwo => '酷我';
+
+  @override
+  String get musicSourceNetease => '网易云';
+
+  @override
+  String get musicSourceTencent => 'QQ';
+
+  @override
+  String get musicSourceTidal => 'Tidal';
+
+  @override
+  String get musicSourceQobuz => 'Qobuz';
+
+  @override
+  String get musicSourceJoox => 'JOOX';
+
+  @override
+  String get musicSourceBilibili => 'B站';
+
+  @override
+  String get musicSourceApple => 'Apple Music';
+
+  @override
+  String get musicSourceYouTube => 'YouTube Music';
+
+  @override
+  String get musicSourceSpotify => 'Spotify';
+
+  @override
+  String get musicStatusReady => '搜索歌曲、播放音乐';
+
+  @override
+  String get musicStatusGettingPlaybackUrl => '正在获取播放地址';
+
+  @override
+  String get musicStatusBuffering => '正在缓冲';
+
+  @override
+  String get musicStatusPlaying => '正在播放';
+
+  @override
+  String get musicStatusPaused => '已暂停';
+
+  @override
+  String get musicStatusPlayFailed => '播放失败';
+
+  @override
+  String get musicStatusPlayerError => '播放器错误';
+
+  @override
+  String get musicStatusSeekFailed => '定位失败';
+
+  @override
+  String get musicStatusSelectTrackFirst => '请先选择歌曲';
+
+  @override
+  String get musicStatusPreparingDownload => '正在准备下载';
+
+  @override
+  String get musicStatusDownloading => '正在下载';
+
+  @override
+  String get musicStatusDownloadCancelled => '已取消下载';
+
+  @override
+  String get musicStatusSaved => '已保存';
+
+  @override
+  String get musicStatusDownloadFailed => '下载失败';
+
+  @override
+  String get musicStatusSelectTracks => '请选择要下载的歌曲';
+
+  @override
+  String get musicStatusBatchCancelled => '已取消批量下载';
+
+  @override
+  String get musicStatusBatchPreparing => '准备批量下载';
+
+  @override
+  String get musicStatusBatchComplete => '批量下载完成';
+
+  @override
+  String get musicStatusLyricsFailed => '歌词加载失败';
+
+  @override
+  String get musicStatusPlaybackComplete => '播放完成';
+
+  @override
+  String get musicErrorRequestFailed => '请求失败';
+
+  @override
+  String get musicErrorCoverDownloadFailed => '封面下载失败';
+
+  @override
+  String get musicErrorEmptyResponse => '接口返回为空';
+
+  @override
+  String get musicErrorInvalidJson => '接口返回的 JSON 无效';
+
+  @override
+  String get musicErrorInvalidResponse => '接口返回格式异常';
+
+  @override
+  String get musicErrorSourceUnavailable => '该音乐源当前可能未开放搜索，请切换到网易云或酷我';
+
+  @override
+  String get musicErrorSearchNetwork => '搜索请求失败，请检查网络后重试';
+
+  @override
+  String get musicErrorUnexpected => '未知异常';
+
+  @override
+  String get musicErrorAndroidSave => '保存到 Download/kelivo_music 失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11308,6 +11622,320 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String debugPageManyMessagesSeedText(String role, int index) {
     return '$role 消息 #$index：快速随机调试样例，用于测试列表渲染、滚动稳定性、消息分组和会话历史性能。';
   }
+
+  @override
+  String get settingsPageMusic => '音乐';
+
+  @override
+  String get musicPageTitle => 'LF Music';
+
+  @override
+  String get musicPageSubtitle => '搜索、播放和下载音乐';
+
+  @override
+  String get musicNotificationChannelName => 'Kelivo 音乐播放';
+
+  @override
+  String get musicInitializing => '正在初始化音乐播放器…';
+
+  @override
+  String get musicInitializationFailed => '音乐播放器初始化失败';
+
+  @override
+  String get musicRetry => '重试';
+
+  @override
+  String get musicSearchTitle => '音乐搜索';
+
+  @override
+  String get musicSearchHint => '输入歌曲名、歌手或专辑';
+
+  @override
+  String get musicSearchHistory => '搜索记录';
+
+  @override
+  String get musicSearchHistoryCleared => '已清空搜索记录';
+
+  @override
+  String get musicSearchHistoryClearFailed => '搜索记录清空失败';
+
+  @override
+  String get musicSource => '音乐源';
+
+  @override
+  String get musicQuality => '音质';
+
+  @override
+  String get musicPageNumber => '页';
+
+  @override
+  String get musicCount => '数量';
+
+  @override
+  String get musicSearch => '搜索';
+
+  @override
+  String get musicSearching => '搜索中';
+
+  @override
+  String get musicSearchingNow => '正在搜索';
+
+  @override
+  String get musicPreviousPage => '上一页';
+
+  @override
+  String get musicNextPage => '下一页';
+
+  @override
+  String musicPageLabel(int page) {
+    return '第 $page 页';
+  }
+
+  @override
+  String get musicSearchPrompt => '输入关键字后开始搜索';
+
+  @override
+  String get musicNoResults => '没有搜索结果';
+
+  @override
+  String get musicEnterSearchKeyword => '请输入搜索关键字';
+
+  @override
+  String get musicSearchFailed => '搜索失败';
+
+  @override
+  String get musicFound => '找到';
+
+  @override
+  String get musicDataSource => '数据来源：GD音乐台（music.gdstudio.xyz）';
+
+  @override
+  String get musicPlay => '播放';
+
+  @override
+  String get musicPause => '暂停';
+
+  @override
+  String get musicPaused => '已暂停';
+
+  @override
+  String get musicPlaying => '播放中';
+
+  @override
+  String get musicReplay => '重播';
+
+  @override
+  String get musicLoading => '加载中';
+
+  @override
+  String get musicDownload => '下载';
+
+  @override
+  String get musicDownloading => '下载中';
+
+  @override
+  String get musicDownloadSelected => '下载所选';
+
+  @override
+  String get musicDownloadCurrent => '下载当前歌曲';
+
+  @override
+  String get musicSelectAll => '全选';
+
+  @override
+  String get musicClear => '清空';
+
+  @override
+  String get musicSelected => '已选';
+
+  @override
+  String get musicTotal => '共';
+
+  @override
+  String get musicFailed => '失败';
+
+  @override
+  String get musicTrackUnit => '首';
+
+  @override
+  String get musicLineUnit => '行';
+
+  @override
+  String get musicCover => '封面';
+
+  @override
+  String get musicSave => '保存';
+
+  @override
+  String get musicChooseSaveDirectory => '选择保存目录';
+
+  @override
+  String get musicAudioFileType => '音频';
+
+  @override
+  String get musicBack => '返回';
+
+  @override
+  String get musicNowPlaying => '正在播放';
+
+  @override
+  String get musicPlayerSubtitle => '专辑封面、进度和歌词';
+
+  @override
+  String get musicNoTrackPlaying => '还没有播放歌曲';
+
+  @override
+  String get musicChooseTrackFromHome => '从音乐首页选择歌曲播放';
+
+  @override
+  String get musicLyrics => '歌词';
+
+  @override
+  String get musicLyricsFollowProgress => '跟随播放进度自动高亮';
+
+  @override
+  String get musicNoLyrics => '暂无歌词';
+
+  @override
+  String get musicUnknownTrack => '未知歌曲';
+
+  @override
+  String get musicUnknownArtist => '未知歌手';
+
+  @override
+  String get musicUnknownAlbum => '未知专辑';
+
+  @override
+  String get musicUnknownSource => '未知音乐源';
+
+  @override
+  String get musicUnknownError => '未知错误';
+
+  @override
+  String get musicBitrate24BitLossless => '24bit无损';
+
+  @override
+  String get musicBitrate16BitLossless => '16bit无损';
+
+  @override
+  String get musicBitrateKbps => 'Kbps';
+
+  @override
+  String get musicSourceKuwo => '酷我';
+
+  @override
+  String get musicSourceNetease => '网易云';
+
+  @override
+  String get musicSourceTencent => 'QQ';
+
+  @override
+  String get musicSourceTidal => 'Tidal';
+
+  @override
+  String get musicSourceQobuz => 'Qobuz';
+
+  @override
+  String get musicSourceJoox => 'JOOX';
+
+  @override
+  String get musicSourceBilibili => 'B站';
+
+  @override
+  String get musicSourceApple => 'Apple Music';
+
+  @override
+  String get musicSourceYouTube => 'YouTube Music';
+
+  @override
+  String get musicSourceSpotify => 'Spotify';
+
+  @override
+  String get musicStatusReady => '搜索歌曲、播放音乐';
+
+  @override
+  String get musicStatusGettingPlaybackUrl => '正在获取播放地址';
+
+  @override
+  String get musicStatusBuffering => '正在缓冲';
+
+  @override
+  String get musicStatusPlaying => '正在播放';
+
+  @override
+  String get musicStatusPaused => '已暂停';
+
+  @override
+  String get musicStatusPlayFailed => '播放失败';
+
+  @override
+  String get musicStatusPlayerError => '播放器错误';
+
+  @override
+  String get musicStatusSeekFailed => '定位失败';
+
+  @override
+  String get musicStatusSelectTrackFirst => '请先选择歌曲';
+
+  @override
+  String get musicStatusPreparingDownload => '正在准备下载';
+
+  @override
+  String get musicStatusDownloading => '正在下载';
+
+  @override
+  String get musicStatusDownloadCancelled => '已取消下载';
+
+  @override
+  String get musicStatusSaved => '已保存';
+
+  @override
+  String get musicStatusDownloadFailed => '下载失败';
+
+  @override
+  String get musicStatusSelectTracks => '请选择要下载的歌曲';
+
+  @override
+  String get musicStatusBatchCancelled => '已取消批量下载';
+
+  @override
+  String get musicStatusBatchPreparing => '准备批量下载';
+
+  @override
+  String get musicStatusBatchComplete => '批量下载完成';
+
+  @override
+  String get musicStatusLyricsFailed => '歌词加载失败';
+
+  @override
+  String get musicStatusPlaybackComplete => '播放完成';
+
+  @override
+  String get musicErrorRequestFailed => '请求失败';
+
+  @override
+  String get musicErrorCoverDownloadFailed => '封面下载失败';
+
+  @override
+  String get musicErrorEmptyResponse => '接口返回为空';
+
+  @override
+  String get musicErrorInvalidJson => '接口返回的 JSON 无效';
+
+  @override
+  String get musicErrorInvalidResponse => '接口返回格式异常';
+
+  @override
+  String get musicErrorSourceUnavailable => '该音乐源当前可能未开放搜索，请切换到网易云或酷我';
+
+  @override
+  String get musicErrorSearchNetwork => '搜索请求失败，请检查网络后重试';
+
+  @override
+  String get musicErrorUnexpected => '未知异常';
+
+  @override
+  String get musicErrorAndroidSave => '保存到 Download/kelivo_music 失败';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -16961,4 +17589,318 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String debugPageManyMessagesSeedText(String role, int index) {
     return '$role 訊息 #$index：快速隨機調試樣例，用於測試列表渲染、捲動穩定性、訊息分組和會話歷史效能。';
   }
+
+  @override
+  String get settingsPageMusic => '音樂';
+
+  @override
+  String get musicPageTitle => 'LF Music';
+
+  @override
+  String get musicPageSubtitle => '搜尋、播放和下載音樂';
+
+  @override
+  String get musicNotificationChannelName => 'Kelivo 音樂播放';
+
+  @override
+  String get musicInitializing => '正在初始化音樂播放器…';
+
+  @override
+  String get musicInitializationFailed => '音樂播放器初始化失敗';
+
+  @override
+  String get musicRetry => '重試';
+
+  @override
+  String get musicSearchTitle => '音樂搜尋';
+
+  @override
+  String get musicSearchHint => '輸入歌曲名、歌手或專輯';
+
+  @override
+  String get musicSearchHistory => '搜尋記錄';
+
+  @override
+  String get musicSearchHistoryCleared => '已清空搜尋記錄';
+
+  @override
+  String get musicSearchHistoryClearFailed => '搜尋記錄清空失敗';
+
+  @override
+  String get musicSource => '音樂源';
+
+  @override
+  String get musicQuality => '音質';
+
+  @override
+  String get musicPageNumber => '頁';
+
+  @override
+  String get musicCount => '數量';
+
+  @override
+  String get musicSearch => '搜尋';
+
+  @override
+  String get musicSearching => '搜尋中';
+
+  @override
+  String get musicSearchingNow => '正在搜尋';
+
+  @override
+  String get musicPreviousPage => '上一頁';
+
+  @override
+  String get musicNextPage => '下一頁';
+
+  @override
+  String musicPageLabel(int page) {
+    return '第 $page 頁';
+  }
+
+  @override
+  String get musicSearchPrompt => '輸入關鍵字後開始搜尋';
+
+  @override
+  String get musicNoResults => '沒有搜尋結果';
+
+  @override
+  String get musicEnterSearchKeyword => '請輸入搜尋關鍵字';
+
+  @override
+  String get musicSearchFailed => '搜尋失敗';
+
+  @override
+  String get musicFound => '找到';
+
+  @override
+  String get musicDataSource => '資料來源：GD音樂台（music.gdstudio.xyz）';
+
+  @override
+  String get musicPlay => '播放';
+
+  @override
+  String get musicPause => '暫停';
+
+  @override
+  String get musicPaused => '已暫停';
+
+  @override
+  String get musicPlaying => '播放中';
+
+  @override
+  String get musicReplay => '重播';
+
+  @override
+  String get musicLoading => '載入中';
+
+  @override
+  String get musicDownload => '下載';
+
+  @override
+  String get musicDownloading => '下載中';
+
+  @override
+  String get musicDownloadSelected => '下載所選';
+
+  @override
+  String get musicDownloadCurrent => '下載目前歌曲';
+
+  @override
+  String get musicSelectAll => '全選';
+
+  @override
+  String get musicClear => '清空';
+
+  @override
+  String get musicSelected => '已選';
+
+  @override
+  String get musicTotal => '共';
+
+  @override
+  String get musicFailed => '失敗';
+
+  @override
+  String get musicTrackUnit => '首';
+
+  @override
+  String get musicLineUnit => '行';
+
+  @override
+  String get musicCover => '封面';
+
+  @override
+  String get musicSave => '儲存';
+
+  @override
+  String get musicChooseSaveDirectory => '選擇儲存目錄';
+
+  @override
+  String get musicAudioFileType => '音訊';
+
+  @override
+  String get musicBack => '返回';
+
+  @override
+  String get musicNowPlaying => '正在播放';
+
+  @override
+  String get musicPlayerSubtitle => '專輯封面、進度和歌詞';
+
+  @override
+  String get musicNoTrackPlaying => '還沒有播放歌曲';
+
+  @override
+  String get musicChooseTrackFromHome => '從音樂首頁選擇歌曲播放';
+
+  @override
+  String get musicLyrics => '歌詞';
+
+  @override
+  String get musicLyricsFollowProgress => '跟隨播放進度自動高亮';
+
+  @override
+  String get musicNoLyrics => '暫無歌詞';
+
+  @override
+  String get musicUnknownTrack => '未知歌曲';
+
+  @override
+  String get musicUnknownArtist => '未知歌手';
+
+  @override
+  String get musicUnknownAlbum => '未知專輯';
+
+  @override
+  String get musicUnknownSource => '未知音樂源';
+
+  @override
+  String get musicUnknownError => '未知錯誤';
+
+  @override
+  String get musicBitrate24BitLossless => '24bit無損';
+
+  @override
+  String get musicBitrate16BitLossless => '16bit無損';
+
+  @override
+  String get musicBitrateKbps => 'Kbps';
+
+  @override
+  String get musicSourceKuwo => '酷我';
+
+  @override
+  String get musicSourceNetease => '網易雲';
+
+  @override
+  String get musicSourceTencent => 'QQ';
+
+  @override
+  String get musicSourceTidal => 'Tidal';
+
+  @override
+  String get musicSourceQobuz => 'Qobuz';
+
+  @override
+  String get musicSourceJoox => 'JOOX';
+
+  @override
+  String get musicSourceBilibili => 'B站';
+
+  @override
+  String get musicSourceApple => 'Apple Music';
+
+  @override
+  String get musicSourceYouTube => 'YouTube Music';
+
+  @override
+  String get musicSourceSpotify => 'Spotify';
+
+  @override
+  String get musicStatusReady => '搜尋歌曲、播放音樂';
+
+  @override
+  String get musicStatusGettingPlaybackUrl => '正在取得播放位址';
+
+  @override
+  String get musicStatusBuffering => '正在緩衝';
+
+  @override
+  String get musicStatusPlaying => '正在播放';
+
+  @override
+  String get musicStatusPaused => '已暫停';
+
+  @override
+  String get musicStatusPlayFailed => '播放失敗';
+
+  @override
+  String get musicStatusPlayerError => '播放器錯誤';
+
+  @override
+  String get musicStatusSeekFailed => '定位失敗';
+
+  @override
+  String get musicStatusSelectTrackFirst => '請先選擇歌曲';
+
+  @override
+  String get musicStatusPreparingDownload => '正在準備下載';
+
+  @override
+  String get musicStatusDownloading => '正在下載';
+
+  @override
+  String get musicStatusDownloadCancelled => '已取消下載';
+
+  @override
+  String get musicStatusSaved => '已儲存';
+
+  @override
+  String get musicStatusDownloadFailed => '下載失敗';
+
+  @override
+  String get musicStatusSelectTracks => '請選擇要下載的歌曲';
+
+  @override
+  String get musicStatusBatchCancelled => '已取消批次下載';
+
+  @override
+  String get musicStatusBatchPreparing => '準備批次下載';
+
+  @override
+  String get musicStatusBatchComplete => '批次下載完成';
+
+  @override
+  String get musicStatusLyricsFailed => '歌詞載入失敗';
+
+  @override
+  String get musicStatusPlaybackComplete => '播放完成';
+
+  @override
+  String get musicErrorRequestFailed => '請求失敗';
+
+  @override
+  String get musicErrorCoverDownloadFailed => '封面下載失敗';
+
+  @override
+  String get musicErrorEmptyResponse => '介面回傳為空';
+
+  @override
+  String get musicErrorInvalidJson => '介面回傳的 JSON 無效';
+
+  @override
+  String get musicErrorInvalidResponse => '介面回傳格式異常';
+
+  @override
+  String get musicErrorSourceUnavailable => '該音樂源目前可能未開放搜尋，請切換到網易雲或酷我';
+
+  @override
+  String get musicErrorSearchNetwork => '搜尋請求失敗，請檢查網路後重試';
+
+  @override
+  String get musicErrorUnexpected => '未知異常';
+
+  @override
+  String get musicErrorAndroidSave => '儲存到 Download/kelivo_music 失敗';
 }

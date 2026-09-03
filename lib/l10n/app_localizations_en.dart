@@ -5887,4 +5887,324 @@ class AppLocalizationsEn extends AppLocalizations {
   String debugPageManyMessagesSeedText(String role, int index) {
     return '$role message #$index: quick random debug sample for testing list rendering, scrolling stability, message grouping, and conversation history performance.';
   }
+
+  @override
+  String get settingsPageMusic => 'Music';
+
+  @override
+  String get musicPageTitle => 'LF Music';
+
+  @override
+  String get musicPageSubtitle => 'Search, play, and download music';
+
+  @override
+  String get musicNotificationChannelName => 'Kelivo music playback';
+
+  @override
+  String get musicInitializing => 'Initializing the music player…';
+
+  @override
+  String get musicInitializationFailed =>
+      'Could not initialize the music player';
+
+  @override
+  String get musicRetry => 'Retry';
+
+  @override
+  String get musicSearchTitle => 'Music search';
+
+  @override
+  String get musicSearchHint => 'Enter a song, artist, or album';
+
+  @override
+  String get musicSearchHistory => 'Search history';
+
+  @override
+  String get musicSearchHistoryCleared => 'Search history cleared';
+
+  @override
+  String get musicSearchHistoryClearFailed => 'Could not clear search history';
+
+  @override
+  String get musicSource => 'Music source';
+
+  @override
+  String get musicQuality => 'Quality';
+
+  @override
+  String get musicPageNumber => 'Page';
+
+  @override
+  String get musicCount => 'Count';
+
+  @override
+  String get musicSearch => 'Search';
+
+  @override
+  String get musicSearching => 'Searching';
+
+  @override
+  String get musicSearchingNow => 'Searching';
+
+  @override
+  String get musicPreviousPage => 'Previous';
+
+  @override
+  String get musicNextPage => 'Next';
+
+  @override
+  String musicPageLabel(int page) {
+    return 'Page $page';
+  }
+
+  @override
+  String get musicSearchPrompt => 'Enter a keyword to start searching';
+
+  @override
+  String get musicNoResults => 'No results';
+
+  @override
+  String get musicEnterSearchKeyword => 'Enter a search keyword';
+
+  @override
+  String get musicSearchFailed => 'Search failed';
+
+  @override
+  String get musicFound => 'Found';
+
+  @override
+  String get musicDataSource => 'Data source: GD Music (music.gdstudio.xyz)';
+
+  @override
+  String get musicPlay => 'Play';
+
+  @override
+  String get musicPause => 'Pause';
+
+  @override
+  String get musicPaused => 'Paused';
+
+  @override
+  String get musicPlaying => 'Playing';
+
+  @override
+  String get musicReplay => 'Replay';
+
+  @override
+  String get musicLoading => 'Loading';
+
+  @override
+  String get musicDownload => 'Download';
+
+  @override
+  String get musicDownloading => 'Downloading';
+
+  @override
+  String get musicDownloadSelected => 'Download selected';
+
+  @override
+  String get musicDownloadCurrent => 'Download current song';
+
+  @override
+  String get musicSelectAll => 'Select all';
+
+  @override
+  String get musicClear => 'Clear';
+
+  @override
+  String get musicSelected => 'Selected';
+
+  @override
+  String get musicTotal => 'Total';
+
+  @override
+  String get musicFailed => 'Failed';
+
+  @override
+  String get musicTrackUnit => 'tracks';
+
+  @override
+  String get musicLineUnit => 'lines';
+
+  @override
+  String get musicCover => 'Cover';
+
+  @override
+  String get musicSave => 'Save';
+
+  @override
+  String get musicChooseSaveDirectory => 'Choose save folder';
+
+  @override
+  String get musicAudioFileType => 'Audio';
+
+  @override
+  String get musicBack => 'Back';
+
+  @override
+  String get musicNowPlaying => 'Now playing';
+
+  @override
+  String get musicPlayerSubtitle => 'Album art, progress, and lyrics';
+
+  @override
+  String get musicNoTrackPlaying => 'Nothing is playing';
+
+  @override
+  String get musicChooseTrackFromHome => 'Choose a song from the music page';
+
+  @override
+  String get musicLyrics => 'Lyrics';
+
+  @override
+  String get musicLyricsFollowProgress =>
+      'Highlights automatically with playback';
+
+  @override
+  String get musicNoLyrics => 'No lyrics';
+
+  @override
+  String get musicUnknownTrack => 'Unknown song';
+
+  @override
+  String get musicUnknownArtist => 'Unknown artist';
+
+  @override
+  String get musicUnknownAlbum => 'Unknown album';
+
+  @override
+  String get musicUnknownSource => 'Unknown source';
+
+  @override
+  String get musicUnknownError => 'Unknown error';
+
+  @override
+  String get musicBitrate24BitLossless => '24-bit lossless';
+
+  @override
+  String get musicBitrate16BitLossless => '16-bit lossless';
+
+  @override
+  String get musicBitrateKbps => 'Kbps';
+
+  @override
+  String get musicSourceKuwo => 'Kuwo';
+
+  @override
+  String get musicSourceNetease => 'NetEase';
+
+  @override
+  String get musicSourceTencent => 'QQ';
+
+  @override
+  String get musicSourceTidal => 'Tidal';
+
+  @override
+  String get musicSourceQobuz => 'Qobuz';
+
+  @override
+  String get musicSourceJoox => 'JOOX';
+
+  @override
+  String get musicSourceBilibili => 'Bilibili';
+
+  @override
+  String get musicSourceApple => 'Apple Music';
+
+  @override
+  String get musicSourceYouTube => 'YouTube Music';
+
+  @override
+  String get musicSourceSpotify => 'Spotify';
+
+  @override
+  String get musicStatusReady => 'Search for a song and start listening';
+
+  @override
+  String get musicStatusGettingPlaybackUrl => 'Getting playback URL';
+
+  @override
+  String get musicStatusBuffering => 'Buffering';
+
+  @override
+  String get musicStatusPlaying => 'Playing';
+
+  @override
+  String get musicStatusPaused => 'Paused';
+
+  @override
+  String get musicStatusPlayFailed => 'Playback failed';
+
+  @override
+  String get musicStatusPlayerError => 'Player error';
+
+  @override
+  String get musicStatusSeekFailed => 'Seek failed';
+
+  @override
+  String get musicStatusSelectTrackFirst => 'Choose a song first';
+
+  @override
+  String get musicStatusPreparingDownload => 'Preparing download';
+
+  @override
+  String get musicStatusDownloading => 'Downloading';
+
+  @override
+  String get musicStatusDownloadCancelled => 'Download canceled';
+
+  @override
+  String get musicStatusSaved => 'Saved';
+
+  @override
+  String get musicStatusDownloadFailed => 'Download failed';
+
+  @override
+  String get musicStatusSelectTracks => 'Select songs to download';
+
+  @override
+  String get musicStatusBatchCancelled => 'Batch download canceled';
+
+  @override
+  String get musicStatusBatchPreparing => 'Preparing batch download';
+
+  @override
+  String get musicStatusBatchComplete => 'Batch download complete';
+
+  @override
+  String get musicStatusLyricsFailed => 'Could not load lyrics';
+
+  @override
+  String get musicStatusPlaybackComplete => 'Playback complete';
+
+  @override
+  String get musicErrorRequestFailed => 'Request failed';
+
+  @override
+  String get musicErrorCoverDownloadFailed => 'Cover download failed';
+
+  @override
+  String get musicErrorEmptyResponse =>
+      'The service returned an empty response';
+
+  @override
+  String get musicErrorInvalidJson => 'The service returned invalid JSON';
+
+  @override
+  String get musicErrorInvalidResponse =>
+      'The service returned an unexpected response';
+
+  @override
+  String get musicErrorSourceUnavailable =>
+      'This source may not currently support search; try NetEase or Kuwo';
+
+  @override
+  String get musicErrorSearchNetwork =>
+      'Search request failed; check your network and try again';
+
+  @override
+  String get musicErrorUnexpected => 'Unexpected error';
+
+  @override
+  String get musicErrorAndroidSave => 'Could not save to Download/kelivo_music';
 }

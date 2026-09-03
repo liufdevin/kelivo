@@ -58,6 +58,7 @@ import 'setting/hotkeys_pane.dart';
 import 'setting/network_proxy_pane.dart';
 import 'setting/about_pane.dart';
 import 'setting/stats_pane.dart';
+import '../features/music/pages/music_page.dart';
 import 'package:system_fonts/system_fonts.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -98,6 +99,7 @@ enum _SettingsMenuItem {
   instructionInjection,
   worldBook,
   tts,
+  music,
   networkProxy,
   backup,
   hotkeys,
@@ -241,6 +243,11 @@ class _DesktopSettingsPageState extends State<DesktopSettingsPage> {
                           return const DesktopTtsServicesPane(
                             key: ValueKey('tts'),
                           );
+                        case _SettingsMenuItem.music:
+                          return const MusicPage(
+                            key: ValueKey('music'),
+                            embedded: true,
+                          );
                         case _SettingsMenuItem.stats:
                           return const DesktopStatsPane(key: ValueKey('stats'));
                         case _SettingsMenuItem.about:
@@ -315,6 +322,11 @@ class _SettingsMenu extends StatelessWidget {
         l10n.settingsPageWorldBook,
       ),
       (_SettingsMenuItem.tts, lucide.Lucide.Volume2, l10n.settingsPageTts),
+      (
+        _SettingsMenuItem.music,
+        lucide.Lucide.AudioWaveform,
+        l10n.settingsPageMusic,
+      ),
       (
         _SettingsMenuItem.networkProxy,
         lucide.Lucide.EthernetPort,
