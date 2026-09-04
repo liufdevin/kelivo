@@ -1368,8 +1368,9 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildChatInputBar(BuildContext context, {required bool isTablet}) {
     final conversation = _controller.currentConversation;
+    final settings = context.watch<SettingsProvider>();
     final chatModel = resolveChatModel(
-      context.watch<SettingsProvider>(),
+      settings,
       conversation: conversation,
       assistant: context.watch<AssistantProvider>().currentAssistant,
     );
@@ -1378,6 +1379,7 @@ class _HomePageState extends State<HomePage>
       chatModelProviderKey: chatModel.providerKey,
       chatModelId: chatModel.modelId,
       chatModelIsConversationOverride:
+          settings.perChatModelEnabled &&
           conversation?.chatModelProvider != null &&
           conversation?.chatModelId != null,
       inputFocus: _inputFocus,
