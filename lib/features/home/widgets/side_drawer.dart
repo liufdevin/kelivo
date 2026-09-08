@@ -949,6 +949,7 @@ class _SideDrawerState extends State<SideDrawer> with TickerProviderStateMixin {
           .replaceAll('{content}', content);
       final title = sanitizeGeneratedConversationTitle(
         await ChatApiService.generateText(
+          conversationId: conversationId,
           config: cfg,
           modelId: mdlId,
           prompt: prompt,

@@ -1074,6 +1074,11 @@
   "reasoningBudgetSheetXhighSubtitle": "Use maximum reasoning depth for the toughest problems",
   "reasoningBudgetSheetCustomLabel": "Custom Reasoning Budget",
   "reasoningBudgetSheetCustomHint": "e.g. 2048 (-1 auto, 0 off)",
+  "reasoningBudgetSliderLow": "Low",
+  "reasoningBudgetSliderMedium": "Medium",
+  "reasoningBudgetSliderHigh": "High",
+  "reasoningBudgetSliderXhigh": "XHigh",
+  "reasoningBudgetSliderMax": "Max",
   "chatMessageWidgetFileNotFound": "File not found: {fileName}",
   "@chatMessageWidgetFileNotFound": {
     "placeholders": {
@@ -1649,8 +1654,6 @@
   "modelDetailSheetImageMode": "Image",
   "modelDetailSheetToolsAbility": "Tools",
   "modelDetailSheetReasoningAbility": "Reasoning",
-  "modelDetailSheetProviderOverrideDescription": "Provider overrides: customize provider for a specific model.",
-  "modelDetailSheetAddProviderOverride": "Add Provider Override",
   "modelDetailSheetCustomHeadersTitle": "Custom Headers",
   "modelDetailSheetAddHeader": "Add Header",
   "modelDetailSheetCustomBodyTitle": "Custom Body",
@@ -2613,6 +2616,7 @@
   "assistantEditLocalToolCalendarCreateSubtitle": "Create calendar events on this device with your confirmation, requires the calendar permission.",
   "assistantEditLocalToolLocationTitle": "Current Location",
   "assistantEditLocalToolLocationSubtitle": "Read a one-shot location from this device, requires the location permission.",
+  "assistantEditLocationPermissionSettingsMessage": "Location permission is blocked. Allow location access in system settings, then turn this tool on again.",
   "assistantEditLocalToolWeatherTitle": "Weather",
   "assistantEditLocalToolWeatherSubtitle": "Get Apple Weather for the current or a specified location. WeatherKit attribution is shown in the result.",
   "assistantEditLocalToolHealthTitle": "Health Summary",
@@ -2665,7 +2669,7 @@
   "healthDataSettingsTypeWorkoutsTitle": "Workouts",
   "healthDataSettingsTypeWorkoutsSubtitle": "Workout records: type, duration, distance, and energy",
   "healthDataSettingsTypeSleepTitle": "Sleep",
-  "healthDataSettingsTypeSleepSubtitle": "Sleep duration last night",
+  "healthDataSettingsTypeSleepSubtitle": "Past 24 hours: sleep, time in bed, awake periods and sleep stages",
   "healthDataSettingsTypeMindfulnessTitle": "Resting",
   "healthDataSettingsTypeMindfulnessSubtitle": "Mindfulness or resting periods",
   "healthDataSettingsTypeHeartRateTitle": "Heart Rate",
@@ -4303,5 +4307,8 @@
   "musicErrorSourceUnavailable": "This source may not currently support search; try NetEase or Kuwo",
   "musicErrorSearchNetwork": "Search request failed; check your network and try again",
   "musicErrorUnexpected": "Unexpected error",
-  "musicErrorAndroidSave": "Could not save to Download/kelivo_music"
+  "musicErrorAndroidSave": "Could not save to Download/kelivo_music",
+  "healthDataSettingsCategoryReproductive": "Reproductive health",
+  "healthDataSettingsTypeMenstrualFlowTitle": "Menstrual flow",
+  "healthDataSettingsTypeMenstrualFlowSubtitle": "Recorded menstrual flow and cycle starts in the past 90 days"
 }

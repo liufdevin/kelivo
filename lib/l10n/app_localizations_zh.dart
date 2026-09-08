@@ -2448,6 +2448,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reasoningBudgetSheetCustomHint => '例如：2048 (-1 自动，0 关闭)';
 
   @override
+  String get reasoningBudgetSliderLow => 'Low';
+
+  @override
+  String get reasoningBudgetSliderMedium => 'Medium';
+
+  @override
+  String get reasoningBudgetSliderHigh => 'High';
+
+  @override
+  String get reasoningBudgetSliderXhigh => 'XHigh';
+
+  @override
+  String get reasoningBudgetSliderMax => 'Max';
+
+  @override
   String chatMessageWidgetFileNotFound(String fileName) {
     return '文件不存在: $fileName';
   }
@@ -3463,13 +3478,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get modelDetailSheetReasoningAbility => '推理';
-
-  @override
-  String get modelDetailSheetProviderOverrideDescription =>
-      '供应商重写：允许为特定模型自定义供应商设置。（暂未实现）';
-
-  @override
-  String get modelDetailSheetAddProviderOverride => '添加供应商重写';
 
   @override
   String get modelDetailSheetCustomHeadersTitle => '自定义 Headers';
@@ -5857,6 +5865,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get assistantEditLocalToolLocationSubtitle => '读取本设备的一次性位置，需要授予定位权限。';
 
   @override
+  String get assistantEditLocationPermissionSettingsMessage =>
+      '定位权限已被禁止。请在系统设置中允许定位访问，然后重新开启此工具。';
+
+  @override
   String get assistantEditLocalToolWeatherTitle => '天气';
 
   @override
@@ -5960,7 +5972,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get healthDataSettingsTypeSleepTitle => '睡眠';
 
   @override
-  String get healthDataSettingsTypeSleepSubtitle => '睡眠时长';
+  String get healthDataSettingsTypeSleepSubtitle => '最近 24 小时的睡眠、卧床、清醒与睡眠分期';
 
   @override
   String get healthDataSettingsTypeMindfulnessTitle => '静息';
@@ -9262,6 +9274,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get musicErrorAndroidSave => '保存到 Download/kelivo_music 失败';
+
+  @override
+  String get healthDataSettingsCategoryReproductive => '生殖健康';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowTitle => '经期记录';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowSubtitle =>
+      '最近 90 天记录的经量与周期开始日期';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -11708,6 +11730,21 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get reasoningBudgetSheetCustomHint => '例如：2048 (-1 自动，0 关闭)';
 
   @override
+  String get reasoningBudgetSliderLow => 'Low';
+
+  @override
+  String get reasoningBudgetSliderMedium => 'Medium';
+
+  @override
+  String get reasoningBudgetSliderHigh => 'High';
+
+  @override
+  String get reasoningBudgetSliderXhigh => 'XHigh';
+
+  @override
+  String get reasoningBudgetSliderMax => 'Max';
+
+  @override
   String chatMessageWidgetFileNotFound(String fileName) {
     return '文件不存在: $fileName';
   }
@@ -12723,13 +12760,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get modelDetailSheetReasoningAbility => '推理';
-
-  @override
-  String get modelDetailSheetProviderOverrideDescription =>
-      '供应商重写：允许为特定模型自定义供应商设置。（暂未实现）';
-
-  @override
-  String get modelDetailSheetAddProviderOverride => '添加供应商重写';
 
   @override
   String get modelDetailSheetCustomHeadersTitle => '自定义 Headers';
@@ -15043,6 +15073,10 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get assistantEditLocalToolLocationSubtitle => '读取本设备的一次性位置，需要授予定位权限。';
 
   @override
+  String get assistantEditLocationPermissionSettingsMessage =>
+      '定位权限已被禁止。请在系统设置中允许定位访问，然后重新开启此工具。';
+
+  @override
   String get assistantEditLocalToolWeatherTitle => '天气';
 
   @override
@@ -15146,7 +15180,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get healthDataSettingsTypeSleepTitle => '睡眠';
 
   @override
-  String get healthDataSettingsTypeSleepSubtitle => '睡眠时长';
+  String get healthDataSettingsTypeSleepSubtitle => '最近 24 小时的睡眠、卧床、清醒与睡眠分期';
 
   @override
   String get healthDataSettingsTypeMindfulnessTitle => '静息';
@@ -18448,6 +18482,16 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get musicErrorAndroidSave => '保存到 Download/kelivo_music 失败';
+
+  @override
+  String get healthDataSettingsCategoryReproductive => '生殖健康';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowTitle => '经期记录';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowSubtitle =>
+      '最近 90 天记录的经量与周期开始日期';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).
@@ -20894,6 +20938,21 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get reasoningBudgetSheetCustomHint => '例如：2048 (-1 自動，0 關閉)';
 
   @override
+  String get reasoningBudgetSliderLow => 'Low';
+
+  @override
+  String get reasoningBudgetSliderMedium => 'Medium';
+
+  @override
+  String get reasoningBudgetSliderHigh => 'High';
+
+  @override
+  String get reasoningBudgetSliderXhigh => 'XHigh';
+
+  @override
+  String get reasoningBudgetSliderMax => 'Max';
+
+  @override
   String chatMessageWidgetFileNotFound(String fileName) {
     return '檔案不存在: $fileName';
   }
@@ -21909,13 +21968,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get modelDetailSheetReasoningAbility => '推理';
-
-  @override
-  String get modelDetailSheetProviderOverrideDescription =>
-      '供應商覆寫：允許為特定模型自訂供應商設定。（暫未實現）';
-
-  @override
-  String get modelDetailSheetAddProviderOverride => '新增供應商覆寫';
 
   @override
   String get modelDetailSheetCustomHeadersTitle => '自訂 Headers';
@@ -24304,6 +24356,10 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get assistantEditLocalToolLocationSubtitle => '讀取本裝置的一次性位置，需要授予定位權限。';
 
   @override
+  String get assistantEditLocationPermissionSettingsMessage =>
+      '定位權限已被禁止。請在系統設定中允許定位存取，然後重新開啟此工具。';
+
+  @override
   String get assistantEditLocalToolWeatherTitle => '天氣';
 
   @override
@@ -24407,7 +24463,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get healthDataSettingsTypeSleepTitle => '睡眠';
 
   @override
-  String get healthDataSettingsTypeSleepSubtitle => '睡眠時長';
+  String get healthDataSettingsTypeSleepSubtitle => '最近 24 小時的睡眠、臥床、清醒與睡眠分期';
 
   @override
   String get healthDataSettingsTypeMindfulnessTitle => '靜息';
@@ -27709,4 +27765,14 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
 
   @override
   String get musicErrorAndroidSave => '儲存到 Download/kelivo_music 失敗';
+
+  @override
+  String get healthDataSettingsCategoryReproductive => '生殖健康';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowTitle => '經期記錄';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowSubtitle =>
+      '最近 90 天記錄的經量與週期開始日期';
 }

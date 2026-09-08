@@ -1187,6 +1187,7 @@ class HomeViewModel extends ChangeNotifier {
               .replaceAll('{content}', text)
               .replaceAll('{locale}', locale);
           return (await ChatApiService.generateText(
+            conversationId: convo.id,
             config: cfg,
             modelId: mdlId,
             prompt: prompt,
@@ -1523,6 +1524,7 @@ class HomeViewModel extends ChangeNotifier {
     try {
       final title = sanitizeGeneratedConversationTitle(
         await ChatApiService.generateText(
+          conversationId: convo.id,
           config: cfg,
           modelId: mdlId,
           prompt: prompt,
@@ -1665,6 +1667,7 @@ class HomeViewModel extends ChangeNotifier {
 
     try {
       final summary = (await ChatApiService.generateText(
+        conversationId: convo.id,
         config: cfg,
         modelId: mdlId,
         prompt: prompt,
@@ -1796,6 +1799,7 @@ class HomeViewModel extends ChangeNotifier {
     try {
       await _chatService.clearConversationSuggestions(conversationId);
       final suggestions = await _suggestionService.generate(
+        conversationId: conversationId,
         settings: settings,
         providerKey: provKey,
         modelId: mdlId,

@@ -2535,6 +2535,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reasoningBudgetSheetCustomHint => 'e.g. 2048 (-1 auto, 0 off)';
 
   @override
+  String get reasoningBudgetSliderLow => 'Low';
+
+  @override
+  String get reasoningBudgetSliderMedium => 'Medium';
+
+  @override
+  String get reasoningBudgetSliderHigh => 'High';
+
+  @override
+  String get reasoningBudgetSliderXhigh => 'XHigh';
+
+  @override
+  String get reasoningBudgetSliderMax => 'Max';
+
+  @override
   String chatMessageWidgetFileNotFound(String fileName) {
     return 'File not found: $fileName';
   }
@@ -3588,13 +3603,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get modelDetailSheetReasoningAbility => 'Reasoning';
-
-  @override
-  String get modelDetailSheetProviderOverrideDescription =>
-      'Provider overrides: customize provider for a specific model.';
-
-  @override
-  String get modelDetailSheetAddProviderOverride => 'Add Provider Override';
 
   @override
   String get modelDetailSheetCustomHeadersTitle => 'Custom Headers';
@@ -6094,6 +6102,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Read a one-shot location from this device, requires the location permission.';
 
   @override
+  String get assistantEditLocationPermissionSettingsMessage =>
+      'Location permission is blocked. Allow location access in system settings, then turn this tool on again.';
+
+  @override
   String get assistantEditLocalToolWeatherTitle => 'Weather';
 
   @override
@@ -6202,7 +6214,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get healthDataSettingsTypeSleepTitle => 'Sleep';
 
   @override
-  String get healthDataSettingsTypeSleepSubtitle => 'Sleep duration last night';
+  String get healthDataSettingsTypeSleepSubtitle =>
+      'Past 24 hours: sleep, time in bed, awake periods and sleep stages';
 
   @override
   String get healthDataSettingsTypeMindfulnessTitle => 'Resting';
@@ -9681,4 +9694,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicErrorAndroidSave => 'Could not save to Download/kelivo_music';
+
+  @override
+  String get healthDataSettingsCategoryReproductive => 'Reproductive health';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowTitle => 'Menstrual flow';
+
+  @override
+  String get healthDataSettingsTypeMenstrualFlowSubtitle =>
+      'Recorded menstrual flow and cycle starts in the past 90 days';
 }

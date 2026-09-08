@@ -4756,6 +4756,36 @@ abstract class AppLocalizations {
   /// **'e.g. 2048 (-1 auto, 0 off)'**
   String get reasoningBudgetSheetCustomHint;
 
+  /// No description provided for @reasoningBudgetSliderLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get reasoningBudgetSliderLow;
+
+  /// No description provided for @reasoningBudgetSliderMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get reasoningBudgetSliderMedium;
+
+  /// No description provided for @reasoningBudgetSliderHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get reasoningBudgetSliderHigh;
+
+  /// No description provided for @reasoningBudgetSliderXhigh.
+  ///
+  /// In en, this message translates to:
+  /// **'XHigh'**
+  String get reasoningBudgetSliderXhigh;
+
+  /// No description provided for @reasoningBudgetSliderMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get reasoningBudgetSliderMax;
+
   /// No description provided for @chatMessageWidgetFileNotFound.
   ///
   /// In en, this message translates to:
@@ -6618,18 +6648,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reasoning'**
   String get modelDetailSheetReasoningAbility;
-
-  /// No description provided for @modelDetailSheetProviderOverrideDescription.
-  ///
-  /// In en, this message translates to:
-  /// **'Provider overrides: customize provider for a specific model.'**
-  String get modelDetailSheetProviderOverrideDescription;
-
-  /// No description provided for @modelDetailSheetAddProviderOverride.
-  ///
-  /// In en, this message translates to:
-  /// **'Add Provider Override'**
-  String get modelDetailSheetAddProviderOverride;
 
   /// No description provided for @modelDetailSheetCustomHeadersTitle.
   ///
@@ -11161,6 +11179,12 @@ abstract class AppLocalizations {
   /// **'Read a one-shot location from this device, requires the location permission.'**
   String get assistantEditLocalToolLocationSubtitle;
 
+  /// No description provided for @assistantEditLocationPermissionSettingsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission is blocked. Allow location access in system settings, then turn this tool on again.'**
+  String get assistantEditLocationPermissionSettingsMessage;
+
   /// No description provided for @assistantEditLocalToolWeatherTitle.
   ///
   /// In en, this message translates to:
@@ -11356,7 +11380,7 @@ abstract class AppLocalizations {
   /// No description provided for @healthDataSettingsTypeSleepSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Sleep duration last night'**
+  /// **'Past 24 hours: sleep, time in bed, awake periods and sleep stages'**
   String get healthDataSettingsTypeSleepSubtitle;
 
   /// No description provided for @healthDataSettingsTypeMindfulnessTitle.
@@ -17448,6 +17472,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save to Download/kelivo_music'**
   String get musicErrorAndroidSave;
+
+  /// No description provided for @healthDataSettingsCategoryReproductive.
+  ///
+  /// In en, this message translates to:
+  /// **'Reproductive health'**
+  String get healthDataSettingsCategoryReproductive;
+
+  /// No description provided for @healthDataSettingsTypeMenstrualFlowTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Menstrual flow'**
+  String get healthDataSettingsTypeMenstrualFlowTitle;
+
+  /// No description provided for @healthDataSettingsTypeMenstrualFlowSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded menstrual flow and cycle starts in the past 90 days'**
+  String get healthDataSettingsTypeMenstrualFlowSubtitle;
 }
 
 class _AppLocalizationsDelegate
