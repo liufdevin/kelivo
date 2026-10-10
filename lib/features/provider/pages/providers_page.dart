@@ -1,3 +1,4 @@
+import 'oauth_provider_detail_page.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -8,8 +9,10 @@ import '../widgets/add_provider_sheet.dart';
 import 'package:provider/provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
+import '../../../core/services/model_catalog/model_catalog_service.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/snackbar.dart';
+import 'model_catalog_page.dart';
 import '../../../core/services/haptics.dart';
 import '../widgets/share_provider_sheet.dart';
 import '../../../core/providers/assistant_provider.dart';
@@ -45,6 +48,12 @@ class _ProvidersPageState extends State<ProvidersPage> {
   bool _groupHeaderDragActive = false;
   bool _groupHeaderReorderInFlight = false;
   bool _groupHeaderRestorePending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(ModelCatalogService.instance.ensureLoaded());
+  }
 
   @override
   void dispose() {
@@ -165,6 +174,19 @@ class _ProvidersPageState extends State<ProvidersPage> {
         ),
         title: Text(l10n.providersPageTitle),
         actions: [
+          Tooltip(
+            message: l10n.modelCatalogTitle,
+            child: _TactileIconButton(
+              icon: Lucide.BookOpen,
+              color: cs.onSurface,
+              size: 22,
+              onTap: () {
+                Navigator.of(context).push<void>(
+                  MaterialPageRoute<void>(builder: (_) => ModelCatalogPage()),
+                );
+              },
+            ),
+          ),
           Tooltip(
             message: _selectMode
                 ? l10n.searchServicesPageDone
@@ -1233,10 +1255,17 @@ class _ProviderRow extends StatelessWidget {
     final enabled = cfg.enabled;
     final l10n = AppLocalizations.of(context)!;
 
-    final statusBg = enabled
+    final needsLogin =
+        cfg.isOAuth &&
+        (cfg.oauthCredentials == null || cfg.oauthCredentials!.requiresLogin);
+    final statusBg = needsLogin
+        ? cs.error.withValues(alpha: .12)
+        : enabled
         ? context.appColors.success.withValues(alpha: 0.12)
         : context.appColors.warning.withValues(alpha: 0.15);
-    final statusFg = enabled
+    final statusFg = needsLogin
+        ? cs.error
+        : enabled
         ? context.appColors.success
         : context.appColors.warning;
 
@@ -1248,10 +1277,12 @@ class _ProviderRow extends StatelessWidget {
         } else {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => ProviderDetailPage(
-                keyName: provider.keyName,
-                displayName: provider.name,
-              ),
+              builder: (_) => cfg.isOAuth
+                  ? OAuthProviderDetailPage(providerId: provider.keyName)
+                  : ProviderDetailPage(
+                      keyName: provider.keyName,
+                      displayName: provider.name,
+                    ),
             ),
           );
         }
@@ -1330,7 +1361,9 @@ class _ProviderRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        enabled
+                        needsLogin
+                            ? l10n.oauthNeedsLogin
+                            : enabled
                             ? l10n.providersPageEnabledStatus
                             : l10n.providersPageDisabledStatus,
                         style: TextStyle(fontSize: 11, color: statusFg),

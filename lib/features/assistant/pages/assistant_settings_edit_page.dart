@@ -20,10 +20,12 @@ import 'package:syncfusion_flutter_sliders/sliders.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../chat/widgets/chat_message_widget.dart';
+import '../../chat/widgets/chat_gradient_background.dart';
 import '../../home/widgets/assistant_avatar.dart';
-import '../../chat/widgets/reasoning_budget_sheet.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../../../core/models/assistant.dart';
+import '../widgets/assistant_reasoning_picker.dart';
+import '../../chat/widgets/reasoning_level_sheet.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/conversation.dart';
 import '../../../core/models/preset_message.dart';
@@ -40,11 +42,12 @@ import '../../../core/services/memory/memory_gatekeeper.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../settings/pages/memory_settings_page.dart';
 import '../../settings/widgets/memory_ui.dart';
+import '../../../shared/widgets/tip_icon.dart';
 import '../../../core/services/haptics.dart';
 import '../../../desktop/desktop_context_menu.dart';
 import '../../../desktop/setting/memory_dialogs.dart';
 import '../../../desktop/widgets/desktop_select_dropdown.dart';
-import '../../home/services/health_data_selection.dart';
+import '../../home/services/local_tool_toggle.dart';
 import '../../home/services/local_tools_service.dart';
 import '../../../core/models/health_data_type.dart';
 import '../../../icons/lucide_adapter.dart';
@@ -63,11 +66,15 @@ import '../../../utils/platform_utils.dart';
 import '../../../utils/sandbox_path_resolver.dart';
 import '../utils/assistant_edit_tab_layout.dart';
 import 'assistant_regex_tab.dart';
+import 'assistant_settings_edit_skills_tab.dart';
+import '../widgets/assistant_default_workspace_row.dart';
 import 'health_data_settings_page.dart';
+import '../../settings/pages/phone_control_settings_page.dart';
 import 'package:Kelivo/theme/app_semantic_colors.dart';
 import 'package:Kelivo/shared/widgets/section_card.dart';
 
 part 'assistant_settings_edit_basic_tab.dart';
+part '../widgets/assistant_gradient_settings.dart';
 part 'assistant_settings_edit_prompt_tab.dart';
 part 'assistant_settings_edit_memory_tab.dart';
 part 'assistant_settings_edit_memory_tab_legacy.dart';
@@ -122,6 +129,12 @@ List<_AssistantEditTabSpec> _assistantEditTabSpecs(
       label: l10n.assistantEditPageLocalToolsTab,
       icon: Lucide.Wrench,
       child: _LocalToolsTab(assistantId: assistantId),
+    ),
+    _AssistantEditTabSpec(
+      id: assistantEditTabSkills,
+      label: l10n.skillsTab,
+      icon: Lucide.WandSparkles,
+      child: AssistantSettingsEditSkillsTab(assistantId: assistantId),
     ),
     _AssistantEditTabSpec(
       id: assistantEditTabMcp,
@@ -847,10 +860,46 @@ class _AssistantTabLayoutTile extends StatelessWidget {
   }
 }
 
-class _SegTabBar extends StatelessWidget {
+class _SegTabBar extends StatefulWidget {
   const _SegTabBar({required this.controller, required this.tabs});
   final TabController controller;
   final List<String> tabs;
+
+  @override
+  State<_SegTabBar> createState() => _SegTabBarState();
+}
+
+class _SegTabBarState extends State<_SegTabBar> {
+  final ScrollController _scroll = ScrollController();
+  bool _showStartFade = false;
+  bool _showEndFade = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll.addListener(_syncFades);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _syncFades());
+  }
+
+  @override
+  void dispose() {
+    _scroll.removeListener(_syncFades);
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _syncFades() {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    final overflow = pos.maxScrollExtent > 0.5;
+    final showStart = overflow && pos.pixels > 0.5;
+    final showEnd = overflow && pos.pixels < pos.maxScrollExtent - 0.5;
+    if (showStart == _showStartFade && showEnd == _showEndFade) return;
+    setState(() {
+      _showStartFade = showStart;
+      _showEndFade = showEnd;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -869,13 +918,14 @@ class _SegTabBar extends StatelessWidget {
     )).toDouble();
 
     return AnimatedBuilder(
-      animation: controller.animation ?? controller,
+      animation: widget.controller.animation ?? widget.controller,
       builder: (context, _) {
         final rawIndex =
-            controller.animation?.value ?? controller.index.toDouble();
+            widget.controller.animation?.value ??
+            widget.controller.index.toDouble();
         final selectedIndex = visualAssistantEditTabIndex(
           animationValue: rawIndex,
-          tabCount: tabs.length,
+          tabCount: widget.tabs.length,
         );
 
         return LayoutBuilder(
@@ -884,22 +934,23 @@ class _SegTabBar extends StatelessWidget {
             final double innerAvailWidth = availWidth - innerPadding * 2;
             final double segWidth = math.max(
               minSegWidth,
-              (innerAvailWidth - gap * (tabs.length - 1)) / tabs.length,
+              (innerAvailWidth - gap * (widget.tabs.length - 1)) /
+                  widget.tabs.length,
             );
             final double rowWidth =
-                segWidth * tabs.length + gap * (tabs.length - 1);
+                segWidth * widget.tabs.length + gap * (widget.tabs.length - 1);
 
             final Color shellBg = context.appColors.surfaceCard; // 白底胶囊，无边框阴影
 
             List<Widget> children = [];
-            for (int index = 0; index < tabs.length; index++) {
+            for (int index = 0; index < widget.tabs.length; index++) {
               final bool selected = selectedIndex == index;
               children.add(
                 SizedBox(
                   width: segWidth,
                   height: double.infinity,
                   child: _TactileRow(
-                    onTap: () => controller.animateTo(index),
+                    onTap: () => widget.controller.animateTo(index),
                     builder: (pressed) {
                       // 背景不随按压变化：仅选中时有浅主题底色，未选中透明
                       final Color baseBg = selected
@@ -939,7 +990,7 @@ class _SegTabBar extends StatelessWidget {
                             curve: Curves.easeOutCubic,
                             builder: (context, color, _) {
                               return Text(
-                                tabs[index],
+                                widget.tabs[index],
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -955,7 +1006,7 @@ class _SegTabBar extends StatelessWidget {
                   ),
                 ),
               );
-              if (index != tabs.length - 1) {
+              if (index != widget.tabs.length - 1) {
                 children.add(const SizedBox(width: gap));
               }
             }
@@ -969,15 +1020,66 @@ class _SegTabBar extends StatelessWidget {
               clipBehavior: Clip.hardEdge,
               child: Padding(
                 padding: const EdgeInsets.all(innerPadding),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(minWidth: innerAvailWidth),
-                    child: SizedBox(
-                      width: rowWidth,
-                      child: Row(children: children),
-                    ),
+                child: NotificationListener<ScrollMetricsNotification>(
+                  onNotification: (_) {
+                    _syncFades();
+                    return false;
+                  },
+                  child: Stack(
+                    children: [
+                      SingleChildScrollView(
+                        controller: _scroll,
+                        scrollDirection: Axis.horizontal,
+                        physics: const BouncingScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: innerAvailWidth,
+                          ),
+                          child: SizedBox(
+                            width: rowWidth,
+                            child: Row(children: children),
+                          ),
+                        ),
+                      ),
+                      if (_showStartFade)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 80,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    shellBg,
+                                    shellBg.withValues(alpha: 0),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (_showEndFade)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
+                          width: 80,
+                          child: IgnorePointer(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    shellBg.withValues(alpha: 0),
+                                    shellBg,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -1329,7 +1431,7 @@ Widget _iosNavRow(
             },
           ),
         ),
-        if (tip != null) MemoryTipIcon(message: tip),
+        if (tip != null) TipIcon(message: tip),
         GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
@@ -1426,8 +1528,8 @@ Widget _iosSwitchRow(
             },
           ),
         ),
-        if (tip != null) MemoryTipIcon(message: tip),
-        IosSwitch(value: value, onChanged: onChanged),
+        if (tip != null) TipIcon(message: tip),
+        IosSwitch(value: value, onChanged: onChanged, semanticLabel: label),
       ],
     ),
   );
@@ -1535,10 +1637,28 @@ enum _AssistantDesktopMenu {
   prompts,
   memory,
   localTools,
+  skills,
   mcp,
   quick,
   custom,
   regex,
+}
+
+Future<void> openAssistantBasicSettings(
+  BuildContext context, {
+  required String assistantId,
+}) {
+  if (PlatformUtils.isDesktopTarget) {
+    return showAssistantDesktopDialog(context, assistantId: assistantId);
+  }
+  return Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => _AssistantDetailSectionPage(
+        assistantId: assistantId,
+        tabId: assistantEditTabBasic,
+      ),
+    ),
+  );
 }
 
 Future<void> showAssistantDesktopDialog(
@@ -1645,6 +1765,10 @@ class _DesktopAssistantDialogShellState
                         return _MemoryTab(assistantId: widget.assistantId);
                       case _AssistantDesktopMenu.localTools:
                         return _LocalToolsTab(assistantId: widget.assistantId);
+                      case _AssistantDesktopMenu.skills:
+                        return AssistantSettingsEditSkillsTab(
+                          assistantId: widget.assistantId,
+                        );
                       case _AssistantDesktopMenu.mcp:
                         return _McpTab(assistantId: widget.assistantId);
                       case _AssistantDesktopMenu.quick:
@@ -1689,6 +1813,7 @@ class _DesktopAssistantMenuState extends State<_DesktopAssistantMenu> {
       (_AssistantDesktopMenu.prompts, l10n.assistantEditPagePromptsTab),
       (_AssistantDesktopMenu.memory, l10n.assistantEditPageMemoryTab),
       (_AssistantDesktopMenu.localTools, l10n.assistantEditPageLocalToolsTab),
+      (_AssistantDesktopMenu.skills, l10n.skillsTab),
       (_AssistantDesktopMenu.mcp, l10n.assistantEditPageMcpTab),
       (_AssistantDesktopMenu.quick, l10n.assistantEditPageQuickPhraseTab),
       (_AssistantDesktopMenu.custom, l10n.assistantEditPageCustomTab),
@@ -2276,6 +2401,13 @@ class _DesktopAssistantBasicPaneState
                     ),
                   ),
                 ],
+              ),
+            ),
+            sectionDivider(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: AssistantDefaultWorkspaceRow(
+                assistantId: widget.assistantId,
               ),
             ),
             sectionDivider(),

@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../controllers/music_player_controller.dart';
 import '../models/music_models.dart';
 import '../providers/music_feature_provider.dart';
 import '../services/music_api_client.dart';
+import '../services/music_preferences_store.dart';
 import '../theme/music_theme.dart';
 import '../widgets/music_album_art.dart';
 import '../widgets/music_mini_player.dart';
@@ -149,9 +149,6 @@ class MusicHomeContent extends StatefulWidget {
 
 class _MusicHomeContentState extends State<MusicHomeContent> {
   static const _maxSearchHistory = 12;
-  static const _historyKey = 'music_search_history_v1';
-  static const _sourceKey = 'music_selected_source_v1';
-
   final _keywordController = TextEditingController();
   final _pageController = TextEditingController(text: '1');
   final _countController = TextEditingController(text: '20');
@@ -715,10 +712,10 @@ class _MusicHomeContentState extends State<MusicHomeContent> {
 
   Future<void> _loadPreferences() async {
     try {
-      final preferences = await SharedPreferences.getInstance();
-      final source = _sourceForValue(preferences.getString(_sourceKey));
+      final preferences = MusicPreferencesStore.instance;
+      final source = _sourceForValue(await preferences.selectedSource());
       final history = _normalizeSearchHistory(
-        preferences.getStringList(_historyKey) ?? const <String>[],
+        await preferences.searchHistory(),
       );
       if (!mounted) {
         return;
@@ -741,8 +738,7 @@ class _MusicHomeContentState extends State<MusicHomeContent> {
   }
 
   Future<void> _saveSelectedSource(MusicSource source) async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_sourceKey, source.value);
+    await MusicPreferencesStore.instance.setSelectedSource(source.value);
   }
 
   Future<void> _rememberSearch(String keyword) async {
@@ -769,8 +765,7 @@ class _MusicHomeContentState extends State<MusicHomeContent> {
     final l10n = AppLocalizations.of(context)!;
     setState(() => _searchHistory = const <String>[]);
     try {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.remove(_historyKey);
+      await MusicPreferencesStore.instance.clearSearchHistory();
       if (mounted) {
         _showSnack(l10n.musicSearchHistoryCleared);
       }
@@ -784,8 +779,7 @@ class _MusicHomeContentState extends State<MusicHomeContent> {
 
   Future<void> _persistSearchHistory(List<String> history) async {
     try {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setStringList(_historyKey, history);
+      await MusicPreferencesStore.instance.setSearchHistory(history);
     } catch (error, stackTrace) {
       debugPrint('Music search history save failed: $error\n$stackTrace');
     }

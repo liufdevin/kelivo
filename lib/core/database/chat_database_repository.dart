@@ -4,11 +4,13 @@ import 'dart:isolate';
 
 import 'package:crypto/crypto.dart';
 import 'package:drift/drift.dart';
+import 'package:path/path.dart' as p;
 import 'package:flutter/foundation.dart' show debugPrint, visibleForTesting;
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:uuid/uuid.dart';
 
 import '../models/chat_message.dart';
+import '../models/token_usage.dart';
 import '../models/conversation.dart';
 import '../models/message_part.dart';
 import '../utils/multimodal_input_utils.dart';
@@ -25,6 +27,7 @@ import 'generation_run_commands.dart';
 import 'schema_migrations.dart';
 import '../services/api/stream/stream_chunk_handler.dart';
 import '../services/backup/restore_durability.dart';
+import '../services/backup/restore_previous_plan.dart';
 
 typedef ChatDatabaseSnapshotInfo = ({
   int schemaVersion,
@@ -1895,6 +1898,76 @@ class ChatDatabaseRepository {
     );
   }
 
+  /// Reads only row metadata, never long message bodies or attachment content.
+  /// Covers edits to old messages as well as selected versions and truncation.
+  Future<String?> scheduledContextRevision(String conversationId) async {
+    final conversation = await getConversation(conversationId);
+    if (conversation == null) return null;
+    final rows = await _db
+        .customSelect(
+          'SELECT id, message_order, COALESCE(updated_at, timestamp) AS revision '
+          'FROM message_rows WHERE conversation_id = ? ORDER BY message_order',
+          variables: [Variable.withString(conversationId)],
+        )
+        .get();
+    return sha256
+        .convert(
+          utf8.encode(
+            jsonEncode({
+              'assistant': conversation.assistantId,
+              'versions': conversation.versionSelections,
+              'truncate': conversation.truncateIndex,
+              'summary': conversation.summary,
+              'extras': conversation.extras,
+              'model': [
+                conversation.chatModelProvider,
+                conversation.chatModelId,
+              ],
+              'messages': [for (final row in rows) row.data],
+            }),
+          ),
+        )
+        .toString();
+  }
+
+  Future<Conversation> publishScheduledMessages({
+    required Conversation conversation,
+    required ChatMessage instruction,
+    required ChatMessage response,
+    required bool createConversation,
+    String? expectedContextRevision,
+  }) => _db.transaction(() async {
+    final existing = await getMessage(response.id);
+    if (existing != null) {
+      return (await getConversation(existing.conversationId))!;
+    }
+    var current = await getConversation(conversation.id);
+    if (current == null) {
+      if (!createConversation) throw StateError('conversation_missing');
+      await putConversation(conversation);
+      current = conversation;
+    }
+    if (current.assistantId != conversation.assistantId) {
+      throw StateError('conversation_missing');
+    }
+    if (expectedContextRevision != null &&
+        await scheduledContextRevision(current.id) != expectedContextRevision) {
+      throw StateError('scheduled_context_changed');
+    }
+    final afterInstruction = await _appendLinearMessageToConversation(
+      conversation: current,
+      message: instruction,
+      touchUpdatedAt: true,
+      selectVersion: false,
+    );
+    return _appendLinearMessageToConversation(
+      conversation: afterInstruction,
+      message: response,
+      touchUpdatedAt: true,
+      selectVersion: false,
+    );
+  });
+
   Future<Conversation?> getConversation(String id) async {
     return _observer.measure(ChatDatabaseOperation.queryConversation, () async {
       final row = await (_db.select(
@@ -2435,7 +2508,8 @@ class ChatDatabaseRepository {
   ///
   /// Version collapsing, truncate-index application, tail limiting, and part
   /// hydration intentionally happen in one SQL statement so a large
-  /// conversation is never materialized merely to discard its prefix.
+  /// conversation is never materialized merely to discard its prefix. A reset
+  /// after the requested revision does not apply to that earlier turn.
   Future<List<ChatMessage>> getSelectedContextMessages(
     String conversationId, {
     required int truncateIndex,
@@ -2513,7 +2587,8 @@ class ChatDatabaseRepository {
                   selected.logical_index
                 )
                 ELSE selected.logical_index
-              END AS logical_index
+              END AS logical_index,
+              selected.logical_index AS target_index
               FROM target
               JOIN ordered selected ON selected.group_id = target.group_id
             ),
@@ -2521,7 +2596,9 @@ class ChatDatabaseRepository {
               SELECT revision_id, logical_index
               FROM ordered
               WHERE logical_index >= CASE
-                WHEN ? >= 0 AND ? <= total_count THEN ?
+                WHEN ? >= 0 AND ? <= total_count
+                  AND (NOT EXISTS (SELECT 1 FROM cutoff)
+                    OR ? <= (SELECT target_index FROM cutoff)) THEN ?
                 ELSE 0
               END
                 AND (
@@ -2551,6 +2628,7 @@ class ChatDatabaseRepository {
               Variable<String>(conversationId),
               Variable<String>(throughRevisionId ?? ''),
               Variable<bool>(includeFollowingAssistant),
+              Variable<int>(truncateIndex),
               Variable<int>(truncateIndex),
               Variable<int>(truncateIndex),
               Variable<int>(truncateIndex),
@@ -3420,9 +3498,9 @@ class ChatDatabaseRepository {
         COALESCE(SUM(m.prompt_tokens), 0) AS input_tokens,
         COALESCE(SUM(m.completion_tokens), 0) AS output_tokens,
         COALESCE(SUM(m.cached_tokens), 0) AS cached_tokens,
-        COALESCE(SUM(CASE WHEN COALESCE(m.prompt_tokens, 0) = 0
-          AND COALESCE(m.completion_tokens, 0) = 0
-          THEN COALESCE(m.total_tokens, 0) ELSE 0 END), 0) AS uncategorized_tokens
+        COALESCE(SUM(MAX(COALESCE(m.total_tokens, 0)
+          - COALESCE(m.prompt_tokens, 0)
+          - COALESCE(m.completion_tokens, 0), 0)), 0) AS uncategorized_tokens
       FROM message_rows m
       WHERE m.timestamp >= ? AND m.timestamp < ?
         AND (NULLIF(TRIM(m.provider_id), '') IS NOT NULL
@@ -3440,11 +3518,17 @@ class ChatDatabaseRepository {
         .get();
 
     final modelRows = await _db.customSelect('''
-      SELECT m.model_id AS id, MIN(m.provider_id) AS provider_id,
-        COUNT(*) AS item_count
+      SELECT m.model_id AS id, NULLIF(TRIM(m.provider_id), '') AS provider_id,
+        COUNT(*) AS item_count,
+        COALESCE(SUM(m.prompt_tokens), 0) AS input_tokens,
+        COALESCE(SUM(m.completion_tokens), 0) AS output_tokens,
+        COALESCE(SUM(m.cached_tokens), 0) AS cached_tokens,
+        COALESCE(SUM(CAST(json_extract(m.extras_json, '\$."tokens.cacheWrite"')
+          AS INTEGER)), 0) AS cache_write_tokens
       FROM message_rows m
       WHERE NULLIF(TRIM(m.model_id), '') IS NOT NULL $rangeWhere
-      GROUP BY m.model_id ORDER BY item_count DESC, id;
+      GROUP BY m.model_id, NULLIF(TRIM(m.provider_id), '')
+      ORDER BY item_count DESC, id, provider_id;
     ''', variables: rangeVariables).get();
     final topicRows = await _db.customSelect('''
       SELECT c.id AS id, c.title AS label, COUNT(*) AS item_count
@@ -3499,6 +3583,10 @@ class ChatDatabaseRepository {
             label: row.read<String>('id'),
             count: row.read<int>('item_count'),
             providerId: row.readNullable<String>('provider_id'),
+            inputTokens: row.read<int>('input_tokens'),
+            outputTokens: row.read<int>('output_tokens'),
+            cachedTokens: row.read<int>('cached_tokens'),
+            cacheWriteTokens: row.read<int>('cache_write_tokens'),
           ),
       ],
       assistants: [
@@ -4052,8 +4140,7 @@ class ChatDatabaseRepository {
         );
       END;
     ''');
-    // Rare direct payload rewrites (e.g. sandbox path migration). Normal
-    // checkpoints delete+insert parts instead.
+    // Payload updates include streaming checkpoints and sandbox path rewrites.
     await _db.customStatement('''
       CREATE TRIGGER IF NOT EXISTS message_search_fts_update
       AFTER UPDATE OF payload, conversation_id, kind ON message_part_rows
@@ -4080,7 +4167,7 @@ class ChatDatabaseRepository {
     ''');
     // Streaming checkpoints defer FTS; when is_streaming flips to 0, index the
     // text parts present at that moment. The subsequent part rewrite (if any)
-    // then delete+inserts under the finalized gate.
+    // then updates changed parts under the finalized gate.
     await _db.customStatement('''
       CREATE TRIGGER IF NOT EXISTS message_search_fts_finalize
       AFTER UPDATE OF is_streaming ON message_rows
@@ -4163,6 +4250,35 @@ class ChatDatabaseRepository {
             .insert(_conversationCompanion(conversation));
       }
       await _replaceMcpServers(conversation.id, conversation.mcpServerIds);
+    });
+  }
+
+  /// Reads [conversationId]'s extras, applies [update], and writes the result
+  /// in one transaction. [updatedAt] is bumped only when the map changes.
+  Future<void> updateConversationExtras(
+    String conversationId,
+    Map<String, dynamic> Function(Map<String, dynamic> current) update,
+  ) {
+    return _db.transaction(() async {
+      final row = await (_db.select(
+        _db.conversationRows,
+      )..where((t) => t.id.equals(conversationId))).getSingleOrNull();
+      if (row == null) {
+        throw StateError('conversation_not_found');
+      }
+      final current = _decodeExtrasJson(row.extrasJson);
+      final next = update(Map<String, dynamic>.from(current));
+      if (jsonEncode(current) == jsonEncode(next)) {
+        return;
+      }
+      await (_db.update(
+        _db.conversationRows,
+      )..where((t) => t.id.equals(conversationId))).write(
+        ConversationRowsCompanion(
+          extrasJson: Value(jsonEncode(next)),
+          updatedAt: Value(DateTime.now()),
+        ),
+      );
     });
   }
 
@@ -4366,6 +4482,20 @@ class ChatDatabaseRepository {
         sourceRow,
         includeMessageIds: false,
       );
+      var suggestions = const <String>[];
+      if (source.chatSuggestions.isNotEmpty &&
+          target.role == 'assistant' &&
+          !target.isStreaming) {
+        // Suggestions belong to the selected reply at the conversation tail.
+        final tail = await loadLinearMessageWindow(
+          conversationId: sourceId,
+          limit: 1,
+        );
+        if (tail.slots.isNotEmpty &&
+            tail.slots.single.revisionId == targetRevisionId) {
+          suggestions = List<String>.of(source.chatSuggestions);
+        }
+      }
       final keptSourceGroupIds = {
         for (final row in kept) row.groupId ?? row.id,
       };
@@ -4388,9 +4518,11 @@ class ChatDatabaseRepository {
                 updatedAt: now,
                 assistantId: assistantId,
                 versionSelections: selections,
+                chatSuggestions: suggestions,
                 messageIds: [
                   for (final message in kept) messageIdMap[message.id]!,
                 ],
+                extras: source.extras,
               ),
             ),
           );
@@ -4750,9 +4882,12 @@ class ChatDatabaseRepository {
       message = message.copyWith(reasoningText: effectiveReasoningText);
     }
     final parts = _partsForPersistence(message, toolEvents);
-    await (_db.delete(
-      _db.messagePartRows,
-    )..where((row) => row.revisionId.equals(message.id))).go();
+    await (_db.delete(_db.messagePartRows)..where(
+          (row) =>
+              row.revisionId.equals(message.id) &
+              row.ordinal.isBiggerOrEqualValue(parts.length),
+        ))
+        .go();
     var ordinal = 0;
     final now = DateTime.now().toUtc();
     final updatedAt = now.isBefore(message.timestamp) ? message.timestamp : now;
@@ -4768,6 +4903,24 @@ class ChatDatabaseRepository {
             payload: part.encodePayload(),
             createdAt: message.timestamp,
             updatedAt: updatedAt,
+          ),
+          onConflict: DoUpdate<MessagePartRows, MessagePartRow>.withExcluded(
+            (old, incoming) => MessagePartRowsCompanion.custom(
+              conversationId: incoming.conversationId,
+              kind: incoming.kind,
+              payload: incoming.payload,
+              createdAt: incoming.createdAt,
+              updatedAt: incoming.updatedAt,
+            ),
+            target: [
+              _db.messagePartRows.revisionId,
+              _db.messagePartRows.ordinal,
+            ],
+            where: (old, incoming) =>
+                old.kind.isNotExp(incoming.kind) |
+                old.payload.isNotExp(incoming.payload) |
+                old.conversationId.isNotExp(incoming.conversationId) |
+                old.createdAt.isNotExp(incoming.createdAt),
           ),
         );
       }
@@ -5065,6 +5218,14 @@ class ChatDatabaseRepository {
       ]);
       attached = true;
       return await _db.transaction(() async {
+        // These rows own the workspace references carried by imported chats.
+        // Device-local external folder grants are deliberately excluded.
+        await _db.customStatement(
+          "INSERT OR IGNORE INTO extension_entity_rows "
+          "(kind, id, sort_order, owner_id, payload, updated_at) "
+          "SELECT kind, id, sort_order, owner_id, payload, updated_at "
+          "FROM merge_source.extension_entity_rows WHERE kind IN ('workspace', 'skill');",
+        );
         final sourceRows = await _db
             .customSelect(
               'SELECT id FROM merge_source.conversation_rows ORDER BY id;',
@@ -5251,13 +5412,14 @@ class ChatDatabaseRepository {
   /// processing before publish). Avoids opening a Drift isolate inside
   /// restore staging.
   ///
-  /// Minimal policy: every non-remote/data local attachment becomes
-  /// unavailable. We deliberately do **not** reuse candidate `asset_rows`
-  /// content_hash + path existence — that would treat the candidate's own
-  /// absolute path (or a colliding target file with different bytes) as proof.
+  /// Ordinary imports cannot reuse files based on path coincidence. For an
+  /// explicitly selected snapshot from this device, [localSnapshotAppDataDirectory]
+  /// allows rechecking managed files within that directory, including parts
+  /// that the snapshot had already marked unavailable.
   static Future<int> recomputeAttachmentAvailabilityOnDatabaseFile({
     required File databaseFile,
     required bool filesRestored,
+    Directory? localSnapshotAppDataDirectory,
   }) async {
     if (filesRestored) return 0;
     if (!await databaseFile.exists()) {
@@ -5273,6 +5435,9 @@ class ChatDatabaseRepository {
           "SELECT revision_id, ordinal, kind, payload "
           "FROM message_part_rows WHERE kind IN ('image', 'file');",
         );
+        final localRoot = localSnapshotAppDataDirectory?.absolute.path;
+        final resolvedRoot = localSnapshotAppDataDirectory
+            ?.resolveSymbolicLinksSync();
         var updated = 0;
         final stmt = db.prepare(
           'UPDATE message_part_rows SET payload = ? '
@@ -5285,9 +5450,30 @@ class ChatDatabaseRepository {
             if (decoded is! Map) continue;
             final map = Map<String, dynamic>.from(decoded);
             final uri = (map['uri'] ?? '').toString();
-            if (uri.isEmpty || isRemoteOrDataUri(uri)) continue;
-            if (map['unavailable'] == true) continue;
-            map['unavailable'] = true;
+            if (uri.isEmpty) continue;
+            var restoredUri = uri;
+            var unavailable = true;
+            if (localRoot != null) {
+              if (isRemoteOrDataUri(uri)) {
+                unavailable = false;
+              } else {
+                final local = _localSnapshotAttachment(
+                  uri,
+                  appDataPath: localRoot,
+                  resolvedAppDataPath: resolvedRoot!,
+                );
+                restoredUri = local.uri;
+                unavailable = !local.available;
+              }
+            } else if (isRemoteOrDataUri(uri)) {
+              continue;
+            }
+            if ((map['unavailable'] == true) == unavailable &&
+                restoredUri == uri) {
+              continue;
+            }
+            map['uri'] = restoredUri;
+            map['unavailable'] = unavailable;
             stmt.execute([jsonEncode(map), row['revision_id'], row['ordinal']]);
             updated += 1;
           }
@@ -5299,6 +5485,53 @@ class ChatDatabaseRepository {
         db.close();
       }
     });
+  }
+
+  static ({String uri, bool available}) _localSnapshotAttachment(
+    String uri, {
+    required String appDataPath,
+    required String resolvedAppDataPath,
+  }) {
+    final missing = (uri: uri, available: false);
+    try {
+      var raw = uri;
+      if (uri.startsWith('file:')) {
+        final parsed = Uri.parse(uri);
+        if (parsed.hasAuthority && parsed.host.isNotEmpty ||
+            parsed.hasQuery ||
+            parsed.hasFragment) {
+          return missing;
+        }
+        raw = parsed.toFilePath();
+      }
+      final logical = KelivoFileUri.isKelivoFileUri(uri)
+          ? uri
+          : KelivoFileUri.encodeFromAbsolute(raw, root: appDataPath) ??
+                KelivoFileUri.tryEncodeLegacyAbsolutePath(
+                  raw,
+                  allowGenericFallback: false,
+                );
+      final path = logical == null
+          ? raw
+          : KelivoFileUri.resolveToAbsolute(logical, root: appDataPath);
+      if (path == null || !p.isWithin(appDataPath, path)) return missing;
+      final relative = p.split(p.relative(path, from: appDataPath));
+      if (relative.length < 2 ||
+          !RestorePreviousAssetsPlan.rootNames.contains(relative.first)) {
+        return missing;
+      }
+      final file = File(path);
+      if (!file.existsSync()) return missing;
+      final resolved = file.resolveSymbolicLinksSync();
+      if (!p.isWithin(resolvedAppDataPath, resolved)) return missing;
+      return (uri: logical ?? uri, available: true);
+    } on FileSystemException {
+      return missing;
+    } on FormatException {
+      return missing;
+    } on ArgumentError {
+      return missing;
+    }
   }
 
   Future<String?> _conversationFingerprint(String schema, String id) async {
@@ -5726,9 +5959,24 @@ class ChatDatabaseRepository {
   }
 
   Future<void> _updateMessageRow(ChatMessage message) async {
+    final current = await (_db.select(
+      _db.messageRows,
+    )..where((t) => t.id.equals(message.id))).getSingleOrNull();
     await (_db.update(
       _db.messageRows,
-    )..where((t) => t.id.equals(message.id))).write(_messageUpdate(message));
+    )..where((t) => t.id.equals(message.id))).write(
+      _messageUpdate(message).copyWith(
+        extrasJson: Value(
+          _encodeTokenExtras(
+            current?.extrasJson ?? '{}',
+            reasoningTokens: message.reasoningTokens,
+            cacheWriteTokens: message.cacheWriteTokens,
+            finishUsage: message.finishUsage,
+            firstTokenMs: message.firstTokenMs,
+          ),
+        ),
+      ),
+    );
   }
 
   /// Partial-column UPDATE: only the non-null fields are written, so
@@ -5752,6 +6000,8 @@ class ChatDatabaseRepository {
     int? completionTokens,
     int? cachedTokens,
     int? durationMs,
+    int? reasoningTokens,
+    int? cacheWriteTokens,
   }) {
     final companion = MessageRowsCompanion(
       updatedAt: Value(DateTime.now().toUtc()),
@@ -5785,9 +6035,26 @@ class ChatDatabaseRepository {
       durationMs: durationMs != null ? Value(durationMs) : const Value.absent(),
     );
     return _db.transaction(() async {
+      var write = companion;
+      if (reasoningTokens != null || cacheWriteTokens != null) {
+        final current = await (_db.select(
+          _db.messageRows,
+        )..where((t) => t.id.equals(messageId))).getSingleOrNull();
+        if (current != null) {
+          write = companion.copyWith(
+            extrasJson: Value(
+              _encodeTokenExtras(
+                current.extrasJson,
+                reasoningTokens: reasoningTokens,
+                cacheWriteTokens: cacheWriteTokens,
+              ),
+            ),
+          );
+        }
+      }
       await (_db.update(
         _db.messageRows,
-      )..where((t) => t.id.equals(messageId))).write(companion);
+      )..where((t) => t.id.equals(messageId))).write(write);
       final updated = await getMessage(messageId);
       if (updated == null) return null;
       if (content == null && reasoningText == null && parts == null) {
@@ -6739,6 +7006,7 @@ class ChatDatabaseRepository {
       lastMemoryExtractedOrder: row.lastMemoryExtractedOrder,
       chatModelProvider: row.chatModelProvider,
       chatModelId: row.chatModelId,
+      extras: _decodeExtrasJson(row.extrasJson),
     );
   }
 
@@ -6765,6 +7033,7 @@ class ChatDatabaseRepository {
       lastMemoryExtractedOrder: Value(conversation.lastMemoryExtractedOrder),
       chatModelProvider: Value(conversation.chatModelProvider),
       chatModelId: Value(conversation.chatModelId),
+      extrasJson: Value(jsonEncode(conversation.extras)),
     );
   }
 
@@ -6811,6 +7080,7 @@ class ChatDatabaseRepository {
     final reasoningParts = parts.whereType<ReasoningPart>().toList(
       growable: false,
     );
+    final extras = _decodeExtrasJson(row.extrasJson);
     return ChatMessage(
       id: row.id,
       role: row.role,
@@ -6834,6 +7104,14 @@ class ChatDatabaseRepository {
       completionTokens: row.completionTokens,
       cachedTokens: row.cachedTokens,
       durationMs: row.durationMs,
+      firstTokenMs: _tokenExtraInt(extras, _firstTokenMsExtraKey),
+      reasoningTokens: _tokenExtraInt(extras, _reasoningTokensExtraKey),
+      cacheWriteTokens: _tokenExtraInt(extras, _cacheWriteTokensExtraKey),
+      finishUsage: extras[_finishUsageExtraKey] is Map
+          ? TokenUsage.fromJson(
+              Map<String, dynamic>.from(extras[_finishUsageExtraKey] as Map),
+            )
+          : null,
     );
   }
 
@@ -7079,6 +7357,15 @@ class ChatDatabaseRepository {
       completionTokens: Value(message.completionTokens),
       cachedTokens: Value(message.cachedTokens),
       durationMs: Value(message.durationMs),
+      extrasJson: Value(
+        _encodeTokenExtras(
+          '{}',
+          reasoningTokens: message.reasoningTokens,
+          cacheWriteTokens: message.cacheWriteTokens,
+          finishUsage: message.finishUsage,
+          firstTokenMs: message.firstTokenMs,
+        ),
+      ),
       messageOrder: messageOrder,
     );
   }
@@ -7125,7 +7412,57 @@ class ChatDatabaseRepository {
     }
   }
 
+  Map<String, dynamic> _decodeExtrasJson(String raw) {
+    return Conversation.decodeExtras(raw);
+  }
+
+  static const _reasoningTokensExtraKey = 'tokens.reasoning';
+  static const _cacheWriteTokensExtraKey = 'tokens.cacheWrite';
+  static const _finishUsageExtraKey = 'tokens.finish';
+  static const _firstTokenMsExtraKey = 'timing.firstTokenMs';
+
+  int? _tokenExtraInt(Map<String, dynamic> extras, String key) {
+    final value = extras[key];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  String _encodeTokenExtras(
+    String existing, {
+    int? reasoningTokens,
+    int? cacheWriteTokens,
+    TokenUsage? finishUsage,
+    int? firstTokenMs,
+  }) {
+    final extras = Map<String, dynamic>.from(_decodeExtrasJson(existing));
+    if (reasoningTokens != null) {
+      extras[_reasoningTokensExtraKey] = reasoningTokens;
+    }
+    if (cacheWriteTokens != null) {
+      extras[_cacheWriteTokensExtraKey] = cacheWriteTokens;
+    }
+    if (finishUsage != null) {
+      extras[_finishUsageExtraKey] = finishUsage.toJson();
+    }
+    if (firstTokenMs != null) {
+      extras[_firstTokenMsExtraKey] = firstTokenMs;
+    }
+    if (extras.isEmpty) return '{}';
+    return jsonEncode(extras);
+  }
+
   // —— Memory system V1 read path (§13.3) ——
+
+  /// Read one consistent set of inputs for prompt injection and usage caching.
+  Future<({List<UserProfileField> profile, List<MemoryEntry> memories})>
+  readMemorySnapshotData({required String assistantId}) => _db.transaction(
+    () async => (
+      profile: await readProfileFields(),
+      memories: await queryVisibleMemories(assistantId: assistantId),
+    ),
+  );
 
   /// Visible memories for [assistantId]: `status='active'` (unless
   /// [includeArchived]) and `(scope='global' OR (scope='assistant' AND
@@ -7793,11 +8130,19 @@ final class ChatStatsRank {
     required this.label,
     required this.count,
     this.providerId,
+    this.inputTokens = 0,
+    this.outputTokens = 0,
+    this.cachedTokens = 0,
+    this.cacheWriteTokens = 0,
   });
   final String id;
   final String label;
   final int count;
   final String? providerId;
+  final int inputTokens;
+  final int outputTokens;
+  final int cachedTokens;
+  final int cacheWriteTokens;
 }
 
 final class ChatStatsAggregate {

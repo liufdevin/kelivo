@@ -13,6 +13,8 @@ class ChatInputOverlayLayout extends StatelessWidget {
 
   static const double _topOverlayTailHeight = 16;
   static const double _bottomOverlayFadeHeight = 180;
+  // Leaves room for badges riding 12px above the composer's top edge.
+  static const double _bottomOverlayTopGap = 12;
 
   final double topInset;
   final Widget content;
@@ -31,15 +33,19 @@ class ChatInputOverlayLayout extends StatelessWidget {
               Positioned.fill(child: content),
               if (backgroundImageActive && topBackground != null)
                 Positioned.fill(
-                  child: ClipRect(
-                    clipper: _TopOverlayClipper(
-                      topInset + _topOverlayTailHeight,
-                    ),
-                    child: _TopBackgroundFade(
-                      height: topInset + _topOverlayTailHeight,
-                      child: IgnorePointer(
-                        key: const Key('chat-input-overlay-top-background'),
-                        child: _KeyboardStableBackground(child: topBackground!),
+                  child: RepaintBoundary(
+                    child: ClipRect(
+                      clipper: _TopOverlayClipper(
+                        topInset + _topOverlayTailHeight,
+                      ),
+                      child: _TopBackgroundFade(
+                        height: topInset + _topOverlayTailHeight,
+                        child: IgnorePointer(
+                          key: const Key('chat-input-overlay-top-background'),
+                          child: _KeyboardStableBackground(
+                            child: topBackground!,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -54,15 +60,21 @@ class ChatInputOverlayLayout extends StatelessWidget {
                 ),
               if (backgroundImageActive && topBackground != null)
                 Positioned.fill(
-                  child: ClipRect(
-                    clipper: const _BottomOverlayClipper(
-                      _bottomOverlayFadeHeight,
-                    ),
-                    child: _BottomBackgroundFade(
-                      height: _bottomOverlayFadeHeight,
-                      child: IgnorePointer(
-                        key: const Key('chat-input-overlay-bottom-background'),
-                        child: _KeyboardStableBackground(child: topBackground!),
+                  child: RepaintBoundary(
+                    child: ClipRect(
+                      clipper: const _BottomOverlayClipper(
+                        _bottomOverlayFadeHeight,
+                      ),
+                      child: _BottomBackgroundFade(
+                        height: _bottomOverlayFadeHeight,
+                        child: IgnorePointer(
+                          key: const Key(
+                            'chat-input-overlay-bottom-background',
+                          ),
+                          child: _KeyboardStableBackground(
+                            child: topBackground!,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -79,13 +91,11 @@ class ChatInputOverlayLayout extends StatelessWidget {
             ],
           ),
         ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: UnconstrainedBox(
-            constrainedAxis: Axis.horizontal,
-            alignment: Alignment.bottomCenter,
-            child: bottomOverlay,
-          ),
+        // The overlay may grow up to the top bar (an expanded composer does)
+        // but never behind it.
+        Positioned.fill(
+          top: topInset + _bottomOverlayTopGap,
+          child: Align(alignment: Alignment.bottomCenter, child: bottomOverlay),
         ),
       ],
     );

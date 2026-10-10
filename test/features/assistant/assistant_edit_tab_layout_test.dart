@@ -4,16 +4,17 @@ import 'package:Kelivo/features/assistant/utils/assistant_edit_tab_layout.dart';
 
 void main() {
   group('assistant edit tab layout', () {
-    test('default order keeps MCP after regex replace', () {
+    test('default order puts tools before phrases without a workspace tab', () {
       expect(defaultAssistantEditTabIds, const [
         'basic',
         'prompts',
         'memory',
+        'localTools',
+        'skills',
+        'mcp',
         'quickPhrase',
         'custom',
         'regex',
-        'localTools',
-        'mcp',
       ]);
     });
 
@@ -24,16 +25,18 @@ void main() {
 
       expect(ordered.take(4), const ['mcp', 'basic', 'prompts', 'memory']);
       expect(ordered, containsAll(defaultAssistantEditTabIds));
+      expect(ordered.last, 'regex');
     });
 
     test('ignores duplicate and unknown saved ids', () {
       final ordered = orderAssistantEditTabIds(
-        savedOrder: const ['mcp', 'unknown', 'mcp', 'regex'],
+        savedOrder: const ['mcp', 'unknown', 'workspace', 'mcp', 'regex'],
       );
 
       expect(ordered.take(2), const ['mcp', 'regex']);
       expect(ordered.where((id) => id == 'mcp'), hasLength(1));
       expect(ordered, isNot(contains('unknown')));
+      expect(ordered, isNot(contains('workspace')));
     });
 
     test('hides requested ids while keeping order', () {
@@ -42,7 +45,7 @@ void main() {
         hiddenIds: const {'prompts', 'mcp'},
       );
 
-      expect(visible.take(3), const ['basic', 'memory', 'quickPhrase']);
+      expect(visible.take(3), const ['basic', 'memory', 'localTools']);
       expect(visible, isNot(contains('mcp')));
       expect(visible, isNot(contains('prompts')));
     });

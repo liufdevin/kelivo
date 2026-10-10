@@ -52,127 +52,13 @@ class _LocalToolsTab extends StatelessWidget {
       LocalToolNames.remindersComplete,
     );
 
-    Future<void> updateTool(String toolId, bool value) {
-      final ids = assistant.localToolIds.toSet();
-      if (value) {
-        ids.add(toolId);
-      } else {
-        ids.remove(toolId);
-      }
-      return context.read<AssistantProvider>().updateAssistant(
-        assistant.copyWith(localToolIds: ids.toList(growable: false)),
+    Future<void> toggleTool(String toolId, bool value) {
+      return setLocalToolEnabled(
+        context,
+        assistant: assistant,
+        toolId: toolId,
+        value: value,
       );
-    }
-
-    Future<void> toggleTool(String toolId, bool value) async {
-      if (!value) {
-        await updateTool(toolId, false);
-        return;
-      }
-
-      if (toolId == LocalToolNames.screenTime &&
-          DeviceLocalTools.screenTimeSupported) {
-        final granted = await DeviceLocalTools.hasUsageStatsPermission();
-        if (!granted) {
-          if (context.mounted) {
-            showAppSnackBar(
-              context,
-              message: l10n.chatMessageWidgetScreenTimePermissionRequired,
-              type: NotificationType.warning,
-            );
-          }
-          await DeviceLocalTools.openUsageAccessSettings();
-        }
-        // Still enable even if Usage Access is not granted yet.
-        await updateTool(toolId, true);
-        return;
-      }
-
-      if ((toolId == LocalToolNames.calendarQuery ||
-              toolId == LocalToolNames.calendarCreate) &&
-          DeviceLocalTools.calendarSupported) {
-        final granted = await DeviceLocalTools.hasCalendarPermission();
-        if (!granted) {
-          final requested = await DeviceLocalTools.requestCalendarPermission();
-          if (!requested) {
-            // Do not enable until the user grants calendar access.
-            return;
-          }
-        }
-        await updateTool(toolId, true);
-        return;
-      }
-
-      if (toolId == LocalToolNames.currentLocation &&
-          DeviceLocalTools.locationSupported) {
-        final granted = await DeviceLocalTools.hasLocationPermission();
-        if (!granted) {
-          try {
-            final requested =
-                await DeviceLocalTools.requestLocationPermission();
-            if (!requested) return;
-          } on PlatformException catch (error) {
-            if (error.code !=
-                DeviceLocalTools.locationPermissionPermanentlyDenied) {
-              rethrow;
-            }
-            if (context.mounted) {
-              showAppSnackBar(
-                context,
-                message: l10n.assistantEditLocationPermissionSettingsMessage,
-                type: NotificationType.warning,
-                duration: const Duration(seconds: 8),
-                actionLabel: l10n.hotkeyOpenSettings,
-                onAction: () => unawaited(DeviceLocalTools.openAppSettings()),
-              );
-            }
-            return;
-          }
-        }
-        await updateTool(toolId, true);
-        return;
-      }
-
-      if ((toolId == LocalToolNames.remindersQuery ||
-              toolId == LocalToolNames.remindersCreate ||
-              toolId == LocalToolNames.remindersComplete) &&
-          DeviceLocalTools.remindersSupported) {
-        final granted = await DeviceLocalTools.hasRemindersPermission();
-        if (!granted) {
-          final requested = await DeviceLocalTools.requestRemindersPermission();
-          if (!requested) {
-            return;
-          }
-        }
-        await updateTool(toolId, true);
-        return;
-      }
-
-      if (toolId == LocalToolNames.healthSummary &&
-          DeviceLocalTools.healthSupported) {
-        if (!value) {
-          await updateTool(toolId, false);
-          return;
-        }
-        var next = HealthDataSelection.setMasterEnabled(
-          assistant,
-          enabled: true,
-          availableIds: DeviceLocalTools.availableHealthTypeIds,
-        );
-        final types = HealthDataSelection.queryTypes(
-          next,
-          availableIds: DeviceLocalTools.availableHealthTypeIds,
-        );
-        final requested = await DeviceLocalTools.requestHealthPermission(
-          types: types,
-        );
-        if (!requested) return;
-        if (!context.mounted) return;
-        await context.read<AssistantProvider>().updateAssistant(next);
-        return;
-      }
-
-      await updateTool(toolId, true);
     }
 
     return ListView(
@@ -260,6 +146,20 @@ class _LocalToolsTab extends StatelessWidget {
                 enabled: locationEnabled,
                 onChanged: (value) =>
                     toggleTool(LocalToolNames.currentLocation, value),
+              ),
+            ],
+            if (DeviceLocalTools.phoneControlSupported) ...[
+              _iosDivider(context),
+              _LocalToolRow(
+                icon: Lucide.Smartphone,
+                title: l10n.phoneControlTitle,
+                subtitle: l10n.phoneControlSubtitle,
+                enabled: assistant.localToolIds.contains(
+                  LocalToolNames.phoneControl,
+                ),
+                onChanged: (value) =>
+                    toggleTool(LocalToolNames.phoneControl, value),
+                onOpenSettings: () => PhoneControlSettingsPage.open(context),
               ),
             ],
             if (DeviceLocalTools.iosDeviceToolsSupported)
@@ -360,6 +260,7 @@ class _LocalToolRow extends StatelessWidget {
     required this.subtitle,
     required this.enabled,
     required this.onChanged,
+    this.onOpenSettings,
   });
 
   final IconData icon;
@@ -367,6 +268,7 @@ class _LocalToolRow extends StatelessWidget {
   final String subtitle;
   final bool enabled;
   final ValueChanged<bool> onChanged;
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -422,6 +324,12 @@ class _LocalToolRow extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 10),
+                  if (onOpenSettings != null)
+                    IconButton(
+                      icon: const Icon(Lucide.Settings, size: 18),
+                      tooltip: AppLocalizations.of(context)!.phoneControlTitle,
+                      onPressed: onOpenSettings,
+                    ),
                   IosSwitch(value: enabled, onChanged: onChanged),
                 ],
               ),

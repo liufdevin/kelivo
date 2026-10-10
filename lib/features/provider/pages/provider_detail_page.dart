@@ -1,3 +1,4 @@
+import '../widgets/prompt_cache_ttl_control.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -14,16 +15,16 @@ import 'package:image_picker/image_picker.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../core/providers/model_provider.dart';
 import '../../../core/providers/assistant_provider.dart';
-import '../../model/widgets/model_detail_sheet.dart';
+import '../../model/pages/model_spec_edit_page.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../widgets/share_provider_sheet.dart';
 import '../widgets/provider_group_picker_sheet.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/services/logging/flutter_logger.dart';
-import '../../../core/services/model_override_resolver.dart';
 import '../../../core/services/local_provider_config.dart';
 import '../../../core/services/provider_model_catalog_cache.dart';
+import '../../../core/services/model_spec/model_spec_resolver.dart';
 import '../../../shared/widgets/snackbar.dart';
 import '../../../shared/widgets/model_tag_wrap.dart';
 import '../../../shared/widgets/ios_checkbox.dart';
@@ -1236,7 +1237,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 context,
                 label: l10n.providerDetailPageClaudePromptCachingTtlTitle,
                 helpText: l10n.providerDetailPageClaudePromptCachingTtlHelp,
-                trailing: _PromptCachingTtlSegmentedControl(
+                trailing: PromptCachingTtlSegmentedControl(
                   value: _claudePromptCachingTtl,
                   fiveMinuteLabel:
                       l10n.providerDetailPageClaudePromptCachingTtl5m,
@@ -2534,7 +2535,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                   padding: compact ? iconButtonPadding : textButtonPadding,
                   colorScheme: cs,
                   onTap: () async {
-                    await showCreateModelSheet(
+                    await showCreateModelSpecPage(
                       context,
                       providerKey: widget.keyName,
                     );
@@ -3402,10 +3403,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
       widget.keyName,
       defaultName: widget.displayName,
     );
+    final isDefaultSilicon = widget.keyName.toLowerCase() == 'siliconflow';
+    final hasUserKey =
+        (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) ||
+        cfg.apiKey.trim().isNotEmpty;
+    final restrictToFree = isDefaultSilicon && !hasUserKey;
     final controller = TextEditingController();
-    List<dynamic> items = [
+    List<ModelSpec> items = [
       for (final id in cfg.cachedModels)
-        ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
+        ModelSpecResolver.instance.resolve(cfg, id, displayName: id).spec,
     ];
     bool loading = items.isEmpty;
     String error = '';
@@ -3426,20 +3432,43 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
             final l10n = AppLocalizations.of(ctx)!;
             Future<void> loadModels() async {
               try {
-                final list = await ProviderManager.listModels(cfg);
-                final latest = settings.getProviderConfig(
-                  widget.keyName,
-                  defaultName: widget.displayName,
-                );
-                await settings.setProviderConfig(
-                  widget.keyName,
-                  cacheFetchedProviderModels(latest, list.map((m) => m.id)),
-                );
-                setLocal(() {
-                  items = list;
-                  loading = false;
-                  error = '';
-                });
+                if (restrictToFree) {
+                  final list = <ModelSpec>[
+                    ModelSpecResolver.instance
+                        .resolve(
+                          cfg,
+                          'THUDM/GLM-4-9B-0414',
+                          displayName: 'THUDM/GLM-4-9B-0414',
+                        )
+                        .spec,
+                    ModelSpecResolver.instance
+                        .resolve(
+                          cfg,
+                          'Qwen/Qwen3-8B',
+                          displayName: 'Qwen/Qwen3-8B',
+                        )
+                        .spec,
+                  ];
+                  setLocal(() {
+                    items = list;
+                    loading = false;
+                  });
+                } else {
+                  final list = await ProviderManager.listModels(cfg);
+                  final latest = settings.getProviderConfig(
+                    widget.keyName,
+                    defaultName: widget.displayName,
+                  );
+                  await settings.setProviderConfig(
+                    widget.keyName,
+                    cacheFetchedProviderModels(latest, list.map((m) => m.id)),
+                  );
+                  setLocal(() {
+                    items = list;
+                    loading = false;
+                    error = '';
+                  });
+                }
               } catch (e) {
                 setLocal(() {
                   if (items.isEmpty) {
@@ -3464,16 +3493,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                 .models
                 .toSet();
             final query = controller.text.trim().toLowerCase();
-            final filtered = <ModelInfo>[
+            final filtered = <ModelSpec>[
               for (final m in items)
-                if (m is ModelInfo &&
-                    (query.isEmpty ||
-                        m.id.toLowerCase().contains(query) ||
-                        m.displayName.toLowerCase().contains(query)))
+                if (query.isEmpty ||
+                    m.id.toLowerCase().contains(query) ||
+                    m.displayName.toLowerCase().contains(query))
                   m,
             ];
 
-            String groupFor(ModelInfo m) {
+            String groupFor(ModelSpec m) {
               return ModelGrouping.groupFor(
                 m,
                 embeddingsLabel: l10n.providerDetailPageEmbeddingsGroupTitle,
@@ -3481,7 +3509,7 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
               );
             }
 
-            final Map<String, List<ModelInfo>> grouped = {};
+            final Map<String, List<ModelSpec>> grouped = {};
             for (final m in filtered) {
               final g = groupFor(m);
               (grouped[g] ??= []).add(m);
@@ -3624,16 +3652,15 @@ class _ProviderDetailPageState extends State<ProviderDetailPage> {
                                         final q = controller.text
                                             .trim()
                                             .toLowerCase();
-                                        final filteredNow = <ModelInfo>[
+                                        final filteredNow = <ModelSpec>[
                                           for (final m in items)
-                                            if (m is ModelInfo &&
-                                                (q.isEmpty ||
-                                                    m.id.toLowerCase().contains(
-                                                      q,
-                                                    ) ||
-                                                    m.displayName
-                                                        .toLowerCase()
-                                                        .contains(q)))
+                                            if (q.isEmpty ||
+                                                m.id.toLowerCase().contains(
+                                                  q,
+                                                ) ||
+                                                m.displayName
+                                                    .toLowerCase()
+                                                    .contains(q))
                                               m,
                                         ];
                                         if (filteredNow.isEmpty) return;
@@ -4091,14 +4118,8 @@ class _ModelCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final resolved = _resolveBaseAndOverride(context);
-    final effective = resolved.ov == null
-        ? resolved.base
-        : _applyModelOverride(
-            resolved.base,
-            resolved.ov!,
-            applyDisplayName: true,
-          );
+    final resolved = _resolveModel(context);
+    final effective = resolved.spec;
     String displayName = effective.displayName.trim();
     if (displayName.isEmpty) displayName = modelId;
     final Widget? detectionIndicator = isDetecting
@@ -4158,7 +4179,7 @@ class _ModelCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                 ],
-                _BrandAvatar(name: resolved.baseId, size: 28),
+                _BrandAvatar(name: resolved.upstreamId, size: 28),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -4189,10 +4210,10 @@ class _ModelCard extends StatelessWidget {
                     semanticLabel: l10n.providerDetailPageEditTooltip,
                     haptics: false,
                     onTap: () async {
-                      await showModelDetailSheet(
+                      await showModelSpecEditPage(
                         context,
                         providerKey: providerKey,
-                        modelId: modelId,
+                        modelKey: modelId,
                       );
                     },
                   ),
@@ -4205,42 +4226,23 @@ class _ModelCard extends StatelessWidget {
     );
   }
 
-  ModelInfo _infer(String id) {
-    // build a minimal ModelInfo and let registry infer
-    return ModelRegistry.infer(ModelInfo(id: id, displayName: id));
-  }
-
-  _ResolvedModelOverride _resolveBaseAndOverride(BuildContext context) {
-    final configs = context.watch<SettingsProvider>().providerConfigs;
-    final cfg = configs[providerKey];
-    if (cfg == null) {
-      final base = _infer(modelId);
-      return _ResolvedModelOverride(base: base, ov: null, baseId: modelId);
-    }
-    final rawOv = cfg.modelOverrides[modelId];
-    final Map<String, dynamic>? ov = rawOv is Map
-        ? {for (final e in rawOv.entries) e.key.toString(): e.value}
-        : null;
-    String baseId = modelId;
-    if (ov != null) {
-      final raw = (ov['apiModelId'] ?? ov['api_model_id'])?.toString().trim();
-      if (raw != null && raw.isNotEmpty) baseId = raw;
-    }
-    final base = _infer(baseId);
-    return _ResolvedModelOverride(base: base, ov: ov, baseId: baseId);
+  _ResolvedListedModel _resolveModel(BuildContext context) {
+    final cfg = context.watch<SettingsProvider>().getProviderConfig(
+      providerKey,
+    );
+    final resolved = ModelSpecResolver.instance.resolve(cfg, modelId);
+    return _ResolvedListedModel(
+      spec: resolved.spec,
+      upstreamId: resolved.spec.upstreamId,
+    );
   }
 }
 
-class _ResolvedModelOverride {
-  const _ResolvedModelOverride({
-    required this.base,
-    required this.ov,
-    required this.baseId,
-  });
+class _ResolvedListedModel {
+  const _ResolvedListedModel({required this.spec, required this.upstreamId});
 
-  final ModelInfo base;
-  final Map<String, dynamic>? ov;
-  final String baseId;
+  final ModelSpec spec;
+  final String upstreamId;
 }
 
 class _ConnectionTestDialog extends StatefulWidget {
@@ -4561,30 +4563,6 @@ Future<String?> showModelPickerForTest(
   return sel?.modelId;
 }
 
-ModelInfo _applyModelOverride(
-  ModelInfo base,
-  Map<String, dynamic> ov, {
-  bool applyDisplayName = false,
-}) {
-  try {
-    return ModelOverrideResolver.applyModelOverride(
-      base,
-      ov,
-      applyDisplayName: applyDisplayName,
-    );
-  } catch (e, st) {
-    FlutterLogger.log(
-      '[ModelOverride] applyModelOverride failed: $e\n$st',
-      tag: 'ModelOverride',
-    );
-    assert(() {
-      debugPrint('[ModelOverride] applyModelOverride failed: $e');
-      return true;
-    }());
-    return base;
-  }
-}
-
 // Using flutter_slidable for reliable swipe actions with confirm + undo.
 
 // Legacy page-based implementations removed in favor of swipeable PageView tabs.
@@ -4870,101 +4848,6 @@ class _BottomTabItemState extends State<_BottomTabItem> {
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _PromptCachingTtlSegmentedControl extends StatelessWidget {
-  const _PromptCachingTtlSegmentedControl({
-    required this.value,
-    required this.fiveMinuteLabel,
-    required this.oneHourLabel,
-    required this.semanticLabel,
-    required this.onChanged,
-  });
-
-  final String value;
-  final String fiveMinuteLabel;
-  final String oneHourLabel;
-  final String semanticLabel;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = cs.onSurface.withValues(alpha: isDark ? 0.08 : 0.05);
-
-    return Semantics(
-      label: semanticLabel,
-      child: Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _PromptCachingTtlSegment(
-              label: fiveMinuteLabel,
-              selected: value == ProviderConfig.claudePromptCachingTtl5m,
-              selectedColor: cs.primary,
-              onTap: () => onChanged(ProviderConfig.claudePromptCachingTtl5m),
-            ),
-            _PromptCachingTtlSegment(
-              label: oneHourLabel,
-              selected: value == ProviderConfig.claudePromptCachingTtl1h,
-              selectedColor: cs.primary,
-              onTap: () => onChanged(ProviderConfig.claudePromptCachingTtl1h),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PromptCachingTtlSegment extends StatelessWidget {
-  const _PromptCachingTtlSegment({
-    required this.label,
-    required this.selected,
-    required this.selectedColor,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final Color selectedColor;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? selectedColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-        ),
-        child: AnimatedDefaultTextStyle(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: AppFontWeights.semibold,
-            color: selected
-                ? cs.onPrimary
-                : cs.onSurface.withValues(alpha: 0.7),
-          ),
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
       ),
     );
   }

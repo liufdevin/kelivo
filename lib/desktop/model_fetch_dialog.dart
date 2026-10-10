@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../core/providers/settings_provider.dart';
 import '../core/providers/model_provider.dart';
 import '../core/services/provider_model_catalog_cache.dart';
+import '../core/services/model_spec/model_spec_resolver.dart';
 import '../l10n/app_localizations.dart';
 import '../icons/lucide_adapter.dart' as lucide;
 import '../utils/brand_assets.dart';
@@ -58,7 +59,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
   final TextEditingController _searchCtrl = TextEditingController();
   bool _loading = true;
   String _error = '';
-  List<ModelInfo> _items = const [];
+  List<ModelSpec> _items = const [];
   final Map<String, bool> _collapsed = <String, bool>{};
 
   @override
@@ -79,9 +80,14 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
       widget.providerKey,
       defaultName: widget.providerDisplayName,
     );
+    final isDefaultSilicon = widget.providerKey.toLowerCase() == 'siliconflow';
+    final hasUserKey =
+        (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) ||
+        cfg.apiKey.trim().isNotEmpty;
+    final restrictToFree = isDefaultSilicon && !hasUserKey;
     final cachedItems = [
       for (final id in cfg.cachedModels)
-        ModelRegistry.infer(ModelInfo(id: id, displayName: id)),
+        ModelSpecResolver.instance.resolve(cfg, id, displayName: id).spec,
     ];
     if (cachedItems.isNotEmpty) {
       setState(() {
@@ -91,21 +97,41 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
       });
     }
     try {
-      final list = await ProviderManager.listModels(cfg);
-      if (!mounted) return;
-      final latest = settings.getProviderConfig(
-        widget.providerKey,
-        defaultName: widget.providerDisplayName,
-      );
-      await settings.setProviderConfig(
-        widget.providerKey,
-        cacheFetchedProviderModels(latest, list.map((m) => m.id)),
-      );
-      setState(() {
-        _items = list;
-        _loading = false;
-        _error = '';
-      });
+      if (restrictToFree) {
+        final list = <ModelSpec>[
+          ModelSpecResolver.instance
+              .resolve(
+                cfg,
+                'THUDM/GLM-4-9B-0414',
+                displayName: 'THUDM/GLM-4-9B-0414',
+              )
+              .spec,
+          ModelSpecResolver.instance
+              .resolve(cfg, 'Qwen/Qwen3-8B', displayName: 'Qwen/Qwen3-8B')
+              .spec,
+        ];
+        setState(() {
+          _items = list;
+          _loading = false;
+          _error = '';
+        });
+      } else {
+        final list = await ProviderManager.listModels(cfg);
+        if (!mounted) return;
+        final latest = settings.getProviderConfig(
+          widget.providerKey,
+          defaultName: widget.providerDisplayName,
+        );
+        await settings.setProviderConfig(
+          widget.providerKey,
+          cacheFetchedProviderModels(latest, list.map((m) => m.id)),
+        );
+        setState(() {
+          _items = list;
+          _loading = false;
+          _error = '';
+        });
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -118,7 +144,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
     }
   }
 
-  String _groupFor(BuildContext context, ModelInfo m) {
+  String _groupFor(BuildContext context, ModelSpec m) {
     final l10n = AppLocalizations.of(context)!;
     return ModelGrouping.groupFor(
       m,
@@ -136,7 +162,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
 
     // Compute header filtered list and selection state for toggle icon
     final headerQuery = _searchCtrl.text.trim().toLowerCase();
-    final headerFiltered = <ModelInfo>[
+    final headerFiltered = <ModelSpec>[
       for (final m in _items)
         if (headerQuery.isEmpty ||
             m.id.toLowerCase().contains(headerQuery) ||
@@ -288,7 +314,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                                           final q = _searchCtrl.text
                                               .trim()
                                               .toLowerCase();
-                                          final filtered = <ModelInfo>[
+                                          final filtered = <ModelSpec>[
                                             for (final m in _items)
                                               if (q.isEmpty ||
                                                   m.id.toLowerCase().contains(
@@ -359,7 +385,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
                                         final q = _searchCtrl.text
                                             .trim()
                                             .toLowerCase();
-                                        final filtered = <ModelInfo>[
+                                        final filtered = <ModelSpec>[
                                           for (final m in _items)
                                             if (q.isEmpty ||
                                                 m.id.toLowerCase().contains(
@@ -454,7 +480,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
         .toSet();
 
     final q = _searchCtrl.text.trim().toLowerCase();
-    final filtered = <ModelInfo>[
+    final filtered = <ModelSpec>[
       for (final m in _items)
         if (q.isEmpty ||
             m.id.toLowerCase().contains(q) ||
@@ -462,7 +488,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
           m,
     ];
 
-    final Map<String, List<ModelInfo>> grouped = {};
+    final Map<String, List<ModelSpec>> grouped = {};
     for (final m in filtered) {
       final g = _groupFor(context, m);
       (grouped[g] ??= []).add(m);
@@ -607,7 +633,7 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
     );
   }
 
-  Widget _modelRow(BuildContext context, ModelInfo m) {
+  Widget _modelRow(BuildContext context, ModelSpec m) {
     final cs = Theme.of(context).colorScheme;
     final settings = context.read<SettingsProvider>();
     final selected = settings

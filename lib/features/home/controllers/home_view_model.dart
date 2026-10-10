@@ -1,8 +1,10 @@
+import '../../../core/services/scheduled_tasks_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/assistant.dart';
+import '../../../core/models/reasoning_request.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/models/conversation.dart';
@@ -10,13 +12,14 @@ import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/api/chat_api_service.dart';
 import '../../../core/services/chat/chat_service.dart';
-import '../../../core/services/model_override_payload_parser.dart';
 import '../../../core/services/logging/flutter_logger.dart';
+import '../../../core/services/model_spec/model_spec_resolver.dart';
 import '../../../core/services/memory/memory_pipeline.dart';
 import '../../../core/services/memory/memory_trace.dart';
 import '../../../utils/utf16_safe_cut.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
+import '../services/context_usage_service.dart';
 import '../services/message_builder_service.dart';
 import '../services/message_generation_service.dart';
 import '../services/chat_suggestion_service.dart';
@@ -104,7 +107,8 @@ class HomeViewModel extends ChangeNotifier {
     required this._chatController,
     required this._contextProvider,
     required this.getTitleForLocale,
-  }) {
+    ContextUsageService? contextUsage,
+  }) : _contextUsage = contextUsage {
     // Initialize ChatActions
     _chatActions = ChatActions(
       chatService: _chatService,
@@ -114,6 +118,7 @@ class HomeViewModel extends ChangeNotifier {
       messageGenerationService: _messageGenerationService,
       contextProvider: _contextProvider,
       viewModel: this,
+      contextUsage: contextUsage,
     );
 
     // Wire up callbacks
@@ -144,6 +149,7 @@ class HomeViewModel extends ChangeNotifier {
   final stream_ctrl.StreamController _streamController;
   final ChatController _chatController;
   final BuildContext _contextProvider;
+  final ContextUsageService? _contextUsage;
   final ChatSuggestionService _suggestionService =
       const ChatSuggestionService();
   late final ChatActions _chatActions;
@@ -172,8 +178,8 @@ class HomeViewModel extends ChangeNotifier {
   /// Called when streaming finishes (UI may show notification).
   void Function(String conversationId)? onStreamFinished;
 
-  /// Called when a successful assistant reply is finalized.
-  void Function(ChatMessage message)? onAssistantMessageFinished;
+  /// Completes once downstream work has taken over background execution.
+  FutureOr<void> Function(ChatMessage message)? onAssistantMessageFinished;
 
   /// Called to schedule inline image sanitization.
   void Function(String messageId, String content, {bool immediate})?
@@ -311,8 +317,8 @@ class HomeViewModel extends ChangeNotifier {
     onStreamFinished?.call(conversationId);
   }
 
-  void _onAssistantMessageFinished(ChatMessage message) {
-    onAssistantMessageFinished?.call(message);
+  Future<void> _onAssistantMessageFinished(ChatMessage message) async {
+    await onAssistantMessageFinished?.call(message);
     _onMaybeOrganizeMemory(message.conversationId);
   }
 
@@ -360,7 +366,59 @@ class HomeViewModel extends ChangeNotifier {
   // ============================================================================
 
   /// Send a new message or queue it if the current conversation is busy.
+  Future<ChatActionResult> sendScheduledMessage({
+    required ChatInputData input,
+    required Conversation conversation,
+    required Assistant assistant,
+    ({String providerKey, String modelId})? modelOverride,
+    ValueChanged<String>? onGenerationStarted,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
+  }) {
+    if (_chatController.isConversationLoading(conversation.id) ||
+        _chatActions.activeStreamingMessageId(conversation.id) != null) {
+      return Future.value(ChatActionResult.inFlight());
+    }
+    return _chatActions.sendMessage(
+      input: input,
+      conversation: conversation,
+      assistantOverride: assistant,
+      scheduled: true,
+      scheduledNotify: scheduledNotify,
+      scheduledPreview: scheduledPreview,
+      modelOverride: modelOverride,
+      onGenerationStarted: onGenerationStarted,
+    );
+  }
+
+  Future<ChatActionResult> regenerateScheduledMessage({
+    required ChatMessage message,
+    required Conversation conversation,
+    required Assistant assistant,
+    ({String providerKey, String modelId})? modelOverride,
+    ValueChanged<String>? onGenerationStarted,
+    bool scheduledNotify = true,
+    bool scheduledPreview = true,
+  }) {
+    if (_chatController.isConversationLoading(conversation.id) ||
+        _chatActions.activeStreamingMessageId(conversation.id) != null) {
+      return Future.value(ChatActionResult.inFlight());
+    }
+    return _chatActions.regenerateAtMessage(
+      message: message,
+      conversation: conversation,
+      assistantOverride: assistant,
+      scheduled: true,
+      scheduledNotify: scheduledNotify,
+      scheduledPreview: scheduledPreview,
+      modelOverride: modelOverride,
+      preserveFollowingMessages: true,
+      onGenerationStarted: onGenerationStarted,
+    );
+  }
+
   Future<ChatInputSubmissionResult> sendMessage(ChatInputData input) async {
+    await ScheduledTasksService.instance.reconcileBeforeSend();
     final content = input.text.trim();
     if (content.isEmpty &&
         input.imagePaths.isEmpty &&
@@ -866,6 +924,10 @@ class HomeViewModel extends ChangeNotifier {
   // Public Methods - Conversation Management
   // ============================================================================
 
+  void _syncContextUsageConversation(String? conversationId) {
+    _contextUsage?.setActiveConversation(conversationId);
+  }
+
   /// Switch to an existing conversation.
   ///
   /// The caller flushes the current conversation's progress before invoking
@@ -879,6 +941,7 @@ class HomeViewModel extends ChangeNotifier {
     if (currentConversation?.id == id) return;
 
     _chatService.setCurrentConversation(id);
+    _syncContextUsageConversation(id);
     final convo = _chatService.getConversation(id);
     if (convo != null) {
       // Assistant preference persistence runs concurrently with the window
@@ -929,6 +992,7 @@ class HomeViewModel extends ChangeNotifier {
   void commitConversationSwitch(PreparedConversationSwitch prepared) {
     final id = prepared.conversation.id;
     _chatService.setCurrentConversation(id);
+    _syncContextUsageConversation(id);
     _chatController.commitConversationWindow(
       prepared.window,
       onDeferredGroupDataLoaded: notifyListeners,
@@ -989,7 +1053,10 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     _chatController.setDraftConversation(conversation);
-    _streamController.clearAllState();
+    _syncContextUsageConversation(conversation.id);
+    _streamController.clearAllState(
+      keepMessageIds: _chatActions.activeStreamingMessageIds,
+    );
     notifyListeners();
 
     // Inject assistant preset messages into new conversation (ordered)
@@ -1049,7 +1116,10 @@ class HomeViewModel extends ChangeNotifier {
     );
 
     _chatController.setDraftConversation(conversation);
-    _streamController.clearAllState();
+    _syncContextUsageConversation(conversation.id);
+    _streamController.clearAllState(
+      keepMessageIds: _chatActions.activeStreamingMessageIds,
+    );
     notifyListeners();
     onScrollToBottom?.call();
   }
@@ -1070,6 +1140,7 @@ class HomeViewModel extends ChangeNotifier {
 
     // Switch to the new conversation
     _chatService.setCurrentConversation(newConvo.id);
+    _syncContextUsageConversation(newConvo.id);
     await _chatController.setCurrentConversationAndLoad(newConvo);
     _restoreMessageUiState();
     onConversationSwitched?.call();
@@ -1167,9 +1238,7 @@ class HomeViewModel extends ChangeNotifier {
     if (provKey == null || mdlId == null) return 'no_model';
 
     final cfg = settings.getProviderConfig(provKey);
-    final budget = settings.compressGenerationThinkingBudgetFor(
-      assistant?.thinkingBudget,
-    );
+    final reasoning = settings.compressGenerationReasoningFor(assistant);
 
     var stage = 'prepare';
     var inputLength = summarizeInput.fold<int>(
@@ -1191,7 +1260,7 @@ class HomeViewModel extends ChangeNotifier {
             config: cfg,
             modelId: mdlId,
             prompt: prompt,
-            thinkingBudget: budget,
+            reasoning: reasoning,
             skipImageParsing: true,
           )).trim();
         },
@@ -1208,9 +1277,9 @@ class HomeViewModel extends ChangeNotifier {
     try {
       stage = 'prepare';
       final requestChars = compressRequestCharBudget(
-        contextWindowTokens: readModelContextWindowTokens(
-          ModelOverridePayloadParser.modelOverride(cfg.modelOverrides, mdlId),
-        ),
+        contextWindowTokens: ModelSpecResolver.instance
+            .spec(cfg, mdlId)
+            .contextWindow,
       );
       stage = 'chunk';
       final chunks = buildCompressRequestContents(
@@ -1277,6 +1346,7 @@ class HomeViewModel extends ChangeNotifier {
         );
 
         _chatService.setCurrentConversation(newConvo.id);
+        _syncContextUsageConversation(newConvo.id);
         await _chatController.setCurrentConversationAndLoad(
           _chatService.getConversation(newConvo.id) ?? newConvo,
         );
@@ -1303,6 +1373,7 @@ class HomeViewModel extends ChangeNotifier {
 
       // Switch to the new conversation
       _chatService.setCurrentConversation(newConvo.id);
+      _syncContextUsageConversation(newConvo.id);
       await _chatController.setCurrentConversationAndLoad(
         _chatService.getConversation(newConvo.id) ?? newConvo,
       );
@@ -1424,11 +1495,12 @@ class HomeViewModel extends ChangeNotifier {
     return _chatController.groupMessagesByGroup();
   }
 
-  /// Get clear context label based on current state.
-  String getClearContextLabel(
-    String Function(String, String) withCountFormatter,
-    String defaultLabel,
-  ) {
+  /// Messages currently in the conversation context.
+  ///
+  /// [actual] counts the messages after the context boundary, capped by the
+  /// assistant's limit when one is set. [configured] is that limit, or null
+  /// when context messages are unlimited.
+  ({int actual, int? configured}) getContextMessageCount() {
     final assistant = _contextProvider
         .read<AssistantProvider>()
         .currentAssistant;
@@ -1443,10 +1515,12 @@ class HomeViewModel extends ChangeNotifier {
           : _chatService.getContextStartIndex(currentConversation!.id),
     );
     if (configured > 0) {
-      final actual = remaining > configured ? configured : remaining;
-      return withCountFormatter(actual.toString(), configured.toString());
+      return (
+        actual: remaining > configured ? configured : remaining,
+        configured: configured,
+      );
     }
-    return defaultLabel;
+    return (actual: remaining, configured: null);
   }
 
   /// Test entry for [_maybeGenerateSummaryFor].
@@ -1508,9 +1582,7 @@ class HomeViewModel extends ChangeNotifier {
     final mdlId = settings.titleModelId ?? chatModel.modelId;
     if (provKey == null || mdlId == null) return;
     final cfg = settings.getProviderConfig(provKey);
-    final budget = settings.titleGenerationThinkingBudgetFor(
-      assistant?.thinkingBudget,
-    );
+    final reasoning = settings.titleGenerationReasoningFor(assistant);
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
 
     // Build content from messages (shared with the side drawer title path;
@@ -1528,7 +1600,7 @@ class HomeViewModel extends ChangeNotifier {
           config: cfg,
           modelId: mdlId,
           prompt: prompt,
-          thinkingBudget: budget,
+          reasoning: reasoning,
           skipImageParsing: true,
         ),
       );
@@ -1582,9 +1654,7 @@ class HomeViewModel extends ChangeNotifier {
         ? assistantProvider.getById(convo.assistantId!)
         : assistantProvider.currentAssistant;
 
-    final budget = settings.summaryGenerationThinkingBudgetFor(
-      assistant?.thinkingBudget,
-    );
+    final reasoning = settings.summaryGenerationReasoningFor(assistant);
 
     final legacy = settings.legacyMemoryMode;
     if (legacy) {
@@ -1671,7 +1741,7 @@ class HomeViewModel extends ChangeNotifier {
         config: cfg,
         modelId: mdlId,
         prompt: prompt,
-        thinkingBudget: budget,
+        reasoning: reasoning,
         skipImageParsing: true,
       )).trim();
       traceStep?.appendResponse(summary);
@@ -1744,7 +1814,10 @@ class HomeViewModel extends ChangeNotifier {
   // Chat Suggestions
   // ============================================================================
 
+  final Map<String, Object> _suggestionRequests = {};
+
   Future<void> _clearSuggestionsFor(String conversationId) async {
+    _suggestionRequests.remove(conversationId);
     final convo = _chatService.getConversation(conversationId);
     if (convo == null || convo.chatSuggestions.isEmpty) return;
     await _chatService.clearConversationSuggestions(conversationId);
@@ -1777,50 +1850,62 @@ class HomeViewModel extends ChangeNotifier {
     final mdlId = settings.suggestionModelId ?? chatModel.modelId;
     if (provKey == null || mdlId == null) return;
     final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
-    final budget = settings.suggestionGenerationThinkingBudgetFor(
-      assistant?.thinkingBudget,
-    );
+    final reasoning = settings.suggestionGenerationReasoningFor(assistant);
 
-    final loadedMessages = await _chatService.loadMessages(convo.id);
-    // Raw revision count snapshot for the post-generation freshness check:
-    // getMessageCount counts every revision, the collapsed list does not.
-    final loadedMessageCount = loadedMessages.length;
-    final msgs = collapseVersions(loadedMessages);
-    final lastAssistant = msgs.cast<ChatMessage?>().lastWhere(
-      (m) =>
-          m != null &&
-          m.role == 'assistant' &&
-          !m.isStreaming &&
-          m.content.trim().isNotEmpty,
-      orElse: () => null,
-    );
-    if (lastAssistant == null) return;
+    final request = Object();
+    _suggestionRequests[conversationId] = request;
+    final truncateIndex = _chatService.getContextStartIndex(conversationId);
+    final prompt = settings.suggestionPrompt;
+    bool isCurrent() =>
+        identical(_suggestionRequests[conversationId], request) &&
+        settings.isSuggestionGenerationEnabled &&
+        settings.suggestionPrompt == prompt &&
+        _chatService.getConversation(conversationId) != null &&
+        _chatService.getContextStartIndex(conversationId) == truncateIndex;
+
+    Future<List<ChatMessage>> loadSelectedMessages() async {
+      final loaded = await _chatService.loadMessages(conversationId);
+      // A background conversation must use its own selected versions, even
+      // when a different conversation is now displayed by the controller.
+      return _chatController.collapseVersions(
+        loaded,
+        selections: _chatService.getVersionSelections(conversationId),
+      );
+    }
 
     try {
+      final msgs = await loadSelectedMessages();
+      if (!isCurrent()) return;
+      final content = ChatSuggestionService.buildContent(
+        msgs,
+        truncateIndex: truncateIndex,
+      );
+      if (content.isEmpty) return;
+      final sourceMessageId = msgs.last.id;
       await _chatService.clearConversationSuggestions(conversationId);
+      if (!isCurrent()) return;
       final suggestions = await _suggestionService.generate(
         conversationId: conversationId,
         settings: settings,
         providerKey: provKey,
         modelId: mdlId,
         messages: msgs,
-        truncateIndex: _chatService.getContextStartIndex(conversationId),
+        truncateIndex: truncateIndex,
         locale: locale,
-        thinkingBudget: budget,
+        reasoning: reasoning,
       );
-      if (suggestions.isEmpty) {
-        onBackgroundTaskError?.call(
-          BackgroundTaskKind.suggestions,
-          'empty_response',
-        );
-        return;
-      }
+      // An empty array is a valid decision to offer no suggestions.
+      if (suggestions.isEmpty || !isCurrent()) return;
 
-      final latest = _chatService.getConversation(conversationId);
-      // loadMessages above populates the count; unknown (-1) ≠ loaded length
-      // and correctly aborts publishing stale suggestions.
-      if (latest == null ||
-          _chatService.getMessageCount(latest.id) != loadedMessageCount) {
+      final latestMessages = await loadSelectedMessages();
+      if (!isCurrent() ||
+          latestMessages.isEmpty ||
+          latestMessages.last.id != sourceMessageId ||
+          ChatSuggestionService.buildContent(
+                latestMessages,
+                truncateIndex: truncateIndex,
+              ) !=
+              content) {
         return;
       }
 
@@ -1835,11 +1920,16 @@ class HomeViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
+      if (!isCurrent()) return;
       FlutterLogger.log(
         '[SuggestionGen] Generation failed: $e',
         tag: 'HomeViewModel',
       );
       onBackgroundTaskError?.call(BackgroundTaskKind.suggestions, e);
+    } finally {
+      if (identical(_suggestionRequests[conversationId], request)) {
+        _suggestionRequests.remove(conversationId);
+      }
     }
   }
 
@@ -1855,8 +1945,8 @@ class HomeViewModel extends ChangeNotifier {
     return _generationController.isToolModel(providerKey, modelId);
   }
 
-  bool isReasoningEnabled(int? budget) {
-    return _generationController.isReasoningEnabled(budget);
+  bool isReasoningEnabled(ReasoningRequest r) {
+    return _generationController.isReasoningEnabled(r);
   }
 
   // ============================================================================

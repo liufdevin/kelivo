@@ -117,7 +117,6 @@ class AssistantProvider extends ChangeNotifier {
     id: const Uuid().v4(),
     name: l10n.assistantProviderDefaultAssistantName,
     systemPrompt: '',
-    thinkingBudget: null,
     temperature: null,
     topP: null,
     limitContextMessages: false,
@@ -348,6 +347,10 @@ class AssistantProvider extends ChangeNotifier {
       background: backgroundCopy,
       mcpServerIds: List<String>.of(source.mcpServerIds),
       localToolIds: List<String>.of(source.localToolIds),
+      defaultWorkspaceId: source.defaultWorkspaceId,
+      skillIds: source.skillIds == null
+          ? null
+          : List<String>.of(source.skillIds!),
       healthDataTypeIds: List<String>.of(source.healthDataTypeIds),
       customHeaders: source.customHeaders
           .map((e) => Map<String, String>.from(e))

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../models/token_usage.dart';
 import '../../../providers/settings_provider.dart';
+import '../../custom_request_merger.dart';
 import '../chat_api_helpers.dart';
 import '../stream/stream_chunk.dart';
 
@@ -146,13 +147,10 @@ Map<String, dynamic> _difyBuildBody({
       'conversation_id': cachedDifyConversationId,
   };
 
-  final configuredBody = customBody(config, modelId);
-  if (configuredBody.isNotEmpty) body.addAll(configuredBody);
-  if (extraBody != null && extraBody.isNotEmpty) {
-    extraBody.forEach((key, value) {
-      body[key] = value;
-    });
-  }
+  CustomRequestMerger.applyBody(
+    body,
+    customBody(config, modelId, assistantBody: extraBody),
+  );
   body['response_mode'] = stream ? 'streaming' : 'blocking';
   body.putIfAbsent('inputs', () => <String, dynamic>{});
   body.putIfAbsent('query', () => _difyQueryFromMessages(messages));
@@ -179,15 +177,16 @@ Stream<StreamChunk> sendDifyChatStream(
     localConversationId: localConversationId ?? '',
   );
   final request = http.Request('POST', _difyChatMessagesUrl(config));
-  final headers = <String, String>{
-    'Authorization': 'Bearer ${apiKeyForRequest(config, modelId)}',
-    'Content-Type': 'application/json',
-    'Accept': stream ? 'text/event-stream' : 'application/json',
-  };
-  headers.addAll(customHeaders(config, modelId));
-  if (extraHeaders != null && extraHeaders.isNotEmpty) {
-    headers.addAll(extraHeaders);
-  }
+  final headers = customHeaders(
+    config,
+    modelId,
+    baseHeaders: <String, String>{
+      'Authorization': 'Bearer ${apiKeyForRequest(config, modelId)}',
+      'Content-Type': 'application/json',
+      'Accept': stream ? 'text/event-stream' : 'application/json',
+    },
+    assistantHeaders: extraHeaders,
+  );
   request.headers.addAll(headers);
   request.body = jsonEncode(
     _difyBuildBody(

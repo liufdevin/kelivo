@@ -5,25 +5,56 @@ import android.content.ActivityNotFoundException
 import android.net.Uri
 import android.content.Intent
 import com.ryanheise.audioservice.AudioServiceActivity
-import android.os.Build
+import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.StatFs
 import android.provider.DocumentsContract
-import android.util.Log
-import android.view.Surface
-import android.view.SurfaceHolder
 import io.flutter.embedding.android.FlutterSurfaceView
 import io.flutter.embedding.engine.FlutterEngine
+import com.psyche.kelivo.workspace.WorkspacePlugin
 import io.flutter.plugin.common.MethodChannel
+import com.dexterous.flutterlocalnotifications.FlutterLocalNotificationsPlugin
 import java.io.File
 import java.io.FileInputStream
 import java.io.OutputStream
 import java.util.concurrent.Executors
 
 class MainActivity : AudioServiceActivity() {
+    private val kelivo get() = application as KelivoApplication
+    private var reusedEngine = false
+    private val highRefreshRate by lazy { HighRefreshRateController(window) }
+
+    override fun provideFlutterEngine(context: android.content.Context): FlutterEngine {
+        reusedEngine = kelivo.hasEngine
+        return kelivo.engine
+    }
+    override fun shouldDestroyEngineWithHost(): Boolean = false
+
+    override fun onStart() {
+        super.onStart()
+        kelivo.backgroundRuntime.setForeground(true)
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        // A headless engine may have sent SystemChrome settings before its
+        // Activity/PlatformPlugin existed. Apply the window policy on attach.
+        applyEdgeToEdgeSystemBars(window)
+        highRefreshRate.resume()
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) highRefreshRate.request(force = true)
+    }
+
+    override fun onStop() {
+        highRefreshRate.stop()
+        kelivo.backgroundRuntime.setForeground(false)
+        super.onStop()
+    }
     private companion object {
         const val CREATE_DOCUMENT_REQUEST_CODE = 4107
-        const val TAG = "MainActivity"
     }
 
     private enum class WritableFileState {
@@ -40,10 +71,7 @@ class MainActivity : AudioServiceActivity() {
     private var fileSaveChannel: MethodChannel? = null
     private var localLiteRtChannel: MethodChannel? = null
     private val deviceStorageChannelName = "app.device_storage"
-    private val displayModeChannelName = "app.display_mode"
     private var deviceStorageChannel: MethodChannel? = null
-    private var displayModeChannel: MethodChannel? = null
-    private var flutterSurfaceView: FlutterSurfaceView? = null
     private var pendingProcessText: String? = null
      private var pendingSaveResult: MethodChannel.Result? = null
      private var pendingSaveSourcePath: String? = null
@@ -53,41 +81,43 @@ class MainActivity : AudioServiceActivity() {
      @Volatile private var writableFileState = WritableFileState.IDLE
      private val writableFileExecutor = Executors.newSingleThreadExecutor()
      private var deviceLocalToolsHandler: DeviceLocalToolsHandler? = null
+     private var workspacePlugin: WorkspacePlugin? = null
+    private var incomingShareHandler: IncomingShareHandler? = null
+    private var receivedShare = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        forwardCachedProcessTextLaunch(reusedEngine, savedInstanceState, intent, processTextChannel)
+        (kelivo.engine.plugins.get(FlutterLocalNotificationsPlugin::class.java) as? FlutterLocalNotificationsPlugin)?.let {
+            forwardCachedNotificationLaunch(reusedEngine, savedInstanceState, intent, it)
+        }
+        kelivo.backgroundRuntime.receiveConversation(intent)
+        receivedShare = savedInstanceState?.getBoolean("kelivo.receivedShare") == true
+        if (!receivedShare) receivedShare = incomingShareHandler?.receive(intent) == true
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("kelivo.receivedShare", receivedShare)
+        super.onSaveInstanceState(outState)
+    }
 
     override fun onFlutterSurfaceViewCreated(flutterSurfaceView: FlutterSurfaceView) {
         super.onFlutterSurfaceViewCreated(flutterSurfaceView)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            this.flutterSurfaceView = flutterSurfaceView
-            flutterSurfaceView.holder.addCallback(object : SurfaceHolder.Callback {
-                override fun surfaceCreated(holder: SurfaceHolder) {
-                    requestNativeHighRefreshRate()
-                }
-
-                override fun surfaceChanged(
-                    holder: SurfaceHolder,
-                    format: Int,
-                    width: Int,
-                    height: Int,
-                ) {
-                    requestNativeHighRefreshRate()
-                }
-
-                override fun surfaceDestroyed(holder: SurfaceHolder) = Unit
-            })
-        }
+        highRefreshRate.attach(flutterSurfaceView)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
          super.configureFlutterEngine(flutterEngine)
-         McpOAuthHandler.configure(this, flutterEngine.dartExecutor.binaryMessenger)
-         deviceLocalToolsHandler = DeviceLocalToolsHandler(this).also {
-             it.configure(flutterEngine.dartExecutor.binaryMessenger)
-         }
+        incomingShareHandler = IncomingShareHandler(this, flutterEngine.dartExecutor.binaryMessenger)
+         OAuthHandler.configure(this, flutterEngine.dartExecutor.binaryMessenger)
+         kelivo.backgroundRuntime.attachActivity(this)
+         deviceLocalToolsHandler = kelivo.deviceTools.also { it.attachActivity(this) }
+         workspacePlugin = kelivo.workspace.also { it.attachActivity(this) }
         processTextChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, processTextChannelName)
         processTextChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getInitialText" -> {
-                    val text = pendingProcessText ?: extractProcessText(intent)
+                    val text = pendingProcessText ?: takeProcessText(intent)
                     pendingProcessText = null
                     result.success(text)
                 }
@@ -112,13 +142,6 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
-        displayModeChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, displayModeChannelName)
-        displayModeChannel?.setMethodCallHandler { call, result ->
-            when (call.method) {
-                "requestHighRefreshRate" -> result.success(requestNativeHighRefreshRate())
-                else -> result.notImplemented()
-            }
-        }
         localLiteRtChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, localLiteRtChannelName)
         localLiteRtChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
@@ -126,38 +149,6 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
-        pendingProcessText = extractProcessText(intent)
-    }
-
-    private fun requestNativeHighRefreshRate(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return false
-
-        try {
-            val surface = flutterSurfaceView?.holder?.surface
-            if (surface?.isValid == true) {
-                val currentDisplay = display ?: return true
-                val activeMode = currentDisplay.mode
-                val targetRefreshRate = currentDisplay.supportedModes
-                    .asSequence()
-                    .filter {
-                        it.physicalWidth == activeMode.physicalWidth &&
-                            it.physicalHeight == activeMode.physicalHeight
-                    }
-                    .maxOfOrNull { it.refreshRate }
-                if (targetRefreshRate != null) {
-                    // Hint the actual Flutter rendering surface while leaving
-                    // mode selection, ARR, and system limits to Android.
-                    surface.setFrameRate(
-                        targetRefreshRate,
-                        Surface.FRAME_RATE_COMPATIBILITY_DEFAULT,
-                        Surface.CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS,
-                    )
-                }
-            }
-        } catch (error: RuntimeException) {
-            Log.w(TAG, "Unable to request a high refresh rate", error)
-        }
-        return true
     }
 
     /**
@@ -173,8 +164,10 @@ class MainActivity : AudioServiceActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        kelivo.backgroundRuntime.receiveConversation(intent)
         setIntent(intent)
-        val text = extractProcessText(intent) ?: return
+        receivedShare = incomingShareHandler?.receive(intent) == true
+        val text = takeProcessText(intent) ?: return
         val ch = processTextChannel
         if (ch != null) {
             ch.invokeMethod("onProcessText", text)
@@ -184,7 +177,17 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onDestroy() {
-        deviceLocalToolsHandler?.dispose()
+        deviceLocalToolsHandler?.detachActivity(this)
+        kelivo.backgroundRuntime.detachActivity(this)
+        OAuthHandler.detachActivity(this)
+        processTextChannel?.setMethodCallHandler(null)
+        fileSaveChannel?.setMethodCallHandler(null)
+        localLiteRtChannel?.setMethodCallHandler(null)
+        deviceStorageChannel?.setMethodCallHandler(null)
+        highRefreshRate.dispose()
+        pendingSaveResult?.error("cancelled", "The file picker was closed.", null)
+        pendingSaveResult = null
+        pendingSaveSourcePath = null
         val stream = pendingWritableStream
         val uri = pendingWritableUri
         if (stream != null && uri != null) {
@@ -198,14 +201,17 @@ class MainActivity : AudioServiceActivity() {
             }
         }
         writableFileExecutor.shutdown()
+        incomingShareHandler?.dispose()
+        workspacePlugin?.detachActivity(this)
         super.onDestroy()
     }
-
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
         grantResults: IntArray,
     ) {
+        if (workspacePlugin?.onRequestPermissionsResult(requestCode) == true) return
+        if (kelivo.backgroundRuntime.permissionResult(requestCode)) return
         if (deviceLocalToolsHandler?.onRequestPermissionsResult(requestCode, grantResults) == true) {
             return
         }
@@ -213,6 +219,7 @@ class MainActivity : AudioServiceActivity() {
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (workspacePlugin?.onActivityResult(requestCode, resultCode, data) == true) return
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != CREATE_DOCUMENT_REQUEST_CODE) {
             return
@@ -220,12 +227,6 @@ class MainActivity : AudioServiceActivity() {
 
         val destUri = if (resultCode == Activity.RESULT_OK) data?.data else null
         handleSaveDestination(destUri)
-    }
-
-    private fun extractProcessText(intent: Intent?): String? {
-        if (intent?.action != Intent.ACTION_PROCESS_TEXT) return null
-        val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
-        return text?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     private fun handleSaveFileFromPath(arguments: Any?, result: MethodChannel.Result) {
@@ -496,5 +497,42 @@ class MainActivity : AudioServiceActivity() {
                 }
             }
         }.start()
+    }
+}
+
+/** Cold launches are read by HomePage; a retained HomePage instead needs an
+ * event when Android creates its replacement Activity. Consume the extra so
+ * restoring that Activity or querying initial text cannot deliver it twice. */
+internal fun forwardCachedProcessTextLaunch(
+    reusedEngine: Boolean,
+    savedState: Bundle?,
+    intent: Intent,
+    channel: MethodChannel?,
+) {
+    if (reusedEngine && savedState == null && channel != null &&
+        intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) {
+        takeProcessText(intent)?.let { channel.invokeMethod("onProcessText", it) }
+    }
+}
+
+internal fun takeProcessText(intent: Intent?): String? {
+    if (intent?.action != Intent.ACTION_PROCESS_TEXT) return null
+    val text = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
+    intent.removeExtra(Intent.EXTRA_PROCESS_TEXT)
+    return text?.trim()?.takeIf { it.isNotEmpty() }
+}
+
+/** The notifications plugin queries cold launches once from Dart. A new
+ * Activity on an existing engine needs its new notification Intent forwarded,
+ * because onAttachedToActivity does not deliver a normal notification tap. */
+internal fun forwardCachedNotificationLaunch(
+    reusedEngine: Boolean,
+    savedState: Bundle?,
+    intent: Intent,
+    plugin: FlutterLocalNotificationsPlugin,
+) {
+    if (reusedEngine && savedState == null &&
+        intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY == 0) {
+        plugin.onNewIntent(intent)
     }
 }

@@ -1,3 +1,4 @@
+import 'package:Kelivo/core/models/provider_oauth.dart';
 import "support/business_test_harness.dart";
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
@@ -108,6 +109,56 @@ void main() {
       expect(find.byType(IosCheckbox), findsNothing);
     },
   );
+
+  testWidgets('provider pane can switch between OAuth and API settings', (
+    tester,
+  ) async {
+    final settings = await _buildSettings(tester);
+    addTearDown(settings.dispose);
+    await settings.setProviderConfig(
+      'Account',
+      _providerConfig('Account').copyWith(oauthProvider: OAuthProvider.chatgpt),
+    );
+    await settings.setProvidersOrder(const [
+      'ProviderA',
+      'Account',
+      'ProviderB',
+    ]);
+    await _pumpProviderSettings(tester, settings);
+    await tester.tap(find.text('Account').first);
+    await tester.pumpAndSettle();
+    expect(find.text('API Key'), findsNothing);
+    final accountSettings = find.byKey(
+      const ValueKey('desktop-provider-settings-Account'),
+    );
+    expect(accountSettings, findsOneWidget);
+    await tester.tap(accountSettings);
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-provider-settings-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text(OAuthProvider.chatgpt.baseUrl), findsOneWidget);
+    Navigator.of(
+      tester.element(
+        find.byKey(const ValueKey('desktop-provider-settings-dialog')),
+      ),
+    ).pop();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ProviderB').first);
+    await tester.pumpAndSettle();
+    expect(find.text('API Key'), findsOneWidget);
+    await tester.tap(
+      find.byKey(const ValueKey('desktop-provider-settings-ProviderB')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('desktop-provider-settings-dialog')),
+      findsOneWidget,
+    );
+    expect(find.text(OAuthProvider.chatgpt.baseUrl), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('desktop provider proxy port input preserves typed order', (
     tester,
@@ -233,4 +284,56 @@ void main() {
       {'key': 'desktop', 'value': 'true'},
     ]);
   });
+
+  testWidgets(
+    'desktop provider model rows pin action icons to a shared right edge',
+    (tester) async {
+      final settings = await _buildSettings(tester);
+      addTearDown(settings.dispose);
+      await settings.setProviderConfig(
+        'ProviderA',
+        _providerConfig('ProviderA').copyWith(
+          models: const ['wide-ctx', 'narrow-ctx'],
+          modelOverrides: const {
+            'wide-ctx': {
+              'name': 'Wide Context',
+              'type': 'chat',
+              'input': ['text', 'image'],
+              'abilities': ['tool'],
+              'contextWindow': 1000000,
+            },
+            'narrow-ctx': {
+              'name': 'Narrow Context',
+              'type': 'chat',
+              'input': ['text', 'image'],
+              'abilities': ['tool'],
+              'contextWindow': 262144,
+            },
+          },
+        ),
+      );
+      await _pumpProviderSettings(tester, settings);
+
+      expect(find.text('1M'), findsOneWidget);
+      expect(find.text('262.1k'), findsOneWidget);
+
+      final wideSettings = tester.getRect(
+        find.byKey(const ValueKey('desktop-provider-model-settings-wide-ctx')),
+      );
+      final narrowSettings = tester.getRect(
+        find.byKey(
+          const ValueKey('desktop-provider-model-settings-narrow-ctx'),
+        ),
+      );
+      final wideRemove = tester.getRect(
+        find.byKey(const ValueKey('desktop-provider-model-remove-wide-ctx')),
+      );
+      final narrowRemove = tester.getRect(
+        find.byKey(const ValueKey('desktop-provider-model-remove-narrow-ctx')),
+      );
+
+      expect(wideSettings.right, closeTo(narrowSettings.right, 0.5));
+      expect(wideRemove.right, closeTo(narrowRemove.right, 0.5));
+    },
+  );
 }

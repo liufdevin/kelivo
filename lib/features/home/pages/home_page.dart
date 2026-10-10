@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -14,6 +15,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/model_spec/model_spec_resolver.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
 import '../../../core/providers/instruction_injection_provider.dart';
@@ -23,26 +25,31 @@ import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
+import '../../../core/services/incoming_share_service.dart';
 import '../../../core/services/logging/flutter_logger.dart';
 import '../../../utils/platform_utils.dart';
 import '../../../desktop/search_provider_popover.dart';
-import '../../../desktop/reasoning_budget_popover.dart';
-import '../../../desktop/mcp_servers_popover.dart';
+import '../../../desktop/reasoning_level_popover.dart';
+import '../../../desktop/context_usage_popover.dart';
+import '../../../desktop/tools_popover.dart';
+import '../../../desktop/workspace_dialog.dart';
+import '../../../desktop/skills_popover.dart';
 import '../../../desktop/mini_map_popover.dart';
 import '../../../desktop/quick_phrase_popover.dart';
 import '../../../desktop/instruction_injection_popover.dart';
 import '../../../desktop/world_book_popover.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../chat/widgets/bottom_tools_sheet.dart';
+import '../../chat/widgets/chat_tools_sheet.dart';
+import '../../chat/utils/ensure_conversation.dart';
 import '../../chat/widgets/context_management_sheet.dart';
-import '../../chat/widgets/reasoning_budget_sheet.dart';
+import '../../chat/widgets/reasoning_level_sheet.dart';
 import '../../search/widgets/search_settings_sheet.dart';
 import '../../chat/widgets/frosted/chat_frosted_backdrop.dart';
 import '../../chat/widgets/chat_assistant_background.dart';
 import '../../model/widgets/model_select_sheet.dart';
 import '../../mcp/pages/mcp_page.dart';
 import '../../provider/pages/providers_page.dart';
-import '../../assistant/widgets/mcp_assistant_sheet.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
 import '../widgets/chat_input_bar.dart';
@@ -53,6 +60,7 @@ import '../widgets/learning_prompt_sheet.dart';
 import '../widgets/scroll_nav_buttons.dart';
 import '../widgets/message_list_view.dart';
 import '../widgets/chat_input_section.dart';
+import '../widgets/conversation_system_prompt_button.dart';
 import '../widgets/chat_input_overlay_layout.dart';
 import '../widgets/chat_selection_app_bar.dart';
 import '../widgets/chat_selection_delete_bar.dart';
@@ -77,10 +85,12 @@ class _TemporaryConversationEmptyState extends StatelessWidget {
   const _TemporaryConversationEmptyState({
     required this.topContentPadding,
     required this.bottomContentPadding,
+    this.footer,
   });
 
   final double topContentPadding;
   final double bottomContentPadding;
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +126,10 @@ class _TemporaryConversationEmptyState extends StatelessWidget {
                   fontWeight: AppFontWeights.medium,
                 ),
               ),
+              if (footer != null) ...[
+                const SizedBox(height: 16),
+                SizedBox(height: 48, child: footer),
+              ],
             ],
           ),
         ),
@@ -701,6 +715,10 @@ class _HomePageState extends State<HomePage>
   bool _scrollNavHovering = false;
   double _lastViewInsetBottom = 0;
   StreamSubscription<String>? _processTextSub;
+  IncomingShareService? _incomingShares;
+  late final Future<void> _chatReady;
+  bool _readingIncomingShares = false;
+  bool _incomingShareChanged = false;
 
   // ============================================================================
   // Page Controller (manages all business logic and state)
@@ -730,11 +748,13 @@ class _HomePageState extends State<HomePage>
       scrollController: _scrollController,
     );
 
+    _controller.onRevealConversation = () => _drawerController.jumpTo(0);
     _controller.addListener(_onControllerChanged);
     _drawerController.addListener(_onDrawerValueChanged);
 
-    _controller.initChat();
+    _chatReady = _controller.initChat();
     _initProcessText();
+    _initIncomingShares();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -749,6 +769,9 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Modal routes disable tickers only after an opaque route covers us.
+    // Keep streaming visible behind translucent dialogs and bottom sheets.
+    _controller.onHomeVisibilityChanged(TickerMode.valuesOf(context).enabled);
     final route = ModalRoute.of(context);
     if (route != null) {
       routeObserver.subscribe(this, route);
@@ -758,6 +781,7 @@ class _HomePageState extends State<HomePage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _controller.onAppLifecycleStateChanged(state);
+    if (state == AppLifecycleState.resumed) _readIncomingShares();
   }
 
   @override
@@ -786,6 +810,7 @@ class _HomePageState extends State<HomePage>
       WidgetsBinding.instance.removeObserver(this);
     } catch (_) {}
     _processTextSub?.cancel();
+    _incomingShares?.dispose();
     _controller.removeListener(_onControllerChanged);
     _drawerController.removeListener(_onDrawerValueChanged);
     _inputFocus.dispose();
@@ -829,6 +854,84 @@ class _HomePageState extends State<HomePage>
         _handleProcessText(text);
       }
     });
+  }
+
+  void _initIncomingShares() {
+    if (!PlatformUtils.isMobile) return;
+    _incomingShares = IncomingShareService()
+      ..listen(
+        onChanged: _readIncomingShares,
+        onFailed: _showIncomingShareFailure,
+      );
+    _incomingShares!.progress.addListener(() {
+      _mediaController.shareImport.value = _incomingShares!.progress.value;
+    });
+    _mediaController.cancelShareImport = () =>
+        unawaited(_incomingShares!.cancelImport());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _readIncomingShares());
+  }
+
+  void _showIncomingShareFailure() {
+    if (!mounted) return;
+    showAppSnackBar(
+      context,
+      message: AppLocalizations.of(context)!.incomingShareFailed,
+      type: NotificationType.error,
+    );
+  }
+
+  Future<void> _readIncomingShares() async {
+    final service = _incomingShares;
+    if (service == null || !mounted) return;
+    _incomingShareChanged = true;
+    if (_readingIncomingShares) return;
+    _readingIncomingShares = true;
+    try {
+      await _chatReady;
+      while (mounted && _incomingShareChanged) {
+        _incomingShareChanged = false;
+        final shares = await service.pending();
+        if (!mounted || shares.isEmpty) continue;
+        final hasContent = shares.any(
+          (share) => share.text.trim().isNotEmpty || share.files.isNotEmpty,
+        );
+        if (hasContent) {
+          final homeRoute = ModalRoute.of(context);
+          Navigator.of(
+            context,
+          ).popUntil((route) => route == homeRoute || route.isFirst);
+          _drawerController.close();
+          await WidgetsBinding.instance.endOfFrame;
+          if (!mounted) return;
+          final ChatInputData input;
+          try {
+            input = await service.prepare(shares);
+          } on ShareImportCancelled {
+            await service.acknowledge(shares);
+            continue;
+          }
+          var accepted = false;
+          try {
+            if (!mounted) return;
+            // Check the current draft at delivery time: preparing a large
+            // attachment may take long enough for the user to keep typing.
+            accepted = await _controller.acceptIncomingShareDraft(input);
+          } finally {
+            if (!accepted) await service.discardPrepared(input);
+          }
+        }
+        if (shares.any((share) => share.failedFiles > 0)) {
+          _showIncomingShareFailure();
+        }
+        await service.acknowledge(shares);
+      }
+    } on MissingPluginException {
+      // The desktop/test host does not have a mobile incoming-share inbox.
+    } catch (_) {
+      _showIncomingShareFailure();
+    } finally {
+      _readingIncomingShares = false;
+    }
   }
 
   void _handleProcessText(String text) {
@@ -981,7 +1084,7 @@ class _HomePageState extends State<HomePage>
       // (MobileBackgroundLayer); painting it again inside the body would only
       // duplicate it in a box that shrinks with the keyboard.
       topBackground: backgroundImageActive
-          ? const ChatAssistantBackground(expand: false)
+          ? const ChatAssistantBackground(expand: false, pinnedToBackdrop: true)
           : null,
       backgroundImageActive: backgroundImageActive,
       content: Builder(
@@ -1173,7 +1276,11 @@ class _HomePageState extends State<HomePage>
     return ChatInputOverlayLayout(
       topInset: _chatTopOverlayInset(context),
       topBackground: backgroundImageActive
-          ? _buildAssistantBackground(context)
+          ? const ChatAssistantBackground(
+              desktop: true,
+              includeSurfaceFill: true,
+              pinnedToBackdrop: true,
+            )
           : null,
       backgroundImageActive: backgroundImageActive,
       content: FadeTransition(
@@ -1213,7 +1320,9 @@ class _HomePageState extends State<HomePage>
                 child: Builder(
                   builder: (context) {
                     Widget input = _buildChatInputBar(context, isTablet: true);
-                    input = Center(
+                    input = Align(
+                      alignment: Alignment.bottomCenter,
+                      heightFactor: 1,
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
                           maxWidth: ChatLayoutConstants.maxInputWidth,
@@ -1238,7 +1347,6 @@ class _HomePageState extends State<HomePage>
     return const ChatAssistantBackground(
       desktop: true,
       includeSurfaceFill: true,
-      applyMaskStrength: false,
     );
   }
 
@@ -1256,18 +1364,30 @@ class _HomePageState extends State<HomePage>
     required double bottomContentPadding,
     required EdgeInsetsGeometry dividerPadding,
   }) {
+    final assistant = context.watch<AssistantProvider>().currentAssistant;
+    final footer =
+        assistant?.allowConversationSystemPrompt == true &&
+            !_controller.isCurrentConversationLoading &&
+            !_controller.selecting
+        ? ConversationSystemPromptButton(
+            assistantId: assistant!.id,
+            conversationId: _controller.currentConversation?.id,
+            backgroundImageActive: _assistantBackgroundActive(context),
+          )
+        : null;
     if (_controller.isTemporaryConversation &&
         _controller.chatController.collapsedMessages.isEmpty) {
       return _TemporaryConversationEmptyState(
         topContentPadding: topContentPadding,
         bottomContentPadding: bottomContentPadding,
+        footer: footer,
       );
     }
 
     final settings = context.watch<SettingsProvider>();
     final suggestionsEnabled = settings.isSuggestionGenerationEnabled;
-    final assistant = context.watch<AssistantProvider>().currentAssistant;
     return MessageListView(
+      footer: footer,
       processingFilesMessageId: _controller.processingFilesMessageId,
       scrollController: _scrollController,
       listController: _controller.scrollCtrl.messageListController,
@@ -1304,6 +1424,7 @@ class _HomePageState extends State<HomePage>
       collapseThinkingSteps: settings.collapseThinkingSteps,
       showThinkingCards: settings.showThinkingCards,
       showToolCards: settings.showToolCards,
+      showProducedFiles: settings.showProducedFiles,
       showToolResultSummary: settings.showToolResultSummary,
       hideToolResultImages: settings.hideToolResultImages,
       collapsedCodeLines: settings.autoCollapseCodeBlock
@@ -1402,59 +1523,63 @@ class _HomePageState extends State<HomePage>
           context,
         ).push(MaterialPageRoute(builder: (_) => const ProvidersPage()));
       },
-      onOpenMcp: () {
+      onOpenWorkspace: () {
         final a = context.read<AssistantProvider>().currentAssistant;
-        if (a != null) {
-          if (PlatformUtils.isDesktop) {
-            showDesktopMcpServersPopover(
-              context,
-              anchorKey: _inputBarKey,
-              assistantId: a.id,
-            );
-          } else {
-            showAssistantMcpSheet(context, assistantId: a.id);
-          }
+        if (PlatformUtils.isDesktop) {
+          showDesktopWorkspaceDialog(
+            context,
+            conversationListenable: _controller,
+            conversationId: () => _controller.currentConversation?.id,
+            assistantId: a?.id,
+          );
+        } else {
+          _toggleTools();
         }
       },
-      onLongPressMcp: () {
+      onOpenSkills: () async {
+        final assistant = context.read<AssistantProvider>().currentAssistant;
+        final id = await ensureConversationId(
+          context,
+          conversationId: _controller.currentConversation?.id,
+          assistantId: assistant?.id,
+        );
+        if (id == null || !context.mounted) return;
+        await showDesktopSkillsPopover(
+          context,
+          anchorKey: _inputBarKey,
+          conversationId: id,
+          assistant: assistant,
+        );
+      },
+      onOpenTools: () {
+        final a = context.read<AssistantProvider>().currentAssistant;
+        if (a == null) return;
+        if (PlatformUtils.isDesktop) {
+          showDesktopToolsPopover(
+            context,
+            anchorKey: _inputBarKey,
+            assistantId: a.id,
+          );
+        } else {
+          _controller.dismissKeyboard();
+          showChatToolsSheet(
+            context,
+            assistantId: a.id,
+            conversationId: _controller.currentConversation?.id,
+          );
+        }
+      },
+      onLongPressTools: () {
         Navigator.of(
           context,
         ).push(MaterialPageRoute(builder: (_) => const McpPage()));
       },
       onOpenSearch: _openSearchSettings,
       onConfigureReasoning: () async {
-        final assistantProvider = context.read<AssistantProvider>();
-        final settingsProvider = context.read<SettingsProvider>();
-        final assistant = assistantProvider.currentAssistant;
-        if (assistant == null) return;
-        if (PlatformUtils.isDesktop) {
-          // Desktop popover keeps the legacy global-settings sync flow.
-          if (assistant.thinkingBudget != null) {
-            settingsProvider.setThinkingBudget(assistant.thinkingBudget);
-          }
-          await _openReasoningSettings();
-          if (!mounted) return;
-          final chosen = settingsProvider.thinkingBudget;
-          await assistantProvider.updateAssistant(
-            assistant.copyWith(thinkingBudget: chosen),
-          );
-          return;
-        }
-        // Mobile: seed the sheet via initialBudget instead of pre-writing
-        // global settings. setThinkingBudget notifies synchronously and would
-        // rebuild the home page (message list, input bar, drawer) on the
-        // first frames of the sheet's entrance animation, dropping frames.
-        int? chosen;
-        await _openReasoningSettings(
-          initialBudget: assistant.thinkingBudget,
-          onChanged: (v) => chosen = v,
-        );
-        if (!mounted) return;
-        if (chosen != null && chosen != assistant.thinkingBudget) {
-          await assistantProvider.updateAssistant(
-            assistant.copyWith(thinkingBudget: chosen),
-          );
-        }
+        await _openReasoningSettings();
+      },
+      onOpenContextUsage: () async {
+        await _openContextUsagePopover();
       },
       onSend: (text) async {
         final result = await _controller.sendMessage(text);
@@ -1469,6 +1594,7 @@ class _HomePageState extends State<HomePage>
       hasQueuedInput: _controller.currentQueuedInput != null,
       queuedPreviewText: _controller.currentQueuedInput?.input.text,
       onCancelQueuedInput: _controller.cancelQueuedMessage,
+      onExpandedChanged: _controller.setInputBarExpanded,
       onQuickPhrase: _showQuickPhraseMenu,
       onLongPressQuickPhrase: () {
         Navigator.of(
@@ -1698,25 +1824,42 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  Future<void> _openReasoningSettings({
-    int? initialBudget,
-    ValueChanged<int>? onChanged,
-  }) async {
+  Future<void> _openContextUsagePopover() async {
+    final conversationId = _controller.currentConversation?.id;
+    if (conversationId == null || conversationId.isEmpty) return;
+    await showContextUsagePopover(
+      context,
+      anchorKey: _inputBarKey,
+      conversationId: conversationId,
+      draftText: _inputController.text,
+    );
+  }
+
+  Future<void> _openReasoningSettings() async {
     final model = _resolvedChatModel();
+    final providerKey = model.providerKey;
+    final modelId = model.modelId;
+    if (providerKey == null || modelId == null) return;
+    final settings = context.read<SettingsProvider>();
+    final config = settings.getProviderConfig(providerKey);
+    if (!ModelSpecResolver.instance.spec(config, modelId).supportsReasoning) {
+      return;
+    }
+    final assistant = context.read<AssistantProvider>().currentAssistant;
     if (PlatformUtils.isDesktop) {
-      await showDesktopReasoningBudgetPopover(
+      await showDesktopReasoningLevelPopover(
         context,
         anchorKey: _inputBarKey,
-        modelProvider: model.providerKey,
-        modelId: model.modelId,
+        config: config,
+        modelId: modelId,
+        assistant: assistant,
       );
     } else {
-      await showReasoningBudgetSheet(
+      await showReasoningLevelSheet(
         context,
-        modelProvider: model.providerKey,
-        modelId: model.modelId,
-        initialBudget: initialBudget,
-        onChanged: onChanged,
+        config: config,
+        modelId: modelId,
+        assistant: assistant,
       );
     }
   }
@@ -1730,15 +1873,34 @@ class _HomePageState extends State<HomePage>
     final items = provider.items;
     if (items.isEmpty) return;
 
+    final scoped =
+        context
+            .read<AssistantProvider>()
+            .currentAssistant
+            ?.allowConversationPromptInjection ??
+        false;
+    final scopeId = scoped
+        ? await ensureConversationId(
+            context,
+            conversationId: _controller.currentConversation?.id,
+            assistantId: assistantId,
+          )
+        : null;
+    if (!mounted || (scoped && scopeId == null)) return;
     if (isDesktop) {
       await showDesktopInstructionInjectionPopover(
         context,
         anchorKey: _inputBarKey,
         items: items,
         assistantId: assistantId,
+        conversationId: scopeId,
       );
     } else {
-      await showInstructionInjectionSheet(context, assistantId: assistantId);
+      await showInstructionInjectionSheet(
+        context,
+        assistantId: assistantId,
+        conversationId: scopeId,
+      );
     }
   }
 
@@ -1751,15 +1913,34 @@ class _HomePageState extends State<HomePage>
     final books = provider.books;
     if (books.isEmpty) return;
 
+    final scoped =
+        context
+            .read<AssistantProvider>()
+            .currentAssistant
+            ?.allowConversationPromptInjection ??
+        false;
+    final scopeId = scoped
+        ? await ensureConversationId(
+            context,
+            conversationId: _controller.currentConversation?.id,
+            assistantId: assistantId,
+          )
+        : null;
+    if (!mounted || (scoped && scopeId == null)) return;
     if (isDesktop) {
       await showDesktopWorldBookPopover(
         context,
         anchorKey: _inputBarKey,
         books: books,
         assistantId: assistantId,
+        conversationId: scopeId,
       );
     } else {
-      await showWorldBookSheet(context, assistantId: assistantId);
+      await showWorldBookSheet(
+        context,
+        assistantId: assistantId,
+        conversationId: scopeId,
+      );
     }
   }
 
@@ -1778,27 +1959,34 @@ class _HomePageState extends State<HomePage>
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: BottomToolsSheet(
-            onPhotos: () {
-              Navigator.of(ctx).maybePop();
-              _controller.onPickPhotos();
-            },
-            onCamera: () {
-              Navigator.of(ctx).maybePop();
-              _controller.onPickCamera();
-            },
-            onUpload: () {
-              Navigator.of(ctx).maybePop();
-              _controller.onPickFiles();
-            },
-            onClear: () async {
-              await Navigator.of(ctx).maybePop();
-              _showContextManagementSheet();
-            },
-            assistantId: assistantId,
-          ),
+        return ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            return SafeArea(
+              top: false,
+              child: BottomToolsSheet(
+                onPhotos: () {
+                  Navigator.of(ctx).maybePop();
+                  _controller.onPickPhotos();
+                },
+                onCamera: () {
+                  Navigator.of(ctx).maybePop();
+                  _controller.onPickCamera();
+                },
+                onUpload: () {
+                  Navigator.of(ctx).maybePop();
+                  _controller.onPickFiles();
+                },
+                onClear: () async {
+                  await Navigator.of(ctx).maybePop();
+                  _showContextManagementSheet();
+                },
+                assistantId: assistantId,
+                conversationId: _controller.currentConversation?.id,
+                onClose: () => Navigator.of(ctx).maybePop(),
+              ),
+            );
+          },
         );
       },
     );
@@ -1816,7 +2004,9 @@ class _HomePageState extends State<HomePage>
         return SafeArea(
           top: false,
           child: ContextManagementSheet(
-            clearLabel: _controller.clearContextLabel(),
+            conversationId: _controller.currentConversation?.id,
+            draftText: _inputController.text,
+            messageCountLabel: _controller.contextMessageCountLabel(),
             onCompress: () async {
               await Navigator.of(ctx).maybePop();
               if (!mounted) return;

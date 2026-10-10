@@ -10,7 +10,6 @@ class _BasicSettingsTab extends StatefulWidget {
 
 class _BasicSettingsTabState extends State<_BasicSettingsTab> {
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _thinkingCtrl;
   late final TextEditingController _maxTokensCtrl;
   late final TextEditingController _backgroundCtrl;
 
@@ -20,9 +19,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
     final ap = context.read<AssistantProvider>();
     final a = ap.getById(widget.assistantId)!;
     _nameCtrl = TextEditingController(text: a.name);
-    _thinkingCtrl = TextEditingController(
-      text: a.thinkingBudget?.toString() ?? '',
-    );
     _maxTokensCtrl = TextEditingController(text: a.maxTokens?.toString() ?? '');
     _backgroundCtrl = TextEditingController(text: a.background ?? '');
   }
@@ -34,7 +30,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
       final ap = context.read<AssistantProvider>();
       final a = ap.getById(widget.assistantId)!;
       _nameCtrl.text = a.name;
-      _thinkingCtrl.text = a.thinkingBudget?.toString() ?? '';
       _maxTokensCtrl.text = a.maxTokens?.toString() ?? '';
       _backgroundCtrl.text = a.background ?? '';
     }
@@ -43,7 +38,6 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _thinkingCtrl.dispose();
     _maxTokensCtrl.dispose();
     _backgroundCtrl.dispose();
     super.dispose();
@@ -193,31 +187,28 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                 onTap: () => _showContextMessagesSheet(context, a),
               ),
               _iosDivider(context),
-              // Thinking budget
+              // Thinking / reasoning default
               _iosNavRow(
                 context,
                 icon: Lucide.Brain,
                 label: l10n.assistantEditThinkingBudgetTitle,
-                detailText: a.thinkingBudget?.toString() ?? '-',
+                tip: l10n.assistantEditReasoningClampedSubtitle,
+                detailText: a.reasoning == null
+                    ? l10n.assistantEditReasoningFollowDefault
+                    : reasoningLevelLabel(l10n, a.reasoning!.level),
                 onTap: () async {
                   final assistantProvider = context.read<AssistantProvider>();
-                  // Seed via initialBudget instead of pre-writing global
-                  // settings: the synchronous notify would rebuild the page
-                  // during the sheet's entrance animation.
-                  int? chosen;
-                  await showReasoningBudgetSheet(
+                  final picked = await showAssistantReasoningPicker(
                     context,
-                    modelProvider: a.chatModelProvider,
-                    modelId: a.chatModelId,
-                    initialBudget: a.thinkingBudget,
-                    onChanged: (v) => chosen = v,
+                    current: a.reasoning,
                   );
-                  if (!context.mounted) return;
-                  if (chosen != null && chosen != a.thinkingBudget) {
-                    await assistantProvider.updateAssistant(
-                      a.copyWith(thinkingBudget: chosen),
-                    );
-                  }
+                  if (!context.mounted || picked == null) return;
+                  if (picked.request == a.reasoning) return;
+                  await assistantProvider.updateAssistant(
+                    picked.request == null
+                        ? a.copyWith(clearReasoning: true)
+                        : a.copyWith(reasoning: picked.request),
+                  );
                 },
               ),
               _iosDivider(context),
@@ -230,6 +221,8 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                     a.maxTokens?.toString() ?? l10n.assistantEditMaxTokensHint,
                 onTap: () => _showMaxTokensSheet(context, a),
               ),
+              _iosDivider(context),
+              AssistantDefaultWorkspaceRow(assistantId: widget.assistantId),
               _iosDivider(context),
               // Use assistant avatar
               _iosSwitchRow(
@@ -535,99 +528,104 @@ class _BasicSettingsTabState extends State<_BasicSettingsTab> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                l10n.assistantEditChatBackgroundDescription,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: cs.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
               const SizedBox(height: 8),
-              if ((a.background ?? '').isEmpty) ...[
-                // Single button when no background (full width)
-                _TactileRow(
-                  onTap: () => _pickBackground(context, a),
-                  pressedScale: 0.98,
-                  builder: (pressed) {
-                    final bg = context.appColors.surfaceFill;
-                    final overlay = cs.onSurface.withValues(
-                      alpha: isDark ? 0.06 : 0.05,
-                    );
-                    final pressedBg = Color.alphaBlend(overlay, bg);
-                    final iconColor = cs.onSurface.withValues(alpha: 0.75);
-                    final textColor = cs.onSurface.withValues(alpha: 0.9);
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      curve: Curves.easeOutCubic,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: pressed ? pressedBg : bg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: cs.outlineVariant.withValues(alpha: 0.35),
+              AssistantGradientSettings(assistant: a),
+              if (!a.useGradientBackground) ...[
+                const SizedBox(height: 6),
+                Text(
+                  l10n.assistantEditChatBackgroundDescription,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if ((a.background ?? '').isEmpty) ...[
+                  // Single button when no background (full width)
+                  _TactileRow(
+                    onTap: () => _pickBackground(context, a),
+                    pressedScale: 0.98,
+                    builder: (pressed) {
+                      final bg = context.appColors.surfaceFill;
+                      final overlay = cs.onSurface.withValues(
+                        alpha: isDark ? 0.06 : 0.05,
+                      );
+                      final pressedBg = Color.alphaBlend(overlay, bg);
+                      final iconColor = cs.onSurface.withValues(alpha: 0.75);
+                      final textColor = cs.onSurface.withValues(alpha: 0.9);
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutCubic,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pressed ? pressedBg : bg,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: cs.outlineVariant.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                left: 2.0,
+                              ), // Material icon spacing
+                              child: Icon(
+                                Icons.image,
+                                size: 18,
+                                color: iconColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              l10n.assistantEditChooseImageButton,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: AppFontWeights.semibold,
+                                color: textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ] else ...[
+                  // Two buttons when background exists
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _IosButton(
+                          label: l10n.assistantEditChooseImageButton,
+                          icon: Icons.image,
+                          onTap: () => _pickBackground(context, a),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(
-                              left: 2.0,
-                            ), // Material icon spacing
-                            child: Icon(
-                              Icons.image,
-                              size: 18,
-                              color: iconColor,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.assistantEditChooseImageButton,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: AppFontWeights.semibold,
-                              color: textColor,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _IosButton(
+                          label: l10n.assistantEditClearButton,
+                          icon: Lucide.X,
+                          onTap: () =>
+                              context.read<AssistantProvider>().updateAssistant(
+                                a.copyWith(clearBackground: true),
+                              ),
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ] else ...[
-                // Two buttons when background exists
-                Row(
-                  children: [
-                    Expanded(
-                      child: _IosButton(
-                        label: l10n.assistantEditChooseImageButton,
-                        icon: Icons.image,
-                        onTap: () => _pickBackground(context, a),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _IosButton(
-                        label: l10n.assistantEditClearButton,
-                        icon: Lucide.X,
-                        onTap: () => context
-                            .read<AssistantProvider>()
-                            .updateAssistant(a.copyWith(clearBackground: true)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              if ((a.background ?? '').isNotEmpty) ...[
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: _BackgroundPreview(path: a.background!),
-                ),
+                    ],
+                  ),
+                ],
+                if ((a.background ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: _BackgroundPreview(path: a.background!),
+                  ),
+                ],
               ],
             ],
           ),

@@ -5,47 +5,29 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
+import '../../custom_request_merger.dart';
+import '../../../models/model_spec.dart';
 import '../../../models/token_usage.dart';
 import '../../../providers/settings_provider.dart';
 import '../../../utils/multimodal_input_utils.dart';
 import '../../../../utils/app_directories.dart';
 import '../../../../utils/sandbox_path_resolver.dart';
+import '../../model_spec/model_spec_resolver.dart';
 import '../chat_api_helpers.dart';
 import '../stream/stream_chunk.dart';
 import '../stream/stream_chunk_emit.dart';
 import '../stream/stream_chunk_ids.dart';
 
 bool shouldUseOpenAIImagesApi(ProviderConfig config, String modelId) {
-  final upstreamModelId = apiModelId(config, modelId).toLowerCase();
-  return _supportsOpenAIImageGenerations(upstreamModelId);
+  return ModelSpecResolver.instance.spec(config, modelId).type ==
+      ModelType.image;
 }
 
-bool _supportsOpenAIImageGenerations(String modelId) {
-  final normalized = modelId.toLowerCase();
-  return normalized.startsWith('gpt-image-') ||
-      normalized.startsWith('chatgpt-image-') ||
-      normalized.startsWith('agnes-image-') ||
-      _isGrokImageModelAlias(normalized) ||
-      normalized == 'sensenova-u1-fast' ||
-      normalized == 'dall-e-2' ||
-      normalized == 'dall-e-3';
-}
-
-bool _supportsOpenAIImageEdits(String modelId) {
-  final normalized = modelId.toLowerCase();
-  return normalized.startsWith('gpt-image-') ||
-      normalized.startsWith('chatgpt-image-') ||
-      _isGrokImageModelAlias(normalized) ||
-      normalized == 'dall-e-2';
-}
-
-bool _isGrokImageModelAlias(String normalizedModelId) {
-  final tokens = normalizedModelId
-      .split(RegExp(r'[^a-z0-9]+'))
-      .where((token) => token.isNotEmpty)
-      .toSet();
-  return tokens.contains('grok') &&
-      (tokens.contains('image') || tokens.contains('imagine'));
+bool _supportsOpenAIImageEdits(ProviderConfig config, String modelId) {
+  return ModelSpecResolver.instance
+      .spec(config, modelId)
+      .input
+      .contains(Modality.image);
 }
 
 bool _isXAiImagesProvider(ProviderConfig config) {
@@ -77,7 +59,7 @@ Stream<StreamChunk> sendOpenAIImagesStream(
   final outputMime = _openAIImagesOutputMime(config, modelId, extraBody);
   final upstreamModelId = apiModelId(config, modelId);
   if (input.imageRefs.isNotEmpty &&
-      !_supportsOpenAIImageEdits(upstreamModelId)) {
+      !_supportsOpenAIImageEdits(config, modelId)) {
     throw UnsupportedError(
       'OpenAI Images API model $upstreamModelId does not support image edits with input images.',
     );
@@ -480,7 +462,7 @@ Future<http.MultipartFile?> _tryOpenAIImageMultipartFile(ImageRef ref) async {
     final mime = (ref.mime != null && ref.mime!.trim().isNotEmpty)
         ? ref.mime!.trim()
         : mimeFromPath(fixed);
-    return http.MultipartFile.fromPath(
+    return await http.MultipartFile.fromPath(
       'image[]',
       fixed,
       contentType: _openAIImageMediaType(mime),
@@ -542,7 +524,7 @@ void _applyOpenAIImagesExtraBody(
   Map<String, dynamic>? extraBody,
 ) {
   final custom = customBody(config, modelId, assistantBody: extraBody);
-  if (custom.isNotEmpty) body.addAll(custom);
+  CustomRequestMerger.applyBody(body, custom);
 }
 
 String _openAIImagesOutputMime(

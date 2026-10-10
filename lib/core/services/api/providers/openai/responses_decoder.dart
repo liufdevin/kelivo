@@ -5,6 +5,7 @@ import '../../stream/sse_event.dart';
 import '../../stream/stream_chunk.dart';
 import '../../stream/stream_chunk_decoder.dart';
 import '../../stream/stream_chunk_ids.dart';
+import 'openai_request_shaping.dart';
 
 class ResponsesFunctionCall {
   ResponsesFunctionCall({
@@ -65,10 +66,7 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
   final StreamChunkIds _ids;
   TokenUsage? _round;
 
-  TokenUsage? get usage {
-    if (_round == null) return initialUsage;
-    return (initialUsage ?? const TokenUsage()).merge(_round!);
-  }
+  TokenUsage? get usage => _round?.asSnapshot() ?? initialUsage;
 
   bool completed = false;
   int approxCompletionChars = 0;
@@ -178,13 +176,27 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
     return _closeOpenSeries();
   }
 
+  /// Text series id for one `message` output item.
+  ///
+  /// A hosted tool (built-in search) can split one response into several
+  /// `message` items. A sticky id merges them all into the first [TextPart],
+  /// so the tool card lands after the whole answer instead of between the two
+  /// halves it actually interrupted. Keying on `output_index` keeps each item
+  /// its own part, and the parts stay in arrival order.
+  String _textSeriesId(Map<String, dynamic> obj) =>
+      _ids.indexed('text', _readInt(obj['output_index']));
+
+  /// Reasoning series id for one `reasoning` output item. See [_textSeriesId].
+  String _reasoningSeriesId(Map<String, dynamic> obj) =>
+      _ids.indexed('reasoning', _readInt(obj['output_index']));
+
   void _parseEvent(Map<String, dynamic> obj, List<StreamChunk> chunks) {
     final type = obj['type'];
     if (type == 'response.output_text.delta') {
       final delta = obj['delta'];
       if (delta is String && delta.isNotEmpty) {
         approxCompletionChars += delta.length;
-        chunks.add(TextDelta(id: _ids.text(), text: delta));
+        chunks.add(TextDelta(id: _textSeriesId(obj), text: delta));
       }
       return;
     }
@@ -192,7 +204,7 @@ class ResponsesStreamDecoder implements StreamChunkDecoder {
         type == 'response.reasoning_text.delta') {
       final delta = obj['delta'];
       if (delta is String && delta.isNotEmpty) {
-        chunks.add(ReasoningDelta(id: _ids.reasoning(), text: delta));
+        chunks.add(ReasoningDelta(id: _reasoningSeriesId(obj), text: delta));
       }
       return;
     }
@@ -733,21 +745,7 @@ bool _isImageGenerationType(dynamic type) {
 }
 
 TokenUsage? _mergeUsage(TokenUsage? current, dynamic rawUsage) {
-  if (rawUsage is! Map) return current;
-  final details =
-      rawUsage['prompt_tokens_details'] ?? rawUsage['input_tokens_details'];
-  final cachedTokens = details is Map ? _readInt(details['cached_tokens']) : 0;
-  return (current ?? const TokenUsage()).merge(
-    TokenUsage(
-      promptTokens: _readInt(
-        rawUsage['prompt_tokens'] ?? rawUsage['input_tokens'],
-      ),
-      completionTokens: _readInt(
-        rawUsage['completion_tokens'] ?? rawUsage['output_tokens'],
-      ),
-      cachedTokens: cachedTokens,
-    ),
-  );
+  return mergeOpenAICompatibleUsage(current, rawUsage);
 }
 
 int _readInt(dynamic value) {

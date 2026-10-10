@@ -40,6 +40,13 @@ class WorldBookProvider with ChangeNotifier {
   bool isBookActive(String id, {String? assistantId}) =>
       activeBookIdsFor(assistantId).contains(id);
 
+  List<WorldBook> activeBooksFor(String? assistantId, {List<String>? bookIds}) {
+    final ids = (bookIds ?? activeBookIdsFor(assistantId)).toSet();
+    return _books
+        .where((book) => book.enabled && ids.contains(book.id))
+        .toList(growable: false);
+  }
+
   bool isBookCollapsed(String id) => _collapsedBooks[id] ?? false;
 
   Future<void> initialize() {
@@ -112,6 +119,25 @@ class WorldBookProvider with ChangeNotifier {
   Future<void> deleteBook(String id) async {
     await _store.delete(id);
     await loadAll();
+  }
+
+  Future<void> setEntryEnabled(
+    String bookId,
+    String entryId,
+    bool enabled,
+  ) async {
+    final index = _books.indexWhere((book) => book.id == bookId);
+    if (index < 0) return;
+    final book = _books[index];
+    final next = book.copyWith(
+      entries: [
+        for (final entry in book.entries)
+          entry.id == entryId ? entry.copyWith(enabled: enabled) : entry,
+      ],
+    );
+    _books = List<WorldBook>.from(_books)..[index] = next;
+    notifyListeners();
+    await _store.save(_books);
   }
 
   Future<void> clear() async {

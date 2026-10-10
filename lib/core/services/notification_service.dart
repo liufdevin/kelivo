@@ -17,9 +17,23 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static final StreamController<String> _conversationTapController =
       StreamController<String>.broadcast();
+  static final StreamController<String> _scheduledRunTapController =
+      StreamController<String>.broadcast();
+  static String? _pendingScheduledRunId;
+  static Stream<String> get scheduledRunTaps =>
+      _scheduledRunTapController.stream;
+  static String? takePendingScheduledRunId() {
+    final id = _pendingScheduledRunId;
+    _pendingScheduledRunId = null;
+    return id;
+  }
+
   static bool _inited = false;
   static Future<void>? _initialization;
   static String? _pendingConversationId;
+  static final Map<String, String> _pendingMessageIds = {};
+  static String? takePendingMessageId(String conversationId) =>
+      _pendingMessageIds.remove(conversationId);
   static const String _chatCompletionPayloadPrefix = 'chat-complete:';
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'kelivo_bg_chat_v2',
@@ -40,7 +54,7 @@ class NotificationService {
   }
 
   static Future<void> ensureInitialized() async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     if (_inited) return;
     final existing = _initialization;
     if (existing != null) {
@@ -62,9 +76,14 @@ class NotificationService {
   static Future<void> _initializeAndroid() async {
     // Android initialization
     const AndroidInitializationSettings androidInit =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_background_generation');
     const InitializationSettings init = InitializationSettings(
       android: androidInit,
+      iOS: DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      ),
     );
     await _plugin.initialize(
       init,
@@ -96,6 +115,7 @@ class NotificationService {
   /// Ensure Android 13+ notifications permission is granted (no-op on lower versions/other platforms).
   static Future<bool> ensureAndroidNotificationsPermission() async {
     if (!Platform.isAndroid) return true;
+    await ensureInitialized();
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -118,7 +138,7 @@ class NotificationService {
     String? title,
     String? body,
   }) async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     if (conversationId.trim().isEmpty) return;
     await ensureInitialized();
     await _plugin.show(
@@ -137,7 +157,14 @@ class NotificationService {
           category: AndroidNotificationCategory.message,
           visibility: NotificationVisibility.public,
           ticker: 'Kelivo',
-          styleInformation: const DefaultStyleInformation(true, true),
+          styleInformation: BigTextStyleInformation(
+            body ?? 'Assistant reply has been generated',
+          ),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentSound: true,
+          threadIdentifier: 'kelivo.chat-completion',
         ),
       ),
       payload: '$_chatCompletionPayloadPrefix$conversationId',
@@ -145,8 +172,25 @@ class NotificationService {
   }
 
   static void _handleNotificationResponse(NotificationResponse response) {
+    final runId = scheduledRunIdFromPayload(response.payload);
+    if (runId != null) {
+      if (_scheduledRunTapController.hasListener) {
+        _scheduledRunTapController.add(runId);
+      } else {
+        _pendingScheduledRunId = runId;
+      }
+      return;
+    }
     final conversationId = conversationIdFromPayload(response.payload);
     if (conversationId == null) return;
+    openConversation(conversationId);
+  }
+
+  /// Also receives taps from the native ongoing notification, overlay and
+  /// ActivityKit. Keep the target until the home route has initialized.
+  static void openConversation(String conversationId, {String? messageId}) {
+    if (messageId != null) _pendingMessageIds[conversationId] = messageId;
+    if (conversationId.trim().isEmpty) return;
     if (_conversationTapController.hasListener) {
       _conversationTapController.add(conversationId);
     } else {
@@ -165,6 +209,14 @@ class NotificationService {
     return conversationId.isEmpty ? null : conversationId;
   }
 
+  @visibleForTesting
+  static String? scheduledRunIdFromPayload(String? payload) {
+    const prefix = 'scheduled-task:';
+    if (payload == null || !payload.startsWith(prefix)) return null;
+    final id = payload.substring(prefix.length).trim();
+    return id.isEmpty ? null : id;
+  }
+
   /// Stable per-conversation IDs let notifications from different chats
   /// coexist while a later completion in the same chat replaces the old one.
   @visibleForTesting
@@ -176,16 +228,5 @@ class NotificationService {
     const firstChatNotificationId = 10000;
     return firstChatNotificationId +
         (hash % (0x7fffffff - firstChatNotificationId));
-  }
-
-  static bool shouldShowChatCompleted({
-    required bool isAndroid,
-    required bool notifyModeEnabled,
-    required bool appInForeground,
-    required bool homeRouteVisible,
-    required bool isCurrentConversation,
-  }) {
-    if (!isAndroid || !notifyModeEnabled) return false;
-    return !(appInForeground && homeRouteVisible && isCurrentConversation);
   }
 }

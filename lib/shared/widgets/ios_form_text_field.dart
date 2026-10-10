@@ -18,11 +18,14 @@ class IosFormTextField extends StatelessWidget {
     this.autofocus = false,
     this.enabled = true,
     this.onChanged,
+    this.onSubmitted,
     this.selectAllOnFocus = false,
     this.cursorToEndOnFocus = false,
     this.cursorToEndOnTap = false,
     this.textInputAction,
     this.textCapitalization = TextCapitalization.none,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
   });
 
   final String label;
@@ -38,11 +41,14 @@ class IosFormTextField extends StatelessWidget {
   final bool autofocus;
   final bool enabled;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final bool selectAllOnFocus;
   final bool cursorToEndOnFocus;
   final bool cursorToEndOnTap;
   final TextInputAction? textInputAction;
   final TextCapitalization textCapitalization;
+  final bool autocorrect;
+  final bool enableSuggestions;
 
   bool get _useInlineLabel => inlineLabel ?? (maxLines == 1);
 
@@ -92,7 +98,12 @@ class IosFormTextField extends StatelessWidget {
           : TextAlignVertical.top,
       textInputAction: textInputAction,
       textCapitalization: textCapitalization,
+      autocorrect: autocorrect,
+      smartDashesType: autocorrect ? null : SmartDashesType.disabled,
+      smartQuotesType: autocorrect ? null : SmartQuotesType.disabled,
+      enableSuggestions: enableSuggestions,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
       onTap: cursorToEndOnTap
           ? () {
               WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -106,19 +117,30 @@ class IosFormTextField extends StatelessWidget {
         fontSize: 15,
         fontWeight: AppFontWeights.medium,
         color: valueColor,
-        height: maxLines > 1 ? 1.25 : 1.15,
+        height: maxLines > 1 ? 1.25 : 1.0,
       ),
+      strutStyle: maxLines == 1
+          ? const StrutStyle(
+              fontSize: 15,
+              height: 1.0,
+              leading: 0,
+              forceStrutHeight: true,
+            )
+          : null,
       decoration: InputDecoration(
         isDense: true,
-        isCollapsed: true,
+        isCollapsed: maxLines > 1,
         hintText: hintText,
         hintStyle: TextStyle(
           fontSize: 15,
           fontWeight: AppFontWeights.medium,
           color: hintColor,
+          height: maxLines > 1 ? 1.25 : 1.0,
         ),
         border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
+        contentPadding: maxLines == 1
+            ? const EdgeInsets.symmetric(vertical: 10)
+            : EdgeInsets.zero,
       ),
     );
 
@@ -158,10 +180,7 @@ class IosFormTextField extends StatelessWidget {
           color: enabled ? fieldBg : fieldBg.withValues(alpha: 0.55),
           borderRadius: BorderRadius.circular(10),
         ),
-        padding: EdgeInsets.symmetric(
-          horizontal: fieldHorizontalPadding,
-          vertical: 9,
-        ),
+        padding: EdgeInsets.symmetric(horizontal: fieldHorizontalPadding),
         child: field,
       );
       return Padding(
@@ -191,7 +210,7 @@ class IosFormTextField extends StatelessWidget {
       ),
       padding: EdgeInsets.symmetric(
         horizontal: 12,
-        vertical: maxLines > 1 ? 12 : 9,
+        vertical: maxLines > 1 ? 12 : 0,
       ),
       child: field,
     );
