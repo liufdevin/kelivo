@@ -1,3 +1,5 @@
+import 'composer_draft.dart' show DraftSubmission;
+
 class DocumentAttachment {
   final String path; // absolute file path
   final String fileName;
@@ -16,6 +18,7 @@ class ChatInputData {
   final List<DocumentAttachment> documents; // selected files
   final bool generateImage; // route this submission to the image model
   final bool allowImagesApiRouting;
+  final DraftSubmission? draftSubmission;
 
   const ChatInputData({
     required this.text,
@@ -23,6 +26,7 @@ class ChatInputData {
     this.documents = const [],
     this.generateImage = false,
     this.allowImagesApiRouting = true,
+    this.draftSubmission,
   });
 }
 

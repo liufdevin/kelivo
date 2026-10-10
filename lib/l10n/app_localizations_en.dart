@@ -1605,6 +1605,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupPageFilesLabel => 'Files';
 
   @override
+  String get backupPageScopeTitle => 'Backup and import content';
+
+  @override
+  String backupPageScopeSelectedCount(int selected, int total) {
+    return '$selected/$total';
+  }
+
+  @override
+  String get backupPageBackupManagementDescription =>
+      'Choose what to back up and import. Applies to local, WebDAV and S3 backups. Unselected content stays unchanged on import. Skills and workspaces include their own files.';
+
+  @override
+  String get backupPageAssistantsLabel => 'Assistants';
+
+  @override
+  String get backupPageProvidersLabel => 'Providers';
+
+  @override
+  String get backupPageMcpLabel => 'MCP servers';
+
+  @override
+  String get backupPageEnvironmentVariablesLabel => 'Environment variables';
+
+  @override
+  String get backupPageSkillsLabel => 'Skills';
+
+  @override
+  String get backupPageWorldBooksLabel => 'World books';
+
+  @override
+  String get backupPageMemoriesLabel => 'Memories';
+
+  @override
+  String get backupPageQuickPhrasesLabel => 'Quick phrases';
+
+  @override
+  String get backupPageInstructionsLabel => 'Prompt injections';
+
+  @override
+  String get backupPageWorkspacesLabel => 'Workspaces';
+
+  @override
+  String get backupPageSearchServicesLabel => 'Search services';
+
+  @override
+  String get backupPageSpeechServicesLabel => 'Speech services';
+
+  @override
+  String get backupPageSettingsLabel => 'Other settings';
+
+  @override
   String get backupPageTestDone => 'Test done';
 
   @override
@@ -1896,14 +1947,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupPageSelectImportModeDescription =>
-      'Choose a restore mode. The chat and file switches determine which components are included.';
+      'Choose a restore mode. The switches in Backup Management apply to this import.';
 
   @override
   String get backupPageOverwriteMode => 'Complete Overwrite';
 
   @override
   String get backupPageOverwriteModeDescription =>
-      'Replace the selected components; keep unselected components and unrelated local settings';
+      'Replace the selected components; keep unselected components and unrelated local settings. Replacing chats also clears local unsent drafts.';
 
   @override
   String get backupPageMergeMode => 'Merge';
@@ -1947,6 +1998,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupProgressCancelled => 'Cancelled';
+
+  @override
+  String get backupProgressFailed => 'Operation failed';
+
+  @override
+  String backupProgressFailedAt(String phase) {
+    return 'Failed during: $phase';
+  }
+
+  @override
+  String get backupProgressCopyError => 'Copy error';
+
+  @override
+  String get backupProgressErrorCopied => 'Error copied';
 
   @override
   String get backupProgressPreparing => 'Preparing';
@@ -2616,6 +2681,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String chatMessageWidgetWebFetch(String target) {
+    return 'Read page: $target';
+  }
+
+  @override
   String get chatMessageWidgetBuiltinSearch => 'Built-in Search';
 
   @override
@@ -3154,6 +3224,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatInputBarVoiceTranscribing => 'Recognizing…';
+
+  @override
+  String get chatInputBarVoiceAttachAudioTooltip => 'Stop and attach as audio';
+
+  @override
+  String get chatInputBarVoiceSendAudioTooltip => 'Send recording';
+
+  @override
+  String get chatInputBarVoiceSavingAudio => 'Saving audio…';
+
+  @override
+  String get audioClipPlayTooltip => 'Play audio';
+
+  @override
+  String get audioClipPauseTooltip => 'Pause';
+
+  @override
+  String get audioClipPlaybackFailed => 'Couldn\'t play this audio';
 
   @override
   String get chatInputBarImageProcessing => 'Processing image';
@@ -4151,6 +4239,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get providerDetailPageResponseApiTitle => 'Response API (/responses)';
 
   @override
+  String get providerDetailPagePromptCacheKeyTitle =>
+      'Send Conversation Cache Key';
+
+  @override
+  String get providerDetailPagePromptCacheKeyHelp =>
+      'Adds a stable prompt_cache_key for each conversation to OpenAI-compatible requests. Enable only if your provider supports it. Custom Body values take precedence; cache hits are not guaranteed.';
+
+  @override
   String get providerDetailPageAihubmixAppCodeLabel => 'APP-Code (10% off)';
 
   @override
@@ -4603,6 +4699,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'Auto-test connections on launch';
 
   @override
+  String get searchServicesPageWebFetchSection => 'Web page reading';
+
+  @override
+  String get searchServicesPageWebFetchModeTitle => 'Read pages with';
+
+  @override
+  String get searchServicesPageWebFetchFollow => 'Follow search service';
+
+  @override
+  String searchServicesPageWebFetchFollowValue(String name) {
+    return 'Follow search · $name';
+  }
+
+  @override
+  String searchServicesPageWebFetchFollowSubtitle(String name) {
+    return 'Currently $name';
+  }
+
+  @override
+  String get searchServicesPageWebFetchLocal => 'Local';
+
+  @override
+  String get searchServicesPageWebFetchLocalSubtitle =>
+      'Free. This device requests the page directly.';
+
+  @override
+  String get searchServicesPageWebFetchProviderSubtitle =>
+      'Uses this service\'s API key and quota';
+
+  @override
+  String get searchServicesPageWebFetchOff => 'Off';
+
+  @override
+  String get searchServicesPageWebFetchOffSubtitle =>
+      'Search only, without reading pages';
+
+  @override
+  String get searchServicesPageWebFetchFooter =>
+      'With web search on, the model can also read full pages. When the search service can\'t read pages, local reading is used, which can\'t handle pages that need JavaScript or block bots.';
+
+  @override
+  String get searchServicesPageWebFetchSupported => 'Can read web pages';
+
+  @override
   String get searchServicesPageMaxResults => 'Max Results';
 
   @override
@@ -4682,6 +4822,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServicesDialogApiKey => 'API Key';
+
+  @override
+  String get searchServicesDialogApiKeyOptional => 'API Key (optional)';
 
   @override
   String get searchServicesDialogModel => 'Model';
@@ -4844,6 +4987,31 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String searchServiceEditorTestFailed(String message) {
     return 'Search failed: $message';
+  }
+
+  @override
+  String get searchServiceEditorTestModeSearch => 'Search';
+
+  @override
+  String get searchServiceEditorTestModeFetch => 'Read page';
+
+  @override
+  String get searchServiceEditorTestUrlHint => 'Enter a URL';
+
+  @override
+  String get searchServiceEditorTestFetchRun => 'Run test fetch';
+
+  @override
+  String get searchServiceEditorTestFetchRunning => 'Reading…';
+
+  @override
+  String searchServiceEditorTestFetchFailed(String message) {
+    return 'Fetch failed: $message';
+  }
+
+  @override
+  String searchServiceEditorTestFetchStats(String characters, String seconds) {
+    return '$characters characters · ${seconds}s';
   }
 
   @override
@@ -6081,6 +6249,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Neural search with semantic understanding. Great for research and finding specific content.';
 
   @override
+  String get searchProviderExaMcpDescription =>
+      'Exa search via MCP. An API key is optional for limited free usage.';
+
+  @override
   String get searchProviderLinkUpDescription =>
       'Search API with sourced answers. Provides both results and AI-generated summaries.';
 
@@ -6119,6 +6291,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get searchServiceNameExa => 'Exa';
+
+  @override
+  String get searchServiceNameExaMcp => 'Exa MCP';
 
   @override
   String get searchServiceNameZhipu => 'Zhipu AI';
@@ -8338,6 +8513,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get worldBookInjectionPositionAtDepth => 'At depth';
 
   @override
+  String worldBookImportUnsupportedEntries(int count) {
+    return 'Imported. $count entries use unsupported SillyTavern features (such as macros, regex, timing, filters, or insertion rules). Their content was kept and they were disabled. Review them before enabling.';
+  }
+
+  @override
   String get worldBookInjectionRoleUser => 'User';
 
   @override
@@ -9297,7 +9477,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String localSnapshotRestoreMessage(String when) {
-    return 'Your current chats and settings will be replaced by this copy from $when. A copy of what you have now is saved first, so this can be undone.';
+    return 'Your current chats and settings will be replaced by this copy from $when. A copy of the current chats and settings is saved first. Unsent drafts are excluded from copies and will be cleared.';
   }
 
   @override
@@ -13691,4 +13871,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get musicErrorAndroidSave => 'Could not save to Download/kelivo_music';
+
+  @override
+  String get composerDraftLabel => 'Draft';
+
+  @override
+  String get composerDraftRecovered => 'An unsent message was recovered.';
+
+  @override
+  String get composerDraftRestore => 'Continue editing';
+
+  @override
+  String get composerDraftDiscard => 'Discard';
+
+  @override
+  String get composerDraftSaveFailed =>
+      'Your latest draft could not be saved. It is still in this window.';
+
+  @override
+  String get composerDraftRetry => 'Retry saving';
+
+  @override
+  String get composerDraftConflictTitle =>
+      'This conversation already has a draft';
+
+  @override
+  String get composerDraftConflictBody =>
+      'Append keeps both texts and attachments. Replace discards the existing draft. Nothing is sent automatically.';
+
+  @override
+  String get composerDraftAppend => 'Append';
+
+  @override
+  String get composerDraftReplace => 'Replace draft';
+
+  @override
+  String get composerDraftMissingFile =>
+      'An attachment is unavailable. Remove it or choose the file again.';
+
+  @override
+  String get composerDraftMessageMissing =>
+      'The message being edited no longer exists. Copy the text to a new message or discard this edit.';
+
+  @override
+  String get composerDraftDeleteNotice =>
+      'Unsent drafts in these conversations will also be deleted.';
+
+  @override
+  String get mcpOAuthSettings => 'OAuth settings';
+
+  @override
+  String get mcpOAuthAutomatic => 'Automatic';
+
+  @override
+  String get mcpOAuthMetadataUrl => 'Client metadata document URL';
+
+  @override
+  String get mcpOAuthClientAuthentication => 'Client authentication';
+
+  @override
+  String get mcpOAuthPublicClient => 'Public client';
+
+  @override
+  String get mcpOAuthRedirectUri => 'Local callback URL (optional)';
+
+  @override
+  String get mcpOAuthFillRedirectExample => 'Fill example';
+
+  @override
+  String get mcpOAuthRedirectHint =>
+      'Leave empty to use the platform default. Use an HTTP loopback URL if the service only allows localhost callbacks. Port 0 selects an available port; a pre-registered client may require a fixed port.';
+
+  @override
+  String get mcpOAuthClientIdRequired =>
+      'Enter a client ID or choose automatic registration.';
+
+  @override
+  String get mcpOAuthMetadataUrlInvalid =>
+      'Enter an HTTPS metadata document URL with a path.';
+
+  @override
+  String get mcpOAuthSecretRequired =>
+      'This client authentication method requires a client secret.';
+
+  @override
+  String get mcpOAuthRedirectInvalid =>
+      'Use an HTTP callback on localhost, 127.0.0.1 or [::1], without credentials, query parameters or a fragment.';
+
+  @override
+  String get mcpOAuthDiscovering => 'Discovering authorization server…';
+
+  @override
+  String get mcpOAuthRegistering => 'Preparing authorization…';
+
+  @override
+  String get mcpOAuthWaitingBrowser => 'Waiting for browser authorization…';
+
+  @override
+  String get mcpOAuthExchangingToken => 'Completing sign-in…';
 }

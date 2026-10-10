@@ -80,11 +80,6 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
       widget.providerKey,
       defaultName: widget.providerDisplayName,
     );
-    final isDefaultSilicon = widget.providerKey.toLowerCase() == 'siliconflow';
-    final hasUserKey =
-        (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) ||
-        cfg.apiKey.trim().isNotEmpty;
-    final restrictToFree = isDefaultSilicon && !hasUserKey;
     final cachedItems = [
       for (final id in cfg.cachedModels)
         ModelSpecResolver.instance.resolve(cfg, id, displayName: id).spec,
@@ -97,41 +92,21 @@ class _ModelFetchDialogBodyState extends State<_ModelFetchDialogBody> {
       });
     }
     try {
-      if (restrictToFree) {
-        final list = <ModelSpec>[
-          ModelSpecResolver.instance
-              .resolve(
-                cfg,
-                'THUDM/GLM-4-9B-0414',
-                displayName: 'THUDM/GLM-4-9B-0414',
-              )
-              .spec,
-          ModelSpecResolver.instance
-              .resolve(cfg, 'Qwen/Qwen3-8B', displayName: 'Qwen/Qwen3-8B')
-              .spec,
-        ];
-        setState(() {
-          _items = list;
-          _loading = false;
-          _error = '';
-        });
-      } else {
-        final list = await ProviderManager.listModels(cfg);
-        if (!mounted) return;
-        final latest = settings.getProviderConfig(
-          widget.providerKey,
-          defaultName: widget.providerDisplayName,
-        );
-        await settings.setProviderConfig(
-          widget.providerKey,
-          cacheFetchedProviderModels(latest, list.map((m) => m.id)),
-        );
-        setState(() {
-          _items = list;
-          _loading = false;
-          _error = '';
-        });
-      }
+      final list = await ProviderManager.listModels(cfg);
+      if (!mounted) return;
+      final latest = settings.getProviderConfig(
+        widget.providerKey,
+        defaultName: widget.providerDisplayName,
+      );
+      await settings.setProviderConfig(
+        widget.providerKey,
+        cacheFetchedProviderModels(latest, list.map((m) => m.id)),
+      );
+      setState(() {
+        _items = list;
+        _loading = false;
+        _error = '';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {

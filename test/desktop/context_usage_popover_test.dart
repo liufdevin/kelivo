@@ -109,8 +109,12 @@ void main() {
   Future<void> pumpOpenButton(
     WidgetTester tester, {
     required _RecordingUsage usage,
-  }) {
-    final settings = SettingsProvider(createBusinessTestPreferences());
+  }) async {
+    final settings = (await tester.runAsync(() async {
+      final settings = SettingsProvider(createBusinessTestPreferences());
+      await settings.loaded;
+      return settings;
+    }))!;
     addTearDown(settings.dispose);
     final anchorKey = GlobalKey();
     return tester.pumpWidget(
@@ -157,7 +161,7 @@ void main() {
   testWidgets('opens with an estimated snapshot and refreshes once', (
     tester,
   ) async {
-    final usage = await _createUsage();
+    final usage = (await tester.runAsync(_createUsage))!;
     usage.seeded = usageSnap();
     await pumpOpenButton(tester, usage: usage);
 
@@ -219,7 +223,7 @@ void main() {
   testWidgets('shows set context window when the window is null', (
     tester,
   ) async {
-    final usage = await _createUsage();
+    final usage = (await tester.runAsync(_createUsage))!;
     usage.seeded = usageSnap(window: null, used: 40);
     await pumpOpenButton(tester, usage: usage);
 

@@ -61,6 +61,7 @@ final class BusinessKeyRegistry {
     'search_selected_v1',
     'search_enabled_v1',
     'search_auto_test_on_launch_v1',
+    'search_web_fetch_v1',
     'tts_selected_v1',
     'tts_selected_service_id_v1',
     'tts_auto_play_assistant_replies_v1',
@@ -567,6 +568,7 @@ final class BusinessSettingsRouter {
           booleans: const {
             'enabled',
             'useResponseApi',
+            'promptCacheKeyEnabled',
             'vertexAI',
             'proxyEnabled',
             'multiKeyEnabled',
@@ -987,7 +989,6 @@ final class BusinessSettingsRouter {
     );
     switch (payload['type']) {
       case 'bing_local':
-        _validateKnownFields(kind, payload, strings: const {'acceptLanguage'});
       case 'kelivo':
         break;
       case 'tavily':
@@ -997,6 +998,13 @@ final class BusinessSettingsRouter {
           payload,
           requiredStrings: const {'apiKey'},
           strings: const {'url'},
+          stringLists: const {'apiKeys'},
+        );
+      case 'exa_mcp':
+        _validateKnownFields(
+          kind,
+          payload,
+          strings: const {'apiKey', 'url'},
           stringLists: const {'apiKeys'},
         );
       case 'zhipu':

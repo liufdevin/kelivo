@@ -283,13 +283,7 @@ class DifyProvider extends BaseProvider {
 
 class ProviderManager {
   static String _effectiveApiKey(ProviderConfig cfg) {
-    try {
-      if (cfg.multiKeyEnabled == true && (cfg.apiKeys?.isNotEmpty == true)) {
-        final sel = ApiKeyManager().selectForProvider(cfg);
-        if (sel.key != null) return sel.key!.key;
-      }
-    } catch (_) {}
-    return cfg.apiKey;
+    return ApiKeyManager().effectiveKeyForProvider(cfg);
   }
 
   // Per-model override helpers (duplicated logic from ChatApiService)
@@ -424,7 +418,7 @@ class ProviderManager {
         final extra = _customBody(cfg, modelId);
         CustomRequestMerger.applyBody(body, extra);
         // Merge custom headers overrides
-        String apiKey = _effectiveApiKey(cfg);
+        final apiKey = _effectiveApiKey(cfg);
         final headers = <String, String>{
           'Authorization': 'Bearer $apiKey',
           'Content-Type': 'application/json',
