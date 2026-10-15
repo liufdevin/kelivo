@@ -1088,9 +1088,6 @@
       }
     }
   },
-  "sideDrawerUpdateTitle": "发现新版本：{version}",
-  "sideDrawerUpdateTitleWithBuild": "发现新版本：{version} ({build})",
-  "sideDrawerLinkCopied": "已复制下载链接",
   "sideDrawerPinnedLabel": "置顶",
   "sideDrawerHistory": "聊天历史",
   "sideDrawerSettings": "设置",
@@ -1883,8 +1880,6 @@
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "点选助手时不自动关闭侧边栏",
   "displaySettingsPageKeepSidebarOpenOnTopicTapTitle": "点选话题时不自动关闭侧边栏",
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "关闭侧边栏时不折叠助手列表",
-  "displaySettingsPageShowUpdatesTitle": "显示更新",
-  "displaySettingsPageShowUpdatesSubtitle": "显示应用更新通知",
   "displaySettingsPageKeepScreenOnDuringGenerationTitle": "生成时保持屏幕常亮",
   "displaySettingsPageKeepScreenOnDuringGenerationSubtitle": "防止生成中途锁屏导致中断，会增加耗电",
   "displaySettingsPageMessageNavButtonsTitle": "消息导航按钮",

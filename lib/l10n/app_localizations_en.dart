@@ -3079,19 +3079,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String sideDrawerUpdateTitle(String version) {
-    return 'New version: $version';
-  }
-
-  @override
-  String sideDrawerUpdateTitleWithBuild(String version, int build) {
-    return 'New version: $version ($build)';
-  }
-
-  @override
-  String get sideDrawerLinkCopied => 'Link copied';
-
-  @override
   String get sideDrawerPinnedLabel => 'Pinned';
 
   @override
@@ -5344,13 +5331,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle =>
       'Don\'t collapse assistant list when closing sidebar';
-
-  @override
-  String get displaySettingsPageShowUpdatesTitle => 'Show Updates';
-
-  @override
-  String get displaySettingsPageShowUpdatesSubtitle =>
-      'Show app update notifications';
 
   @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>

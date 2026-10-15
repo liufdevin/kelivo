@@ -1407,26 +1407,6 @@
       }
     }
   },
-  "sideDrawerUpdateTitle": "New version: {version}",
-  "@sideDrawerUpdateTitle": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      }
-    }
-  },
-  "sideDrawerUpdateTitleWithBuild": "New version: {version} ({build})",
-  "@sideDrawerUpdateTitleWithBuild": {
-    "placeholders": {
-      "version": {
-        "type": "String"
-      },
-      "build": {
-        "type": "int"
-      }
-    }
-  },
-  "sideDrawerLinkCopied": "Link copied",
   "sideDrawerPinnedLabel": "Pinned",
   "sideDrawerHistory": "History",
   "sideDrawerSettings": "Settings",
@@ -2396,8 +2376,6 @@
   "displaySettingsPageKeepSidebarOpenOnAssistantTapTitle": "Keep sidebar open when selecting assistant",
   "displaySettingsPageKeepSidebarOpenOnTopicTapTitle": "Keep sidebar open when selecting topic",
   "displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle": "Don't collapse assistant list when closing sidebar",
-  "displaySettingsPageShowUpdatesTitle": "Show Updates",
-  "displaySettingsPageShowUpdatesSubtitle": "Show app update notifications",
   "displaySettingsPageKeepScreenOnDuringGenerationTitle": "Keep Screen On While Generating",
   "displaySettingsPageKeepScreenOnDuringGenerationSubtitle": "Prevents the lock screen from interrupting generation. Increases battery use.",
   "displaySettingsPageMessageNavButtonsTitle": "Message Navigation Buttons",

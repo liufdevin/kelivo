@@ -4,7 +4,6 @@ import 'dart:io';
 import "../../../support/business_test_harness.dart";
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
-import 'package:Kelivo/core/providers/update_provider.dart';
 import 'package:Kelivo/core/providers/backup_reminder_provider.dart';
 import 'package:Kelivo/core/providers/tag_provider.dart';
 import 'package:Kelivo/core/services/chat/chat_service.dart';
@@ -214,7 +213,6 @@ void main() {
           ChangeNotifierProvider(
             create: (_) => TagProvider(preferences: tagPrefs),
           ),
-          ChangeNotifierProvider(create: (_) => UpdateProvider()),
         ],
         child: localeListenable == null
             ? materialFor(locale)

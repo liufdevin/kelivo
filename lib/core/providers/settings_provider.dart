@@ -293,7 +293,6 @@ class SettingsProvider extends ChangeNotifier {
       'display_haptics_on_card_tap_v1';
   static const String _displayKeepScreenOnDuringGenerationKey =
       'display_keep_screen_on_during_generation_v1';
-  static const String _displayShowAppUpdatesKey = 'display_show_app_updates_v1';
   static const String _displayKeepSidebarOpenOnAssistantTapKey =
       'display_keep_sidebar_open_on_assistant_tap_v1';
   static const String _displayKeepSidebarOpenOnTopicTapKey =
@@ -1082,7 +1081,6 @@ class SettingsProvider extends ChangeNotifier {
     _keepScreenOnDuringGeneration =
         prefs.getBool(_displayKeepScreenOnDuringGenerationKey) ?? false;
     ScreenWakelock.setEnabled(_keepScreenOnDuringGeneration);
-    _showAppUpdates = prefs.getBool(_displayShowAppUpdatesKey) ?? true;
     _keepSidebarOpenOnAssistantTap =
         prefs.getBool(_displayKeepSidebarOpenOnAssistantTapKey) ?? false;
     _keepSidebarOpenOnTopicTap =
@@ -5929,17 +5927,6 @@ Requirements:
     await prefs.setBool(_displayHapticsOnCardTapKey, v);
   }
 
-  // Display: show app updates notification
-  bool _showAppUpdates = true;
-  bool get showAppUpdates => _showAppUpdates;
-  Future<void> setShowAppUpdates(bool v) async {
-    if (_showAppUpdates == v) return;
-    _showAppUpdates = v;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setBool(_displayShowAppUpdatesKey, v);
-  }
-
   // Display: keep sidebar open when selecting assistant (mobile)
   bool _keepSidebarOpenOnAssistantTap = false;
   bool get keepSidebarOpenOnAssistantTap => _keepSidebarOpenOnAssistantTap;
@@ -6291,7 +6278,6 @@ Requirements:
     copy._hapticsIosSwitch = _hapticsIosSwitch;
     copy._hapticsOnListItemTap = _hapticsOnListItemTap;
     copy._hapticsOnCardTap = _hapticsOnCardTap;
-    copy._showAppUpdates = _showAppUpdates;
     copy._keepSidebarOpenOnAssistantTap = _keepSidebarOpenOnAssistantTap;
     copy._keepSidebarOpenOnTopicTap = _keepSidebarOpenOnTopicTap;
     copy._keepAssistantListExpandedOnSidebarClose =

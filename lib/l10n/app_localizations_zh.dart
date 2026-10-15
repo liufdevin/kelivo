@@ -2968,19 +2968,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String sideDrawerUpdateTitle(String version) {
-    return '发现新版本：$version';
-  }
-
-  @override
-  String sideDrawerUpdateTitleWithBuild(String version, int build) {
-    return '发现新版本：$version ($build)';
-  }
-
-  @override
-  String get sideDrawerLinkCopied => '已复制下载链接';
-
-  @override
   String get sideDrawerPinnedLabel => '置顶';
 
   @override
@@ -5150,12 +5137,6 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle =>
       '关闭侧边栏时不折叠助手列表';
-
-  @override
-  String get displaySettingsPageShowUpdatesTitle => '显示更新';
-
-  @override
-  String get displaySettingsPageShowUpdatesSubtitle => '显示应用更新通知';
 
   @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
@@ -16304,19 +16285,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   }
 
   @override
-  String sideDrawerUpdateTitle(String version) {
-    return '发现新版本：$version';
-  }
-
-  @override
-  String sideDrawerUpdateTitleWithBuild(String version, int build) {
-    return '发现新版本：$version ($build)';
-  }
-
-  @override
-  String get sideDrawerLinkCopied => '已复制下载链接';
-
-  @override
   String get sideDrawerPinnedLabel => '置顶';
 
   @override
@@ -18486,12 +18454,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   @override
   String get displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle =>
       '关闭侧边栏时不折叠助手列表';
-
-  @override
-  String get displaySettingsPageShowUpdatesTitle => '显示更新';
-
-  @override
-  String get displaySettingsPageShowUpdatesSubtitle => '显示应用更新通知';
 
   @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>
@@ -29566,19 +29528,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String sideDrawerUpdateTitle(String version) {
-    return '發現新版本：$version';
-  }
-
-  @override
-  String sideDrawerUpdateTitleWithBuild(String version, int build) {
-    return '發現新版本：$version ($build)';
-  }
-
-  @override
-  String get sideDrawerLinkCopied => '已複製下載連結';
-
-  @override
   String get sideDrawerPinnedLabel => '置頂';
 
   @override
@@ -31747,12 +31696,6 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   @override
   String get displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle =>
       '關閉側邊欄時不折疊助手列表';
-
-  @override
-  String get displaySettingsPageShowUpdatesTitle => '顯示更新';
-
-  @override
-  String get displaySettingsPageShowUpdatesSubtitle => '顯示應用程式更新通知';
 
   @override
   String get displaySettingsPageKeepScreenOnDuringGenerationTitle =>

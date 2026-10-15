@@ -5674,24 +5674,6 @@ abstract class AppLocalizations {
   /// **'{count} results'**
   String sideDrawerGlobalSearchResultCount(int count);
 
-  /// No description provided for @sideDrawerUpdateTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'New version: {version}'**
-  String sideDrawerUpdateTitle(String version);
-
-  /// No description provided for @sideDrawerUpdateTitleWithBuild.
-  ///
-  /// In en, this message translates to:
-  /// **'New version: {version} ({build})'**
-  String sideDrawerUpdateTitleWithBuild(String version, int build);
-
-  /// No description provided for @sideDrawerLinkCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Link copied'**
-  String get sideDrawerLinkCopied;
-
   /// No description provided for @sideDrawerPinnedLabel.
   ///
   /// In en, this message translates to:
@@ -9756,18 +9738,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Don\'t collapse assistant list when closing sidebar'**
   String get displaySettingsPageKeepAssistantListExpandedOnSidebarCloseTitle;
-
-  /// No description provided for @displaySettingsPageShowUpdatesTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show Updates'**
-  String get displaySettingsPageShowUpdatesTitle;
-
-  /// No description provided for @displaySettingsPageShowUpdatesSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Show app update notifications'**
-  String get displaySettingsPageShowUpdatesSubtitle;
 
   /// No description provided for @displaySettingsPageKeepScreenOnDuringGenerationTitle.
   ///

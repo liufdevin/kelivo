@@ -732,11 +732,6 @@ class SettingsSearchIndex {
       SettingsSearchDestination.behavior,
       (l) => l.displaySettingsPageEditAssistantKeepThinkingToolCardsTitle,
     );
-    add(
-      'displaySettingsPageShowUpdatesTitle',
-      SettingsSearchDestination.behavior,
-      (l) => l.displaySettingsPageShowUpdatesTitle,
-    );
     if (!desktop) {
       add(
         'displaySettingsPageKeepScreenOnDuringGenerationTitle',

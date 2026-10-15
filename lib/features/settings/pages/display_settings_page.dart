@@ -2003,14 +2003,6 @@ class BehaviorStartupSettingsPage extends StatelessWidget {
                     .setKeepThinkingAndToolCardsWhenEditingAssistant(v),
               ),
               _iosDivider(context),
-              _iosSwitchRow(
-                context,
-                icon: Lucide.BadgeInfo,
-                label: l10n.displaySettingsPageShowUpdatesTitle,
-                value: sp.showAppUpdates,
-                onChanged: (v) =>
-                    context.read<SettingsProvider>().setShowAppUpdates(v),
-              ),
               if (defaultTargetPlatform == TargetPlatform.android ||
                   defaultTargetPlatform == TargetPlatform.iOS) ...[
                 _iosDivider(context),
