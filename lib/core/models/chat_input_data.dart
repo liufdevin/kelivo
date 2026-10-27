@@ -1,4 +1,5 @@
 import 'composer_draft.dart' show DraftSubmission;
+import 'package:Kelivo/features/intelligent_ui/models/ui_context_attachment.dart';
 
 class DocumentAttachment {
   final String path; // absolute file path
@@ -19,6 +20,7 @@ class ChatInputData {
   final bool generateImage; // route this submission to the image model
   final bool allowImagesApiRouting;
   final DraftSubmission? draftSubmission;
+  final UiContextAttachment? uiContext;
 
   const ChatInputData({
     required this.text,
@@ -27,7 +29,14 @@ class ChatInputData {
     this.generateImage = false,
     this.allowImagesApiRouting = true,
     this.draftSubmission,
+    this.uiContext,
   });
+
+  bool get isEmpty =>
+      text.trim().isEmpty &&
+      imagePaths.isEmpty &&
+      documents.isEmpty &&
+      uiContext == null;
 }
 
 enum ChatInputSubmissionResult { sent, queued, rejected }

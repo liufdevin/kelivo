@@ -509,6 +509,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is GoogleSearchOptions) return 'google';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
+    if (s is DeepSeekOptions) return 'deepseek';
     if (s is JinaOptions) return 'jina';
     if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';

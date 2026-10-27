@@ -548,10 +548,10 @@ class SettingsSearchIndex {
       keywords: 'font size text scale 字号 字號 文字大小 字体大小',
     );
     add(
-      'displaySettingsPageAutoScrollIdleTitle',
+      'displaySettingsPageAutoScrollEnableTitle',
       SettingsSearchDestination.display,
-      (l) => l.displaySettingsPageAutoScrollIdleTitle,
-      keywords: 'auto scroll 自动滚动 自動捲動 延迟 延遲',
+      (l) => l.displaySettingsPageAutoScrollEnableTitle,
+      keywords: 'auto scroll follow bottom streaming 自动滚动 自動捲動 跟随 跟隨 底部 流式',
     );
     add(
       'displaySettingsPageChatBackgroundMaskTitle',
@@ -668,6 +668,12 @@ class SettingsSearchIndex {
       (l) => l.displaySettingsPageEnableAssistantMarkdownTitle,
     );
     add(
+      'displaySettingsShowGenUiHeader',
+      SettingsSearchDestination.rendering,
+      (l) => l.displaySettingsShowGenUiHeader,
+      keywords: 'genui intelligent interactive header immersive 交互界面 标题栏 沉浸',
+    );
+    add(
       'displaySettingsPageAutoCollapseCodeBlockTitle',
       SettingsSearchDestination.rendering,
       (l) => l.displaySettingsPageAutoCollapseCodeBlockTitle,
@@ -678,6 +684,14 @@ class SettingsSearchIndex {
         'displaySettingsPageMobileCodeBlockWrapTitle',
         SettingsSearchDestination.rendering,
         (l) => l.displaySettingsPageMobileCodeBlockWrapTitle,
+      );
+    }
+    if (!kIsWeb && platform == TargetPlatform.iOS) {
+      add(
+        'displaySettingsPageIosNativeSelectionMenuTitle',
+        SettingsSearchDestination.behavior,
+        (l) => l.displaySettingsPageIosNativeSelectionMenuTitle,
+        keywords: 'liquid glass native selection menu 液态玻璃 液態玻璃 原生 选择 選取 菜单 選單',
       );
     }
     add(
@@ -913,13 +927,6 @@ class SettingsSearchIndex {
         'displaySettingsPageSendShortcutTitle',
         SettingsSearchDestination.behavior,
         (l) => l.displaySettingsPageSendShortcutTitle,
-      );
-    }
-    if (desktop) {
-      add(
-        'displaySettingsPageAutoScrollEnableTitle',
-        SettingsSearchDestination.display,
-        (l) => l.displaySettingsPageAutoScrollEnableTitle,
       );
     }
 

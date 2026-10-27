@@ -6,6 +6,7 @@ import android.os.Build
 import com.psyche.kelivo.background.BackgroundRuntime
 import com.psyche.kelivo.workspace.WorkspacePlugin
 import com.psyche.kelivo.scheduled.ScheduledTasks
+import com.psyche.kelivo.input.NativeMessageInputPlugin
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 
@@ -22,6 +23,8 @@ class KelivoApplication : Application() {
     val scheduledTasks by lazy { ScheduledTasks(this) }
     val workspace by lazy { WorkspacePlugin(this) }
     val deviceTools by lazy { DeviceLocalToolsHandler(this) }
+    lateinit var messageInput: NativeMessageInputPlugin
+        private set
 
     private val engineHolder = lazy {
         // Android 11's OpenGL Impeller path exceeds a 120 Hz frame with live
@@ -35,6 +38,7 @@ class KelivoApplication : Application() {
         }
         FlutterEngine(this, engineArgs).also { engine ->
             val messenger = engine.dartExecutor.binaryMessenger
+            messageInput = NativeMessageInputPlugin(this, messenger)
             backgroundRuntime.configure(messenger)
             scheduledTasks.configure(messenger)
             workspace.configure(messenger)

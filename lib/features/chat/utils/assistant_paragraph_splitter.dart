@@ -1,10 +1,9 @@
-import '../../../shared/widgets/markdown_line_lexer.dart';
+import 'package:markstream/markstream_core.dart';
 
 /// Splits assistant markdown into paragraph chunks, one per bubble.
 ///
 /// A blank line starts a new chunk, except where that would break a Markdown
-/// construct. Structure state comes from [MarkdownLineLexer] and
-/// [markdownScanDisplayMath] — the same rules the renderer applies — so code
+/// construct. Structure state comes from [MarkdownStructure] — the same rules the renderer applies — so code
 /// fences, `<details>` blocks, and `$$`/`\[…\]` display math keep their blank
 /// lines, including while an unclosed one is still streaming. On top of that,
 /// indented continuations stay attached to the block above them, adjacent list
@@ -13,19 +12,37 @@ import '../../../shared/widgets/markdown_line_lexer.dart';
 ///
 /// Returns a single-element list holding [text] unchanged when there is
 /// nothing to split.
-List<String> splitAssistantParagraphs(String text) {
-  if (text.trim().isEmpty) return <String>[text];
+List<String> splitAssistantParagraphs(String text) => [
+  for (final paragraph in splitAssistantParagraphsWithSource(text))
+    paragraph.text,
+];
+
+/// Display text retains the existing normalization; [span] also preserves the
+/// exact original interval for widgets whose identity belongs to source text.
+class AssistantParagraph {
+  const AssistantParagraph(this.text, this.span);
+  final String text;
+  final SourceSpan span;
+}
+
+List<AssistantParagraph> splitAssistantParagraphsWithSource(String text) {
+  final whole = AssistantParagraph(text, SourceSpan(0, text.length));
+  if (text.trim().isEmpty) return [whole];
 
   final lines = text.split('\n');
-  final chunks = <String>[];
+  final chunks = <AssistantParagraph>[];
   final current = <String>[];
-  final lexer = MarkdownLineLexer();
-  final math = markdownScanDisplayMath(text);
+  final structure = MarkdownStructure(text);
   var offset = 0;
+  var currentStart = 0, currentEnd = 0;
 
   void flush() {
     final chunk = current.join('\n').trim();
-    if (chunk.isNotEmpty) chunks.add(chunk);
+    if (chunk.isNotEmpty) {
+      chunks.add(
+        AssistantParagraph(chunk, SourceSpan(currentStart, currentEnd)),
+      );
+    }
     current.clear();
   }
 
@@ -33,22 +50,22 @@ List<String> splitAssistantParagraphs(String text) {
     final line = lines[i];
     final lineStart = offset;
     offset += line.length + 1;
-    lexer.consumePhysicalLine(line);
 
     final breaksParagraph =
         line.trim().isEmpty &&
-        !lexer.protected &&
-        !math.covers(lineStart) &&
+        !structure.protects(lineStart) &&
         !_continuesBlock(lines, i + 1);
     if (breaksParagraph) {
       flush();
       continue;
     }
+    if (current.isEmpty) currentStart = lineStart;
+    currentEnd = lineStart + line.length;
     current.add(line);
   }
   flush();
 
-  if (chunks.length < 2) return <String>[text];
+  if (chunks.length < 2) return [whole];
   return _mergeRelatedChunks(chunks);
 }
 
@@ -65,11 +82,14 @@ bool _continuesBlock(List<String> lines, int from) {
   return false;
 }
 
-List<String> _mergeRelatedChunks(List<String> chunks) {
-  final merged = <String>[];
+List<AssistantParagraph> _mergeRelatedChunks(List<AssistantParagraph> chunks) {
+  final merged = <AssistantParagraph>[];
   for (final chunk in chunks) {
-    if (merged.isNotEmpty && _shouldMerge(merged.last, chunk)) {
-      merged[merged.length - 1] = '${merged.last}\n\n$chunk';
+    if (merged.isNotEmpty && _shouldMerge(merged.last.text, chunk.text)) {
+      merged[merged.length - 1] = AssistantParagraph(
+        '${merged.last.text}\n\n${chunk.text}',
+        SourceSpan(merged.last.span.start, chunk.span.end),
+      );
       continue;
     }
     merged.add(chunk);

@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../utils/utf16_safe_cut.dart';
 import 'message_part.dart';
 import 'token_usage.dart';
+import '../database/generation_run.dart';
 
 part 'chat_message.g.dart';
 
@@ -20,13 +21,35 @@ class ChatMessage extends HiveObject {
   /// Hive field 2 (legacy content string) is intentionally not a stored field
   /// here. [ChatMessageAdapter] still reads field 2 for migration only;
   /// [content] is derived from [TextPart]s.
-  final List<MessagePart> parts;
+  final List<MessagePart> _parts;
+  List<MessagePart>? _storageParts;
+  List<MessagePart> get parts => _storageParts ?? _parts;
+
+  /// Canonical ordered storage parts may add reasoning/tool overlays, never
+  /// rewrite the body. Prepare before commit; invoke the assignment afterwards.
+  /// Existing copied/notifier snapshots remain snapshots of their own parts.
+  void Function() prepareStorageParts(List<MessagePart> value) {
+    final frozen = List<MessagePart>.unmodifiable(value);
+    if (frozen.whereType<TextPart>().map((part) => part.text).join() !=
+        content) {
+      throw StateError('Storage parts changed the message body');
+    }
+    return () => _storageParts = frozen;
+  }
 
   // SQLite order metadata for sorting a bounded cache without loading every
   // message id. Not serialized: message_rows remains the ordering authority.
   int? _storageOrder;
   int? get storageOrder => _storageOrder;
   void hydrateStorageOrder(int? order) => _storageOrder = order;
+
+  /// Projection of the authoritative generation run, not another persisted
+  /// status field. A non-streaming revision can be cancelled or interrupted;
+  /// absence of a run does not prove successful completion.
+  GenerationRunState? _generationState;
+  GenerationRunState? get generationState => _generationState;
+  void hydrateGenerationState(GenerationRunState? state) =>
+      _generationState = state;
 
   // Hydrated request metadata belongs to this message snapshot. It is not a
   // second persisted representation: provider_artifact_rows owns storage.
@@ -155,7 +178,7 @@ class ChatMessage extends HiveObject {
     this.reasoningTokens,
     this.cacheWriteTokens,
     this.finishUsage,
-  }) : parts = List<MessagePart>.unmodifiable(
+  }) : _parts = List<MessagePart>.unmodifiable(
          parts ?? <MessagePart>[TextPart(content ?? '')],
        ),
        id = id ?? const Uuid().v4(),
@@ -348,6 +371,11 @@ class ChatMessage extends HiveObject {
         finishUsage: finishUsage ?? this.finishUsage,
       )
       .._storageOrder = (id == null || id == this.id) ? _storageOrder : null
+      .._generationState = (id == null || id == this.id)
+          ? isStreaming == true
+                ? GenerationRunState.streaming
+                : _generationState
+          : null
       .._providerArtifactSnapshot = (id == null || id == this.id)
           ? _providerArtifactSnapshot
           : null;

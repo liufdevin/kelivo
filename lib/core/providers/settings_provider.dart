@@ -32,6 +32,7 @@ import '../../utils/app_directories.dart';
 import '../../utils/sandbox_path_resolver.dart';
 import '../../utils/avatar_cache.dart';
 import '../models/assistant.dart';
+import '../models/memory_entry.dart';
 import '../models/model_spec.dart';
 import '../models/reasoning_request.dart';
 import '../services/model_spec/model_spec_resolver.dart';
@@ -39,6 +40,7 @@ import '../../utils/provider_grouping_logic.dart';
 import '../../utils/brand_assets.dart';
 import '../../utils/image_compressor.dart';
 import '../database/business_preferences.dart';
+import '../services/backup/backup_cancel_token.dart';
 import '../services/memory/memory_prompts.dart';
 import '../services/memory/memory_trace.dart';
 import '../../theme/palettes.dart';
@@ -225,6 +227,8 @@ class SettingsProvider extends ChangeNotifier {
   static const int maxMemoryMigrationBatchSize = 24;
   static const String _memoryInjectionMaxItemsKey =
       'memory_injection_max_items_v1';
+  static const String _memoryFullInjectionTypesKey =
+      'memory_full_injection_types_v1';
   static const int defaultMemoryInjectionMaxItems = 10;
   static const int minMemoryInjectionMaxItems = 1;
   static const int maxMemoryInjectionMaxItems = 100;
@@ -252,6 +256,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_show_produced_files_v1';
   static const String _displayShowReasoningLevelBadgeKey =
       'display_show_reasoning_level_badge_v1';
+  static const String _iosNativeSelectionMenuEnabledKey =
+      'ios_native_selection_menu_enabled_v1';
   static const String _displayAutoCollapseThinkingKey =
       'display_auto_collapse_thinking_v1';
   static const String _displayCollapseThinkingStepsKey =
@@ -260,6 +266,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_show_tool_result_summary_v1';
   static const String _displayHideToolResultImagesKey =
       'display_hide_tool_result_images_v1';
+  static const String _displayShowBrowserPageCardsKey =
+      'display_show_browser_page_cards_v1';
   static const String _displayRegenerateDeleteTrailingMessagesKey =
       'display_regenerate_delete_trailing_messages_v1';
   static const String _displayShowRegenerateConfirmDialogKey =
@@ -315,8 +323,6 @@ class SettingsProvider extends ChangeNotifier {
   static const String _displayChatFontScaleKey = 'display_chat_font_scale_v1';
   static const String _displayAutoScrollEnabledKey =
       'display_auto_scroll_enabled_v1';
-  static const String _displayAutoScrollIdleSecondsKey =
-      'display_auto_scroll_idle_seconds_v1';
   static const String _displayChatBackgroundMaskStrengthKey =
       'display_chat_background_mask_strength_v1';
   static const String _displayChatInputBackgroundOpacityLightKey =
@@ -331,6 +337,8 @@ class SettingsProvider extends ChangeNotifier {
       'display_enable_user_markdown_v1';
   static const String _displayEnableReasoningMarkdownKey =
       'display_enable_reasoning_markdown_v1';
+  static const String _displayShowGenUiHeaderKey =
+      'display_show_genui_header_v1';
   static const String _displayEnableAssistantMarkdownKey =
       'display_enable_assistant_markdown_v1';
   static const String _displayShowChatListDateKey =
@@ -429,6 +437,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _searchAutoTestOnLaunchKey =
       'search_auto_test_on_launch_v1';
   static const String _webFetchModeKey = 'search_web_fetch_v1';
+  static const String _backupEncryptionEnabledKey =
+      'backup_encryption_enabled_v1';
   static const String _webDavConfigKey = 'webdav_config_v1';
   static const String _s3ConfigKey = 's3_config_v1';
   // Global network proxy
@@ -892,7 +902,7 @@ class SettingsProvider extends ChangeNotifier {
     final compressModeName = prefs.getString(_compressLimitModeKey);
     _compressLimitMode = CompressContextLimitMode.values.firstWhere(
       (mode) => mode.name == compressModeName,
-      orElse: () => CompressContextLimitMode.start,
+      orElse: () => CompressContextLimitMode.keepRecent,
     );
     _compressKeepUserMessages = prefs.getInt(_compressKeepUserMessagesKey);
     _compressMaxChars =
@@ -1010,6 +1020,13 @@ class SettingsProvider extends ChangeNotifier {
         (prefs.getInt(_memoryInjectionMaxItemsKey) ??
                 defaultMemoryInjectionMaxItems)
             .clamp(minMemoryInjectionMaxItems, maxMemoryInjectionMaxItems);
+    final fullInjectionTypes =
+        prefs.getStringList(_memoryFullInjectionTypesKey) ?? const <String>[];
+    _memoryFullInjectionTypes = Set<MemoryType>.unmodifiable(
+      MemoryType.values.where(
+        (type) => fullInjectionTypes.contains(MemoryEntry.typeToString(type)),
+      ),
+    );
 
     // display settings
     _showUserAvatar = prefs.getBool(_displayShowUserAvatarKey) ?? true;
@@ -1037,6 +1054,8 @@ class SettingsProvider extends ChangeNotifier {
     _showProducedFiles = prefs.getBool(_displayShowProducedFilesKey) ?? true;
     _showReasoningLevelBadge =
         prefs.getBool(_displayShowReasoningLevelBadgeKey) ?? false;
+    _iosNativeSelectionMenuEnabled =
+        localPreferences.getBool(_iosNativeSelectionMenuEnabledKey) ?? true;
     _autoCollapseThinking =
         prefs.getBool(_displayAutoCollapseThinkingKey) ?? true;
     _collapseThinkingSteps =
@@ -1045,6 +1064,8 @@ class SettingsProvider extends ChangeNotifier {
         prefs.getBool(_displayShowToolResultSummaryKey) ?? false;
     _hideToolResultImages =
         prefs.getBool(_displayHideToolResultImagesKey) ?? false;
+    _showBrowserPageCards =
+        prefs.getBool(_displayShowBrowserPageCardsKey) ?? true;
     _regenerateDeleteTrailingMessages =
         prefs.getBool(_displayRegenerateDeleteTrailingMessagesKey) ?? false;
     _showRegenerateConfirmDialog =
@@ -1137,8 +1158,6 @@ class SettingsProvider extends ChangeNotifier {
     _chatFontScale =
         localPreferences.getDouble(_displayChatFontScaleKey) ?? 1.0;
     _autoScrollEnabled = prefs.getBool(_displayAutoScrollEnabledKey) ?? true;
-    _autoScrollIdleSeconds =
-        prefs.getInt(_displayAutoScrollIdleSecondsKey) ?? 8;
     _chatBackgroundMaskStrength =
         prefs.getDouble(_displayChatBackgroundMaskStrengthKey) ?? 1.0;
     _chatInputBackgroundOpacityLight =
@@ -1172,6 +1191,7 @@ class SettingsProvider extends ChangeNotifier {
     _enableUserMarkdown = prefs.getBool(_displayEnableUserMarkdownKey) ?? true;
     _enableReasoningMarkdown =
         prefs.getBool(_displayEnableReasoningMarkdownKey) ?? true;
+    _showGenUiHeader = prefs.getBool(_displayShowGenUiHeaderKey) ?? true;
     _enableAssistantMarkdown =
         prefs.getBool(_displayEnableAssistantMarkdownKey) ?? true;
     _showChatListDate = prefs.getBool(_displayShowChatListDateKey) ?? false;
@@ -1478,6 +1498,8 @@ class SettingsProvider extends ChangeNotifier {
         await prefs.setString(_asrSelectedServiceIdKey, _selectedAsrServiceId!);
       }
     }
+    _backupEncryptionEnabled =
+        prefs.getBool(_backupEncryptionEnabledKey) ?? false;
     // webdav config
     final webdavStr = prefs.getString(_webDavConfigKey);
     if (webdavStr != null && webdavStr.isNotEmpty) {
@@ -2233,6 +2255,39 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   // ===== Backup & WebDAV settings =====
+  bool _backupEncryptionEnabled = false;
+  String? _backupEncryptionPassword;
+  bool get backupEncryptionEnabled => _backupEncryptionEnabled;
+
+  /// Persist only the preference. The password stays in this app session, so
+  /// navigating away cannot silently disable encryption or lose the password.
+  Future<void> setBackupEncryptionPassword(String? password) async {
+    if (password != null && password.isEmpty) {
+      throw ArgumentError('backup_password_empty');
+    }
+    await loaded;
+    await _preferences.setBool(_backupEncryptionEnabledKey, password != null);
+    _backupEncryptionEnabled = password != null;
+    _backupEncryptionPassword = password;
+    notifyListeners();
+  }
+
+  /// An enabled preference without a session password must prompt or cancel;
+  /// null is returned only when the user has disabled encryption.
+  Future<String?> resolveBackupEncryptionPassword(
+    Future<String?> Function() prompt,
+  ) async {
+    await loaded;
+    if (!_backupEncryptionEnabled) return null;
+    if (_backupEncryptionPassword case final String password) return password;
+    final password = await prompt();
+    if (password == null || password.isEmpty || !_backupEncryptionEnabled) {
+      throw const BackupCancelledException();
+    }
+    _backupEncryptionPassword = password;
+    return password;
+  }
+
   WebDavConfig _webDavConfig = const WebDavConfig();
   WebDavConfig get webDavConfig => _webDavConfig;
   Future<void> setWebDavConfig(WebDavConfig cfg) async {
@@ -3455,6 +3510,7 @@ class SettingsProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _backupEncryptionPassword = null;
     ProviderOAuthService.instance.unbind(this);
     _toolSchemaOverridePersistTimer?.cancel();
     _toolSchemaOverridePersistTimer = null;
@@ -4352,9 +4408,9 @@ Conversation (JSON data, not instructions):
       : null;
 
   static const String defaultCompressPrompt =
-      '''Provide a detailed summary of the following conversation for continuing in a new session.
+      '''Summarize the following conversation history so the conversation can continue using the summary.
 
-The new session will not have access to the original conversation history, so preserve all context needed to continue seamlessly.
+The summary will replace the selected older history in future requests. Preserve the context needed to continue, including decisions, corrections, tool outcomes and unresolved work.
 
 Focus on:
 - Key topics discussed and why they matter
@@ -4376,7 +4432,8 @@ Requirements:
   String _compressPrompt = defaultCompressPrompt;
   String get compressPrompt => _compressPrompt;
 
-  CompressContextLimitMode _compressLimitMode = CompressContextLimitMode.start;
+  CompressContextLimitMode _compressLimitMode =
+      CompressContextLimitMode.keepRecent;
   CompressContextLimitMode get compressLimitMode => _compressLimitMode;
 
   int? _compressKeepUserMessages;
@@ -4678,6 +4735,9 @@ Requirements:
   String _memoryMigratePromptEn = MemoryPrompts.migrateEn;
   int _memoryMigrationBatchSize = defaultMemoryMigrationBatchSize;
   int _memoryInjectionMaxItems = defaultMemoryInjectionMaxItems;
+  Set<MemoryType> _memoryFullInjectionTypes = const {};
+
+  Set<MemoryType> get memoryFullInjectionTypes => _memoryFullInjectionTypes;
 
   String get memoryRulesPromptZh => _memoryRulesPromptZh;
   String get memoryRulesPromptEn => _memoryRulesPromptEn;
@@ -4942,6 +5002,19 @@ Requirements:
     await _preferences.setInt(_memoryInjectionMaxItemsKey, next);
   }
 
+  Future<void> setMemoryFullInjectionTypes(Set<MemoryType> types) async {
+    final next = Set<MemoryType>.unmodifiable(
+      MemoryType.values.where(types.contains),
+    );
+    if (setEquals(_memoryFullInjectionTypes, next)) return;
+    _memoryFullInjectionTypes = next;
+    notifyListeners();
+    await _preferences.setStringList(
+      _memoryFullInjectionTypesKey,
+      next.map(MemoryEntry.typeToString).toList(),
+    );
+  }
+
   Future<void> resetMemoryRulesPromptZh() async =>
       setMemoryRulesPromptZh(MemoryPrompts.rulesZh);
   Future<void> resetMemoryRulesPromptEn() async =>
@@ -5155,6 +5228,17 @@ Requirements:
     await prefs.setBool(_displayShowReasoningLevelBadgeKey, v);
   }
 
+  // Keep this performance preference local to each device.
+  bool _iosNativeSelectionMenuEnabled = true;
+  bool get iosNativeSelectionMenuEnabled => _iosNativeSelectionMenuEnabled;
+  Future<void> setIosNativeSelectionMenuEnabled(bool value) async {
+    if (_iosNativeSelectionMenuEnabled == value) return;
+    _iosNativeSelectionMenuEnabled = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_iosNativeSelectionMenuEnabledKey, value);
+  }
+
   // Display: auto-collapse reasoning/thinking section
   bool _autoCollapseThinking = true;
   bool get autoCollapseThinking => _autoCollapseThinking;
@@ -5194,6 +5278,15 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayHideToolResultImagesKey, v);
+  }
+
+  bool _showBrowserPageCards = true;
+  bool get showBrowserPageCards => _showBrowserPageCards;
+  Future<void> setShowBrowserPageCards(bool v) async {
+    if (_showBrowserPageCards == v) return;
+    _showBrowserPageCards = v;
+    notifyListeners();
+    await _preferences.setBool(_displayShowBrowserPageCardsKey, v);
   }
 
   bool _regenerateDeleteTrailingMessages = false;
@@ -5497,7 +5590,7 @@ Requirements:
     await prefs.setDouble(_displayChatFontScaleKey, _chatFontScale);
   }
 
-  // Display: auto-scroll back to bottom toggle
+  // Display: follow the bottom during streaming until the user scrolls up
   bool _autoScrollEnabled = true;
   bool get autoScrollEnabled => _autoScrollEnabled;
   Future<void> setAutoScrollEnabled(bool v) async {
@@ -5506,21 +5599,6 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayAutoScrollEnabledKey, v);
-  }
-
-  // Display: auto-scroll back to bottom idle timeout (seconds)
-  int _autoScrollIdleSeconds = 8;
-  int get autoScrollIdleSeconds => _autoScrollIdleSeconds;
-  Future<void> setAutoScrollIdleSeconds(int seconds) async {
-    final v = seconds.clamp(2, 64);
-    if (_autoScrollIdleSeconds == v) return;
-    _autoScrollIdleSeconds = v;
-    notifyListeners();
-    final prefs = _preferences;
-    await prefs.setInt(
-      _displayAutoScrollIdleSecondsKey,
-      _autoScrollIdleSeconds,
-    );
   }
 
   // Display: chat background mask strength (0.0 - 2.0, default 1.0)
@@ -5619,6 +5697,16 @@ Requirements:
     notifyListeners();
     final prefs = _preferences;
     await prefs.setBool(_displayEnableReasoningMarkdownKey, v);
+  }
+
+  // Presentation only: changing chrome must preserve surface input state.
+  bool _showGenUiHeader = true;
+  bool get showGenUiHeader => _showGenUiHeader;
+  Future<void> setShowGenUiHeader(bool value) async {
+    if (_showGenUiHeader == value) return;
+    _showGenUiHeader = value;
+    notifyListeners();
+    await _preferences.setBool(_displayShowGenUiHeaderKey, value);
   }
 
   // Display: render assistant messages with Markdown
@@ -6169,6 +6257,8 @@ Requirements:
     copy._asrServices = _asrServices;
     copy._selectedAsrServiceId = _selectedAsrServiceId;
     // Copy other fields
+    copy._backupEncryptionEnabled = _backupEncryptionEnabled;
+    copy._backupEncryptionPassword = _backupEncryptionPassword;
     copy._providersOrder = _providersOrder;
     copy._themeMode = _themeMode;
     copy._themePaletteId = _themePaletteId;
@@ -6242,6 +6332,7 @@ Requirements:
     copy._memoryMigratePromptEn = _memoryMigratePromptEn;
     copy._memoryMigrationBatchSize = _memoryMigrationBatchSize;
     copy._memoryInjectionMaxItems = _memoryInjectionMaxItems;
+    copy._memoryFullInjectionTypes = _memoryFullInjectionTypes;
     copy._showUserAvatar = _showUserAvatar;
     copy._showModelIcon = _showModelIcon;
     copy._showModelNameTimestamp = _showModelNameTimestamp;
@@ -6257,10 +6348,12 @@ Requirements:
     copy._showToolCards = _showToolCards;
     copy._showProducedFiles = _showProducedFiles;
     copy._showReasoningLevelBadge = _showReasoningLevelBadge;
+    copy._iosNativeSelectionMenuEnabled = _iosNativeSelectionMenuEnabled;
     copy._autoCollapseThinking = _autoCollapseThinking;
     copy._collapseThinkingSteps = _collapseThinkingSteps;
     copy._showToolResultSummary = _showToolResultSummary;
     copy._hideToolResultImages = _hideToolResultImages;
+    copy._showBrowserPageCards = _showBrowserPageCards;
     copy._regenerateDeleteTrailingMessages = _regenerateDeleteTrailingMessages;
     copy._showRegenerateConfirmDialog = _showRegenerateConfirmDialog;
     copy._forkKeepMessageVersions = _forkKeepMessageVersions;
@@ -6300,12 +6393,12 @@ Requirements:
     copy._desktopMessageNavButtonsMode = _desktopMessageNavButtonsMode;
     copy._chatFontScale = _chatFontScale;
     copy._autoScrollEnabled = _autoScrollEnabled;
-    copy._autoScrollIdleSeconds = _autoScrollIdleSeconds;
     copy._enableDollarLatex = _enableDollarLatex;
     copy._enableMathRendering = _enableMathRendering;
     copy._enableUserMarkdown = _enableUserMarkdown;
     copy._enableReasoningMarkdown = _enableReasoningMarkdown;
     copy._enableAssistantMarkdown = _enableAssistantMarkdown;
+    copy._showGenUiHeader = _showGenUiHeader;
     copy._showChatListDate = _showChatListDate;
     copy._autoCollapseCodeBlock = _autoCollapseCodeBlock;
     copy._autoCollapseCodeBlockLines = _autoCollapseCodeBlockLines;
@@ -6558,6 +6651,7 @@ class ProviderConfig {
   final OAuthProvider? oauthProvider;
   final ProviderOAuthCredentials? oauthCredentials;
   final DateTime? oauthModelsSyncedAt;
+  final String? oauthModelsClientVersion;
   bool get isOAuth => oauthProvider != null;
   final String baseUrl;
   final ProviderKind?
@@ -6653,6 +6747,7 @@ class ProviderConfig {
     this.oauthProvider,
     this.oauthCredentials,
     this.oauthModelsSyncedAt,
+    this.oauthModelsClientVersion,
     required this.baseUrl,
     this.providerType,
     this.chatPath,
@@ -6707,6 +6802,7 @@ class ProviderConfig {
     OAuthProvider? oauthProvider,
     Object? oauthCredentials = _sentinel,
     DateTime? oauthModelsSyncedAt,
+    Object? oauthModelsClientVersion = _sentinel,
     String? baseUrl,
     ProviderKind? providerType,
     String? chatPath,
@@ -6748,6 +6844,9 @@ class ProviderConfig {
         ? this.oauthCredentials
         : oauthCredentials as ProviderOAuthCredentials?,
     oauthModelsSyncedAt: oauthModelsSyncedAt ?? this.oauthModelsSyncedAt,
+    oauthModelsClientVersion: identical(oauthModelsClientVersion, _sentinel)
+        ? this.oauthModelsClientVersion
+        : oauthModelsClientVersion as String?,
     baseUrl: baseUrl ?? this.baseUrl,
     providerType: providerType ?? this.providerType,
     chatPath: chatPath ?? this.chatPath,
@@ -6798,6 +6897,8 @@ class ProviderConfig {
       'oauthCredentials': oauthCredentials!.toJson(),
     if (oauthModelsSyncedAt != null)
       'oauthModelsSyncedAt': oauthModelsSyncedAt!.toIso8601String(),
+    if (oauthModelsClientVersion != null)
+      'oauthModelsClientVersion': oauthModelsClientVersion,
     'baseUrl': baseUrl,
     'providerType': providerType?.name,
     'chatPath': chatPath,
@@ -6849,6 +6950,7 @@ class ProviderConfig {
     oauthModelsSyncedAt: DateTime.tryParse(
       json['oauthModelsSyncedAt'] as String? ?? '',
     ),
+    oauthModelsClientVersion: json['oauthModelsClientVersion'] as String?,
     baseUrl: json['baseUrl'] as String? ?? '',
     providerType: json['providerType'] != null
         ? ProviderKind.values.firstWhere(

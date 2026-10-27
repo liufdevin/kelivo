@@ -172,6 +172,7 @@ Future<ParsedTextAndImages> parseTextAndImages(
   // Those carry a payload a text-only request has no use for.
   bool keepDisallowedImageText = true,
   bool skipImageParsing = false,
+  String? literalText,
 }) async {
   if (raw.isEmpty) return const ParsedTextAndImages('', <ImageRef>[]);
   // Utility / text-only prompts (title, summary, compress) must keep
@@ -184,8 +185,24 @@ Future<ParsedTextAndImages> parseTextAndImages(
   // Attachments arrive via structured parts / media-path keys.
   final images = <ImageRef>[];
   final buf = StringBuffer();
+  final literalRanges = literalText == null || literalText.isEmpty
+      ? <Match>[]
+      : literalText.allMatches(raw).toList();
+  var literalIndex = 0;
   int i = 0;
   while (i < raw.length) {
+    while (literalIndex < literalRanges.length &&
+        literalRanges[literalIndex].end <= i) {
+      literalIndex++;
+    }
+    final literal = literalIndex < literalRanges.length
+        ? literalRanges[literalIndex]
+        : null;
+    if (literal != null && i >= literal.start) {
+      buf.write(raw.substring(i, literal.end));
+      i = literal.end;
+      continue;
+    }
     // Skip fenced code blocks (``` or ~~~): content inside is never an image.
     if ((raw.startsWith('```', i) || raw.startsWith('~~~', i)) &&
         (i == 0 || raw[i - 1] == '\n')) {
@@ -249,7 +266,7 @@ Future<ParsedTextAndImages> parseTextAndImages(
         raw.codeUnitAt(i) == 0x21 &&
         raw.codeUnitAt(i + 1) == 0x5B) {
       final m1 = mdImg.matchAsPrefix(raw, i);
-      if (m1 != null) {
+      if (m1 != null && (literal == null || m1.end <= literal.start)) {
         final full = raw.substring(m1.start, m1.end);
         final url = (m1.group(1) ?? '').trim();
         if (url.isEmpty) {
@@ -318,7 +335,7 @@ Future<ParsedTextAndImages> parseTextAndImages(
     // Do not indexOf the remaining suffix on every line — that is O(n²)
     // when a Markdown image sits near the end of a long document.
     var j = i;
-    while (j < raw.length) {
+    while (j < raw.length && (literal == null || j < literal.start)) {
       final c = raw.codeUnitAt(j);
       if (c == 0x0A || c == 0x60) break;
       if (c == 0x21 && j + 1 < raw.length && raw.codeUnitAt(j + 1) == 0x5B) {
@@ -433,7 +450,7 @@ void applyAnthropicMessagesProtocolConstraints(Map<String, dynamic> body) {
   thinking['budget_tokens'] = next;
 }
 
-// Clean JSON Schema for Google Gemini API strict validation
+// Clean schemas for Google Gemini's native `parameters` field.
 // Google requires array types to have 'items' field, and only accepts `enum`
 // on string-typed schemas (values must be strings too).
 Map<String, dynamic> cleanSchemaForGemini(
@@ -485,7 +502,10 @@ String? _inferScalarType(List<dynamic> values) {
 
 dynamic _cleanSchemaNode(dynamic node, bool stringEnumOnly) {
   if (node is! Map) return node;
-  final result = Map<String, dynamic>.from(node);
+  // Native Schema rejects this JSON Schema keyword. Only remove it from
+  // schema nodes; a property name or a key inside default/example is data.
+  final result = Map<String, dynamic>.from(node)
+    ..remove('additionalProperties');
 
   final declaredType = (result['type'] ?? '').toString();
 
@@ -563,6 +583,13 @@ dynamic _cleanSchemaNode(dynamic node, bool stringEnumOnly) {
     result['items'] = _cleanSchemaNode(result['items'], stringEnumOnly);
   } else if (type == 'array' && !result.containsKey('items')) {
     result['items'] = {'type': 'string'}; // Default to string array
+  }
+
+  if (result['anyOf'] is List) {
+    result['anyOf'] = [
+      for (final variant in result['anyOf'] as List)
+        _cleanSchemaNode(variant, stringEnumOnly),
+    ];
   }
 
   return result;

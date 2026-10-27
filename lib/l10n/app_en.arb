@@ -41,7 +41,7 @@
   "settingsPageCalculating": "Calculating…",
   "storageSpacePageTitle": "Storage Space",
   "storageSpaceRefreshTooltip": "Refresh",
-  "storageSpaceLoadFailed": "Failed to load storage usage",
+  "storageSpaceLoadFailed": "Could not load files or check which images are in use. Please refresh and try again.",
   "storageSpaceTotalLabel": "Used",
   "storageSpaceClearableLabel": "Clearable: {size}",
   "@storageSpaceClearableLabel": {
@@ -76,7 +76,6 @@
   "storageSpaceClearDisplacedDatabasesButton": "Delete Set-Aside Databases",
   "storageSpaceClearRestoreTracesConfirmMessage": "Clear completed restore snapshots? Your current database, settings, and files will not be affected.",
   "storageSpaceSubCompletedRestoreRuns": "Completed restore snapshots",
-  "storageSpaceCategoryAssistantData": "Assistants",
   "storageSpaceCategoryCache": "Cache",
   "storageSpaceCategoryLogs": "Logs",
   "storageSpaceCategoryOther": "Other",
@@ -90,8 +89,6 @@
   "storageSpaceSubChatDatabase": "Chat database",
   "storageSpaceSubChatWriteAheadLog": "Write-ahead log",
   "storageSpaceSubChatSharedMemory": "Shared memory index",
-  "storageSpaceSubAssistantAvatars": "Avatars",
-  "storageSpaceSubAssistantImages": "Images",
   "storageSpaceSubCacheAvatars": "Avatar cache",
   "storageSpaceSubCacheOther": "Other cache",
   "storageSpaceSubCacheSystem": "System cache",
@@ -170,10 +167,6 @@
       }
     }
   },
-  "storageSpaceSourceLabel": "Source",
-  "storageSpaceSourceAll": "All",
-  "storageSpaceSourceUserUpload": "User uploads",
-  "storageSpaceSourceAssistant": "Assistant",
   "storageSpaceSortLabel": "Sort",
   "storageSpaceSortNewest": "Newest",
   "storageSpaceSortOldest": "Oldest",
@@ -693,6 +686,9 @@
   "restartAppFailedMessage": "Kelivo could not restart automatically. Fully close it, then open it again.",
   "backupRestoreRolledBackTitle": "Restore was rolled back",
   "backupRestoreRolledBackContent": "The restore could not be completed. Kelivo verified and kept your previous data.",
+  "backupRestoreDirectoryBlockedTitle": "Restore is waiting for a folder",
+  "backupRestoreDirectoryBlockedContent": "Windows could not move the folder below. Close terminals, editors, or other programs using it, then continue restoring. If it is still blocked, check that your account can move the folder. Your restore progress has been kept.",
+  "backupRestoreContinueButton": "Continue restore",
   "backupRestoreFailureTitle": "Restore requires attention",
   "backupRestoreFailureContent": "Kelivo could not verify a complete old or new data set, so chat data was not opened. Close Kelivo and try again. If this repeats, keep the diagnostic code for support.",
   "backupRestoreBusinessLeaseUnavailableTitle": "Kelivo is already running",
@@ -723,10 +719,10 @@
   "startupRecoveryBusy": "Working…",
   "startupRecoveryExportSucceeded": "A copy of your data was saved.",
   "startupRecoveryExportFailed": "Could not export a copy of your data.",
-  "startupRecoveryRepairFailed": "Repair could not fix this. Export a copy of your data, then reset.",
+  "startupRecoveryRepairFailed": "Repair could not complete. Your data is preserved; choose a validated copy or export your data for further diagnosis.",
   "startupRecoveryResetFailed": "Reset failed. Fully close Kelivo, then open it again.",
   "startupRecoveryResetDialogTitle": "Reset all data?",
-  "startupRecoveryResetDialogContent": "This permanently deletes Kelivo's database on this device and starts fresh. If you might need this data, export a copy first. This cannot be undone.",
+  "startupRecoveryResetDialogContent": "Start with a new empty database? The current database, its journals and existing copies will be retained for recovery.",
   "startupRecoveryResetDialogConfirm": "Reset and restart",
   "startupRecoveryResetDialogCancel": "Cancel",
   "startupRecoveryWhatFailed": "What failed",
@@ -797,8 +793,8 @@
   "startupRecoveryIntegrityMissing": "No database file was found in the data folder.",
   "startupRecoveryIntegrityFailed": "The integrity check could not run.",
   "startupRecoveryDangerZone": "Danger zone",
-  "startupRecoveryDangerBody": "Resetting permanently deletes Kelivo's database on this device. Export a copy of your data first — a reset also destroys the evidence needed to fix the underlying problem.",
-  "startupRecoveryResetAcknowledge": "I exported a copy, or I do not need this data.",
+  "startupRecoveryDangerBody": "A fresh start removes the current data from view. Kelivo will preserve the old database and existing copies for recovery. Export a data copy first if possible.",
+  "startupRecoveryResetAcknowledge": "I want to start with a new empty database.",
   "startupDatabaseUpdateRequiredTitle": "Update Kelivo to continue",
   "startupDatabaseUpdateRequiredContent": "The chat database on this device was created by a newer version of Kelivo and cannot be opened by this version. Your data has not been changed. Install the latest version of Kelivo, then open it again.",
   "startupDatabaseUpdateRequiredDowngradeTitle": "If you need an older version",
@@ -938,6 +934,7 @@
   "backupPageSave": "Save",
   "backupPageBackupNow": "Backup Now",
   "backupPageLocalBackup": "Local Backup",
+  "backupPageIosSystemBackupNote": "Kelivo's local data is set to be excluded from iCloud device backups. Export a backup file before changing devices or deleting the app.",
   "backupPageImportFromCherryStudio": "Import from Cherry Studio",
   "backupPageCherryStudioUnsupportedBackupVersion": "This backup uses Cherry Studio format version {version}, which Kelivo cannot import yet. Export from Cherry Studio v1 instead, or wait for a Kelivo update that supports Cherry Studio v2 backups.",
   "@backupPageCherryStudioUnsupportedBackupVersion": {
@@ -1010,27 +1007,26 @@
   "bottomToolsSheetUpload": "Upload",
   "bottomToolsSheetClearContext": "Clear Context",
   "compressContext": "Compress Context",
-  "compressContextDesc": "Summarize and start a new chat",
+  "compressContextDesc": "Create a summary you can review and undo",
   "clearContextDesc": "Mark a context boundary",
   "contextManagement": "Context Management",
-  "compressingContext": "Compressing context...",
   "compressContextFailed": "Failed to compress context",
   "compressContextNoMessages": "No messages to compress",
   "compressContextNoConversation": "No conversation to compress",
   "compressContextNoModel": "No compression model configured",
   "compressContextEmptySummary": "Compression returned an empty summary",
   "compressContextOptionsTitle": "Compress Context",
-  "compressContextOptionsDesc": "Choose which part of the current chat is sent to the compression model.",
-  "compressContextKeepStart": "Start",
-  "compressContextKeepRecent": "Recent",
-  "compressContextUnlimited": "Unlimited",
+  "compressContextOptionsDesc": "Create an editable, reversible summary in this chat. Original messages are kept.",
+  "compressContextKeepStart": "Start sample",
+  "compressContextKeepRecent": "End sample",
+  "compressContextUnlimited": "All content",
   "compressContextMaxCharsLabel": "Characters",
   "compressContextInvalidLimit": "Enter a positive character count",
   "compressContextStartButton": "Compress",
   "compressContextModelLabel": "Model",
   "compressContextModelUnset": "Select a model",
   "compressContextKeepRecentMessages": "Keep N",
-  "compressContextKeepCountLabel": "Keep recent messages",
+  "compressContextKeepCountLabel": "Recent user messages",
   "compressContextKeepAllMessages": "Keeping that many covers all messages — nothing to compress",
   "compressContextEstimatePreview": "Summarize {summarized} chars, keep {kept} chars verbatim → about {minTokens}–{maxTokens} tokens (original about {totalTokens} tokens)",
   "@compressContextEstimatePreview": {
@@ -1180,7 +1176,9 @@
   "chatMessageWidgetWebFetch": "Read page: {target}",
   "@chatMessageWidgetWebFetch": {
     "placeholders": {
-      "target": { "type": "String" }
+      "target": {
+        "type": "String"
+      }
     }
   },
   "chatMessageWidgetBuiltinSearch": "Built-in Search",
@@ -1766,6 +1764,8 @@
   "modelSpecFormDialectAnthropicBudgetSubtitle": "thinking.budget_tokens",
   "modelSpecFormDialectAnthropicAdaptiveEffort": "Anthropic adaptive effort",
   "modelSpecFormDialectAnthropicAdaptiveEffortSubtitle": "thinking + output_config.effort",
+  "modelSpecFormDialectAnthropicBetweenTools": "Anthropic adaptive / between_tools",
+  "modelSpecFormDialectAnthropicBetweenToolsSubtitle": "Adaptive thinking; Off uses between_tools",
   "modelSpecFormDialectAnthropicEffort": "Anthropic effort",
   "modelSpecFormDialectAnthropicEffortSubtitle": "thinking + output_config.effort",
   "modelSpecFormDialectGeminiThinkingBudget": "Gemini thinking budget",
@@ -2083,13 +2083,17 @@
   "searchServicesPageWebFetchFollowValue": "Follow search · {name}",
   "@searchServicesPageWebFetchFollowValue": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "searchServicesPageWebFetchFollowSubtitle": "Currently {name}",
   "@searchServicesPageWebFetchFollowSubtitle": {
     "placeholders": {
-      "name": { "type": "String" }
+      "name": {
+        "type": "String"
+      }
     }
   },
   "searchServicesPageWebFetchLocal": "Local",
@@ -2243,14 +2247,20 @@
   "searchServiceEditorTestFetchFailed": "Fetch failed: {message}",
   "@searchServiceEditorTestFetchFailed": {
     "placeholders": {
-      "message": { "type": "String" }
+      "message": {
+        "type": "String"
+      }
     }
   },
   "searchServiceEditorTestFetchStats": "{characters} characters · {seconds}s",
   "@searchServiceEditorTestFetchStats": {
     "placeholders": {
-      "characters": { "type": "String" },
-      "seconds": { "type": "String" }
+      "characters": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
     }
   },
   "searchServiceEditorResultOpenTooltip": "Open result",
@@ -2410,9 +2420,7 @@
   "desktopDisplaySettingsTopicPositionRight": "Right",
   "displaySettingsPageNewChatOnLaunchSubtitle": "Automatically create a new chat on launch",
   "displaySettingsPageChatFontSizeTitle": "Chat Font Size",
-  "displaySettingsPageAutoScrollEnableTitle": "Auto-scroll to bottom",
-  "displaySettingsPageAutoScrollIdleTitle": "Auto-Scroll Back Delay",
-  "displaySettingsPageAutoScrollIdleSubtitle": "Wait time after user scroll before jumping to bottom",
+  "displaySettingsPageAutoScrollEnableTitle": "Auto-follow bottom",
   "displaySettingsPageAutoScrollDisabledLabel": "Off",
   "displaySettingsPageChatFontSampleText": "This is a sample chat text",
   "displaySettingsPageChatBackgroundMaskTitle": "Chat Background Overlay Opacity",
@@ -2487,6 +2495,8 @@
   "asrServicesLocalSubtitle": "Runs offline on this device after download",
   "asrServicesOpenAiTitle": "OpenAI Realtime",
   "asrServicesOpenAiSubtitle": "Low-latency streaming transcription",
+  "asrServicesGroqSubtitle": "Whisper segmented transcription",
+  "asrServicesMistralSubtitle": "Voxtral segmented transcription",
   "asrServicesDashScopeTitle": "DashScope",
   "asrServicesDashScopeSubtitle": "Qwen real-time transcription",
   "asrServicesVolcengineTitle": "Volcengine",
@@ -2734,6 +2744,7 @@
   "searchProviderTavilyDescription": "AI search API optimized for LLMs. Provides high-quality, relevant results.",
   "searchProviderZhipuDescription": "Chinese AI search by Zhipu AI. Optimized for Chinese content and queries.",
   "searchProviderOllamaDescription": "Ollama web search API. Augments models with up-to-date information.",
+  "searchProviderDeepSeekDescription": "DeepSeek official web search and page fetch APIs. Uses a DeepSeek API key.",
   "searchProviderJinaDescription": "AI search foundation with embeddings, rerankers, web reader, deepsearch, and small language models. Multilingual and multimodal.",
   "searchServiceNameBingLocal": "Bing (Local)",
   "searchServiceNameDuckDuckGo": "DuckDuckGo",
@@ -2746,6 +2757,7 @@
   "searchServiceNameBrave": "Brave Search",
   "searchServiceNameMetaso": "Metaso",
   "searchServiceNameOllama": "Ollama",
+  "searchServiceNameDeepSeek": "DeepSeek",
   "searchServiceNameJina": "Jina",
   "searchServiceNamePerplexity": "Perplexity",
   "searchProviderPerplexityDescription": "Perplexity Search API. Ranked web results with region and domain filters.",
@@ -3245,7 +3257,9 @@
   "memorySettingsThinkingSubtitle": "Allow the memory model to use reasoning when supported",
   "memorySettingsInjectionSection": "Memory injection",
   "memorySettingsInjectionMaxItemsTitle": "Items injected per type",
-  "memorySettingsInjectionMaxItemsSubtitle": "When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.",
+  "memorySettingsInjectionMaxItemsSubtitle": "This limit applies to types not selected for full injection. When a type exceeds this limit, only the newest items are injected. The rest can be fetched with memory_search_profile. A larger number is more complete but uses more tokens. If you customized the rules prompt, update it or restore the default.",
+  "memorySettingsFullInjectionTypesTitle": "Always inject these types",
+  "memorySettingsFullInjectionTypesSubtitle": "Select one or more types to inject all their active memories visible to the current assistant. These types ignore the item limit and use more context and tokens.",
   "memorySettingsInjectionMaxItemsOption": "{n}",
   "@memorySettingsInjectionMaxItemsOption": {
     "placeholders": {
@@ -3717,7 +3731,6 @@
   "worldBookInjectionRoleAssistant": "Assistant",
   "mcpToolNeedsApproval": "Require approval",
   "toolApprovalPending": "Waiting for approval",
-  "toolApprovalApprove": "Approve",
   "toolApprovalDeny": "Deny",
   "toolApprovalDenyTitle": "Deny tool call",
   "toolApprovalDenyHint": "Reason (optional)",
@@ -4469,7 +4482,6 @@
   "workspaceToolUpdated": "updated",
   "workspaceToolTruncated": "truncated",
   "workspaceToolImageTag": "image",
-  "workspaceToolAllowAll": "Allow all this session",
   "workspaceToolStdout": "stdout",
   "workspaceToolStderr": "stderr",
   "workspaceToolOpenFullOutput": "Open full output",
@@ -4653,6 +4665,9 @@
   "workspaceEnvErrorNetwork": "Download failed. Check your connection and try again.",
   "workspaceEnvErrorChecksumMismatch": "The download was corrupted. Try again.",
   "workspaceEnvErrorExtractFailed": "Could not extract the sandbox image.",
+  "workspaceEnvErrorCleanupFailed": "Could not remove old sandbox files. Please try again.",
+  "workspaceEnvCleanupIncomplete": "The sandbox is ready, but some old files could not be removed. They still take up storage space.",
+  "workspaceEnvErrorResetFailed": "Could not finish resetting the sandbox. Please try again.",
   "workspaceEnvErrorPatchFailed": "Could not finish setting up the sandbox.",
   "workspaceEnvErrorCancelled": "Installation was cancelled.",
   "workspaceEnvErrorGeneric": "Something went wrong installing the sandbox.",
@@ -4677,7 +4692,7 @@
       }
     }
   },
-  "workspaceEnvNativeShellApproval": "The shell tool needs approval unless this session allows all tools.",
+  "workspaceEnvNativeShellApproval": "The shell tool needs approval in Ask for approval mode.",
   "workspaceEnvDownloadProgress": "{downloaded} / {total} MB ({percent}%)",
   "@workspaceEnvDownloadProgress": {
     "placeholders": {
@@ -4791,8 +4806,6 @@
   "workspaceEntryOpenSystemTerminal": "Open in system terminal",
   "workspaceEntryReveal": "Reveal in file manager",
   "workspaceEntrySessionSkills": "Skills",
-  "workspaceEntryAllowAll": "Allow all this session",
-  "workspaceEntryAllowAllSubtitle": "Shell commands in this conversation will run without approval.",
   "workspaceEntryEnvironment": "Environment",
   "workspaceEntryManage": "Manage workspaces",
   "workspaceEntryCreate": "Create new workspace…",
@@ -5097,7 +5110,7 @@
       }
     }
   },
-  "workspaceEnvNativeUnsandboxed": "Commands run on this computer, not in a sandbox, and need approval unless this session allows all tools.",
+  "workspaceEnvNativeUnsandboxed": "Commands run on this computer without a sandbox and need approval unless this chat has full access.",
   "workspaceEnvRootfsTitle": "/",
   "workspaceEnvBrowserUnavailable": "The sandbox file system is not available.",
   "workspaceEnvMirrorNameOfficial": "Official",
@@ -6276,5 +6289,1274 @@
   "mcpOAuthDiscovering": "Discovering authorization server…",
   "mcpOAuthRegistering": "Preparing authorization…",
   "mcpOAuthWaitingBrowser": "Waiting for browser authorization…",
-  "mcpOAuthExchangingToken": "Completing sign-in…"
+  "mcpOAuthExchangingToken": "Completing sign-in…",
+  "markdownPlaygroundTitle": "Markdown Playground",
+  "markdownPlaygroundSource": "Markdown source",
+  "markdownPlaygroundPreview": "Preview",
+  "markdownPlaygroundAst": "AST",
+  "markdownPlaygroundPlay": "Stream characters",
+  "markdownPlaygroundPause": "Pause",
+  "markdownPlaygroundResume": "Resume",
+  "markdownPlaygroundShowAll": "Show complete",
+  "markdownPlaygroundWidth": "Preview width",
+  "markdownPlaygroundTheme": "Preview theme",
+  "markdownPlaygroundPlain": "Selected plain text",
+  "markdownPlaygroundMarkdown": "Selected Markdown",
+  "markdownPlaygroundSelectionHint": "Select text in the preview to inspect copied content.",
+  "markdownPlaygroundEmpty": "Enter Markdown to preview it.",
+  "markdownPlaygroundProgress": "Input {shown} / {total}",
+  "@markdownPlaygroundProgress": {
+    "placeholders": {
+      "shown": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "markdownCopyMarkdownAction": "Copy Markdown",
+  "markdownCopyCsvAction": "Copy CSV",
+  "markdownCopyImageAction": "Copy image",
+  "markdownCodeLabel": "Code",
+  "markdownDetailsLabel": "Details",
+  "markdownMoreRows": "Show {count} more rows",
+  "@markdownMoreRows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "markdownNoteLabel": "Note",
+  "markdownTipLabel": "Tip",
+  "markdownImportantLabel": "Important",
+  "markdownWarningLabel": "Warning",
+  "markdownCautionLabel": "Caution",
+  "markdownDangerLabel": "Danger",
+  "markdownCopyRichTextAction": "Copy rich text",
+  "markdownCopySelectionFailed": "Could not copy the selected text.",
+  "recoveryMissingDataTitle": "Previous data detected",
+  "recoveryMissingDataBody": "The current database is missing, but this device still contains previous data. Kelivo has paused startup and has not created an empty database. Your remaining files and copies are being preserved.",
+  "recoveryEmptyDataTitle": "Current chat history is empty",
+  "recoveryEmptyDataBody": "The current database has no conversations, but previous copies were found. Kelivo has paused startup so you can recover a copy or explicitly keep the current data. Nothing will be overwritten automatically.",
+  "recoveryKeepCurrent": "Keep current data and continue",
+  "recoveryKeepCurrentConfirm": "Continue with the current empty database? Previous copies will remain available for recovery later.",
+  "recoverySearchingCopies": "Finding and validating local data copies…",
+  "recoveryFoundCopies": "Found {count} validated copies. Choose one to recover your chats and settings. The original files will be kept.",
+  "@recoveryFoundCopies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recoveryInvalidCopy": "{name}: validation failed. The original file has been kept.",
+  "@recoveryInvalidCopy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "recoverySearchFailed": "Some data locations could not be read. Your files have been kept; export a data copy before trying other recovery actions.",
+  "recoveryDiscoveredCopyBody": "Found outside the managed copy folder. This original is preserved and will be fully validated before recovery.",
+  "recoveryStorageFailureTitle": "Data storage needs attention",
+  "recoveryStorageFailureBody": "Kelivo could not activate its protected data storage. Startup has stopped and the original data has been kept. Export a copy of your data or retry; no empty database will be created.",
+  "recoveryProtectingTitle": "Protecting the chat database",
+  "recoveryProtectingData": "Copying and verifying the database. Images, attachments and snapshots stay in Documents and are not copied again. The original database will be kept.",
+  "recoveryStorageReadyTitle": "Chat database moved to internal storage",
+  "recoveryStorageReadyBody": "The database containing chats, assistants and settings now uses internal app storage. Snapshots, images and attachments remain accessible in the Files app under Documents. The original database is retained. If older chats are missing, open Settings → Backup → Local Copies.",
+  "recoveryRetainedData": "Retained original data",
+  "recoveryNoValidCopies": "Copies were found, but none passed validation. The originals have been kept. You can export your data for further diagnosis.",
+  "recoveryStorageInsufficientSpaceBody": "There is not enough free space to keep the original database and create its verified internal copy. Existing data and snapshots are unchanged. Free some space, then retry.",
+  "migrationFreshStartTitle": "Fresh start is ready",
+  "migrationFreshStartSubtitle": "A new empty database is ready, and your previous data has been retained. Restart the app to continue.",
+  "migrationFreshStartFailedTitle": "Fresh start could not be completed",
+  "migrationFreshStartFailedSubtitle": "Your previous data has been retained. Retry starting fresh, or close and reopen the app.",
+  "imageExportPreparing": "Preparing image…",
+  "imageExportDiagrams": "Preparing diagrams {completed}/{total}…",
+  "@imageExportDiagrams": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "imageExportCapturing": "Capturing image {completed}/{total}…",
+  "@imageExportCapturing": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "imageExportProcessing": "Combining image and preparing preview…",
+  "imageExportSaving": "Saving image…",
+  "backupEncryptionTitle": "Encrypt backups",
+  "backupEncryptionOffHint": "Unencrypted backups can be read by anyone with the file.",
+  "backupEncryptionOnHint": "Backups are encrypted. Enter the password again after restarting the app.",
+  "backupEncryptionPasswordHint": "Keep this password safe. If you lose it, the backup cannot be restored. It is kept in memory until you exit the app.",
+  "backupEncryptionPassword": "Password",
+  "backupEncryptionConfirmPassword": "Confirm password",
+  "backupEncryptionMismatch": "Passwords do not match.",
+  "backupEncryptionShowPassword": "Show password",
+  "backupEncryptionHidePassword": "Hide password",
+  "backupEncryptionUnlockTitle": "Encrypted backup",
+  "backupEncryptionUnlockHint": "Enter the password used to create this backup.",
+  "backupEncryptionUnlock": "Unlock",
+  "backupEncryptionFailed": "The password is incorrect, or the backup is damaged. Try again or cancel.",
+  "backupEncryptionInvalid": "The encrypted backup is incomplete or invalid.",
+  "backupEncryptionUnsupported": "This encrypted backup requires a newer version of Kelivo.",
+  "backupProgressEncrypting": "Encrypting backup",
+  "backupProgressDecrypting": "Decrypting backup",
+  "mcpPageStatusFailed": "Connection failed",
+  "mcpPageCardToolsShort": "Tools {enabled}/{total}",
+  "mcpPageSelectServer": "Select {name}",
+  "@mcpPageCardToolsShort": {
+    "placeholders": {
+      "enabled": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@mcpPageSelectServer": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "mcpIconTitle": "Server icon",
+  "mcpIconInvalid": "Unable to use this image. Choose a valid image up to 10 MB.",
+  "mcpSelectServers": "Select servers",
+  "mcpMoveToGroup": "Move to group",
+  "mcpRenameGroup": "Rename group",
+  "mcpDeleteGroupConfirm": "Servers in this group will be moved to Other. The servers will not be deleted.",
+  "mcpGroupNameInvalid": "Use a nonempty, unique group name.",
+  "mcpEnableSelected": "Enable",
+  "mcpDisableSelected": "Disable",
+  "mcpDeleteSelectedConfirm": "Delete {count} selected servers?",
+  "@mcpDeleteSelectedConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserTitle": "Browser",
+  "browserSearchHint": "Search or enter website",
+  "browserStartTitle": "Where to next?",
+  "browserStartSubtitle": "Browse freely. Let your agent help when you need it.",
+  "browserNewTab": "New tab",
+  "browserTabs": "Tabs",
+  "browserCloseTab": "Close tab",
+  "browserClose": "Close browser",
+  "browserBack": "Back",
+  "browserForward": "Forward",
+  "browserReload": "Reload",
+  "browserStop": "Stop loading",
+  "browserMore": "More",
+  "browserBookmarks": "Bookmarks",
+  "browserHistory": "History",
+  "browserSettings": "Browser settings",
+  "browserAddBookmark": "Add bookmark",
+  "browserRemoveBookmark": "Remove bookmark",
+  "browserNoBookmarks": "Your favorite places, all together.",
+  "browserNoHistory": "Your browsing history appears here.",
+  "browserSearchLibrary": "Search saved pages",
+  "browserClearHistory": "Clear history",
+  "browserClearHistoryConfirm": "Delete all browsing history? Bookmarks will be kept.",
+  "browserToday": "Today",
+  "browserYesterday": "Yesterday",
+  "browserDelete": "Delete",
+  "browserCancel": "Cancel",
+  "browserDone": "Done",
+  "browserFind": "Find on page",
+  "browserFindPreviousMatch": "Previous match",
+  "browserFindNextMatch": "Next match",
+  "browserFindHint": "Find text",
+  "browserSearchEngine": "Search engine",
+  "browserDesktopMode": "Desktop website",
+  "browserDesktopModeDescription": "Reload open pages with a desktop user agent.",
+  "browserRestoreTabs": "Restore tabs",
+  "browserRestoreTabsDescription": "Reopen your tabs when Kelivo starts.",
+  "browserSaveHistory": "Save history",
+  "browserSaveHistoryDescription": "Keep a local record of the pages you visit.",
+  "browserClearData": "Clear website data",
+  "browserClearDataConfirm": "Clear cookies, storage and cache, and close all tabs? You will be signed out of websites.",
+  "browserDataCleared": "Website data cleared",
+  "browserAgentControl": "Agent control",
+  "browserAgentWorking": "AI is working",
+  "browserTakeOver": "Take over",
+  "browserAgentPaused": "AI actions paused",
+  "browserAllowAgent": "Allow to continue",
+  "browserAgentDescription": "Send a task in chat to let AI use the browser. Allowing it to continue only removes the pause; it does not send a message or start a task.",
+  "browserOpenExternal": "Open in default browser",
+  "browserCopyLink": "Copy link",
+  "browserLinkCopied": "Link copied",
+  "browserUnsupported": "The embedded browser is not available on this platform.",
+  "browserLoadFailed": "This page could not be loaded",
+  "browserRetry": "Try again",
+  "browserFavorites": "Favorites",
+  "browserEditBookmark": "Edit bookmark",
+  "browserBookmarkTitle": "Title",
+  "browserBookmarkUrl": "Website",
+  "browserSave": "Save",
+  "browserDownloads": "Downloads",
+  "browserNoDownloads": "Downloaded files appear here.",
+  "browserDownloadCancel": "Cancel download",
+  "browserOpenDownload": "Open file",
+  "browserDownloadFailed": "Download failed",
+  "browserAgentEnableHint": "Enable the Browser tool in chat tools, then allow control here.",
+  "browserSessionRequired": "Open the browser from a conversation to allow agent control.",
+  "browserDownloadCancelled": "Cancelled",
+  "browserAgentEnabled": "Allow assistant browser access",
+  "browserAgentEnabledDescription": "Enabled assistants can browse and interact with pages in this browser.",
+  "browserToolTitle": "Browser control",
+  "browserToolSubtitle": "Browse and interact with signed-in pages. Enable Agent control in browser settings first.",
+  "browserOpen": "Open browser",
+  "browserInvalidUrl": "Enter a valid HTTP or HTTPS website address.",
+  "browserClearDataUnavailable": "Clearing all website data is not supported by the Windows browser engine.",
+  "browserSurfaceStyle": "Surface style",
+  "browserSurfaceLiquid": "Liquid glass",
+  "browserSurfaceFrosted": "Frosted",
+  "browserSurfaceSolid": "Solid",
+  "browserPageOptions": "Page options",
+  "browserAskAi": "Let AI work on this page",
+  "browserAskAiHint": "Return to chat, add your request, then send.",
+  "browserAskAiCurrentPage": "the current browser page",
+  "browserAskAiUnavailable": "This chat is unavailable. Open the browser from a chat first.",
+  "browserAskAiEditing": "Finish or cancel editing the current message before adding a page task.",
+  "browserAskAiAssistantDisabled": "Enable Browser control in this assistant’s tools first.",
+  "browserAskAiBrowserDisabled": "Allow assistants to use the browser in browser settings first.",
+  "browserAskAiDraft": "Please use the browser to work on this page:\n{page}\n\nMy request: ",
+  "@browserAskAiDraft": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      }
+    }
+  },
+  "browserOpenFullPage": "Open in full page",
+  "browserClosePanel": "Close browser panel",
+  "browserSearchTabs": "Search tabs",
+  "browserTabsCount": "{count, plural, =1{1 tab} other{{count} tabs}}",
+  "@browserTabsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserOpenInSidebar": "Open in sidebar",
+  "browserUserAgent": "User agent",
+  "browserUserAgentMobile": "Mobile",
+  "browserUserAgentDesktop": "Desktop",
+  "browserUserAgentCustom": "Custom",
+  "browserUserAgentHint": "Enter a custom User-Agent",
+  "browserUserAgentInvalid": "Use a single line of up to 2048 printable ASCII characters.",
+  "browserUserAgentDescription": "Changes reload the current webpage.",
+  "browserStepsShowEarlier": "{count} earlier steps",
+  "browserOpenThisPage": "Open in browser",
+  "browserGroupToggleSemantics": "Show or hide browser steps",
+  "@browserStepsShowEarlier": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserStepGroupTitle": "Browsing",
+  "browserStepCount": "{count} steps",
+  "@browserStepCount": {
+    "description": "Browser page card browserStepCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserStepCurrent": "step {count}",
+  "@browserStepCurrent": {
+    "description": "Browser page card browserStepCurrent",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserActionFailedCount": "· {count} failed",
+  "@browserActionFailedCount": {
+    "description": "Browser page card browserActionFailedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserActionFailed": "{action} failed",
+  "@browserActionFailed": {
+    "description": "Browser page card browserActionFailed",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "browserCardOpen": "Open",
+  "browserCardEnable": "Enable",
+  "browserCardRunning": "{action}…",
+  "@browserCardRunning": {
+    "description": "Browser page card browserCardRunning",
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "browserCardLive": "Live",
+  "browserCardOpenFailed": "Couldn't open page",
+  "browserCardBlankPage": "Blank page",
+  "browserCardTabCount": "{count} tabs",
+  "@browserCardTabCount": {
+    "description": "Browser page card browserCardTabCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserActionOpen": "Open page",
+  "browserActionNewTab": "New tab",
+  "browserActionRender": "Render page",
+  "browserActionExtract": "Extract text",
+  "browserActionSnapshot": "Read page structure",
+  "browserActionClick": "Click",
+  "browserActionType": "Type",
+  "browserActionPress": "Press key",
+  "browserActionScroll": "Scroll",
+  "browserActionWait": "Wait",
+  "browserActionBack": "Back",
+  "browserActionForward": "Forward",
+  "browserActionReload": "Reload",
+  "browserActionEvaluate": "Run script",
+  "browserActionSwitchTab": "Switch tab",
+  "browserActionCloseTab": "Close tab",
+  "browserActionListTabs": "List tabs",
+  "browserActionUnknown": "Browser action",
+  "browserMetaChars": "{count} chars",
+  "@browserMetaChars": {
+    "description": "Browser page card browserMetaChars",
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "browserMetaElements": "{count} elements",
+  "@browserMetaElements": {
+    "description": "Browser page card browserMetaElements",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserErrAgentDisabled": "Browser control is off",
+  "browserErrStaleRef": "Element is stale; page needs re-reading",
+  "browserErrNotVisible": "Element hidden or covered",
+  "browserErrNotFound": "Element not found",
+  "browserErrTimeout": "Page load timed out",
+  "browserErrHumanControl": "You're controlling the browser",
+  "browserErrTabClosed": "Tab was closed",
+  "browserErrGeneric": "Action failed",
+  "browserDirectionUp": "Up",
+  "browserDirectionDown": "Down",
+  "browserDirectionLeft": "Left",
+  "browserDirectionRight": "Right",
+  "browserMetaTabs": "{count} tabs",
+  "@browserMetaTabs": {
+    "description": "Number of tabs returned by list_tabs",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserTabsCurrentConversation": "This chat",
+  "browserTabsAll": "All tabs",
+  "browserTabsUnassigned": "Personal tabs",
+  "browserTabsUnknownConversation": "Other chat",
+  "browserTabsEmptyConversation": "No tabs here yet. Open a page or choose a tab from All tabs.",
+  "browserTabsNoResults": "No matching tabs",
+  "browserMoveToConversation": "Move to this chat",
+  "browserReopenInConversation": "Reopen in this chat",
+  "browserTabBusy": "An assistant is still using this page. Wait for it to finish or stop the task before moving it.",
+  "browserLiveViewLimit": "All browser resources are in use. Try again when a task finishes, or close an unused page.",
+  "browserAskAiInOwnerConversation": "Ask AI in the owning chat",
+  "displaySettingsPageShowBrowserPageCardsTitle": "Show webpage cards",
+  "browserObserverHint": "AI is using this page. Select Take over to interact.",
+  "genuiSurfaceTitle": "Interactive UI",
+  "genuiStatusStreaming": "Generating",
+  "genuiStatusInterrupted": "Interrupted",
+  "genuiStatusUnsaved": "Not saved",
+  "genuiStatusUnsavedRetry": "Tap to retry saving",
+  "genuiReadOnlyUntilComplete": "Available when generation finishes",
+  "genuiReadOnlySnapshot": "Read-only snapshot",
+  "genuiPendingNode": "Waiting for {id}",
+  "@genuiPendingNode": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiViewSource": "View source",
+  "genuiCopySource": "Copy source",
+  "genuiExpand": "Expand",
+  "genuiExpandedStub": "Being edited in expanded view",
+  "genuiMore": "More",
+  "genuiReset": "Reset to defaults",
+  "genuiRepair": "Repair UI",
+  "genuiInvalidTitle": "This UI can't be displayed",
+  "genuiNodesFailed": "{count, plural, =1{1 node can't be displayed} other{{count} nodes can't be displayed}}",
+  "@genuiNodesFailed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiErrorLine": "Line {line}",
+  "@genuiErrorLine": {
+    "placeholders": {
+      "line": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiValueUnavailable": "No value",
+  "genuiFormulaInvalid": "This formula can't be displayed",
+  "genuiNodeUnavailable": "This component is unavailable",
+  "genuiErrorHeader": "Invalid UI header",
+  "genuiErrorVersion": "Unsupported UI language version",
+  "genuiErrorCatalog": "Unsupported component catalog",
+  "genuiErrorRoot": "Missing or invalid root component",
+  "genuiErrorSyntax": "Invalid declaration syntax",
+  "genuiErrorDuplicateSymbol": "A name is defined more than once",
+  "genuiErrorDuplicateProperty": "A property is defined more than once",
+  "genuiErrorReservedName": "This name is reserved",
+  "genuiErrorUnknownComponent": "Unknown component {detail}",
+  "@genuiErrorUnknownComponent": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiErrorUnknownProperty": "Unknown property {detail}",
+  "@genuiErrorUnknownProperty": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiErrorMissingProperty": "Required property {detail} is missing",
+  "@genuiErrorMissingProperty": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiErrorBinding": "Invalid writable input binding",
+  "genuiErrorReference": "Invalid component reference",
+  "genuiErrorMissingReference": "Referenced content has not been defined",
+  "genuiErrorDependency": "Required content cannot be displayed",
+  "genuiErrorCycle": "Circular references are not supported",
+  "genuiErrorDuplicateParent": "A component cannot have two parents",
+  "genuiErrorUnreachableNode": "This component is outside the root tree",
+  "genuiErrorType": "Value has an incompatible type",
+  "genuiErrorValue": "Value is outside the supported options or range",
+  "genuiErrorSourceBudget": "UI source exceeds the size limit",
+  "genuiErrorDeclarationBudget": "A declaration exceeds the size limit",
+  "genuiErrorDeclarationCount": "Too many declarations",
+  "genuiErrorComponentCount": "Too many components",
+  "genuiErrorInputCount": "Too many inputs",
+  "genuiErrorComponentDepth": "Components are nested too deeply",
+  "genuiErrorExpressionDepth": "Calculation is nested too deeply",
+  "genuiErrorFunction": "Unknown calculation function",
+  "genuiErrorAction": "Unsupported action",
+  "genuiErrorNestedSample": "Nested sampling is not supported",
+  "genuiErrorSample": "Invalid sampling range or count",
+  "genuiErrorDataBudget": "Data exceeds the supported size",
+  "genuiErrorRowKey": "Rows need unique nonempty keys",
+  "genuiErrorDomain": "The value is outside the function domain",
+  "genuiErrorDivisionByZero": "Division by zero is undefined",
+  "genuiErrorNonFinite": "Calculation produced a nonfinite number",
+  "genuiErrorOperationsBudget": "Calculation exceeded the operation limit",
+  "genuiMetricTrend": "Change {value}",
+  "@genuiMetricTrend": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiFormErrorsLeft": "{count, plural, =1{1 field needs attention} other{{count} fields need attention}}",
+  "@genuiFormErrorsLeft": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiFieldRequired": "Required",
+  "genuiNumberRange": "Range {min}–{max}",
+  "@genuiNumberRange": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiNumberMinimum": "Minimum {min}",
+  "@genuiNumberMinimum": {
+    "placeholders": {
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiNumberMaximum": "Maximum {max}",
+  "@genuiNumberMaximum": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiFieldTooShort": "At least {min} characters",
+  "@genuiFieldTooShort": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiFieldTooLong": "At most {max} characters",
+  "@genuiFieldTooLong": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiInvalidNumber": "Enter a complete finite number",
+  "genuiChooseOption": "Choose an option",
+  "genuiFinishComposing": "Finish composing before continuing",
+  "genuiActionDisabledDep": "Disabled: depends on {id}, which can't be displayed",
+  "@genuiActionDisabledDep": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiActionUnavailable": "This action isn't available in this view",
+  "genuiActionDisabled": "Disabled by this UI",
+  "genuiFormUnavailable": "This form contains content that can't be displayed",
+  "genuiDecrease": "Decrease {label}",
+  "@genuiDecrease": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiIncrease": "Increase {label}",
+  "@genuiIncrease": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiCharacterCount": "{used} / {max} characters",
+  "@genuiCharacterCount": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiBlockLimit": "Up to 3 UI blocks per message; the rest are shown as source",
+  "genuiChartLine": "Line chart",
+  "genuiChartArea": "Area chart",
+  "genuiChartBar": "Bar chart",
+  "genuiChartScatter": "Scatter plot",
+  "genuiChartPie": "Pie chart",
+  "genuiChartDonut": "Donut chart",
+  "genuiChartEmpty": "No data in this range",
+  "genuiChartAllHidden": "All series are hidden. Use the legend to show one.",
+  "genuiChartSummary": "{kind}, {series, plural, =1{1 series} other{{series} series}}, {points, plural, =1{1 data row} other{{points} data rows}}, {missing, plural, =1{1 missing value} other{{missing} missing values}} (not connected or replaced with zero).",
+  "@genuiChartSummary": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "series": {
+        "type": "int"
+      },
+      "points": {
+        "type": "int"
+      },
+      "missing": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiChartPieSummary": "{kind}, {count, plural, =1{1 item} other{{count} items}}, total {total}.",
+  "@genuiChartPieSummary": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiChartDomainGap": "Undefined",
+  "genuiChartDomainSummary": "{count, plural, =1{1 sampled point is undefined} other{{count} sampled points are undefined}}; shaded gaps are not connected.",
+  "@genuiChartDomainSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiChartShowSeries": "Show {name}",
+  "@genuiChartShowSeries": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiChartHideSeries": "Hide {name}",
+  "@genuiChartHideSeries": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiChartKeyboardHint": "Left and right select a data row. Up and down select a series. Escape clears selection.",
+  "genuiChartTotal": "Total",
+  "genuiChartFieldsError": "Choose an X field and one to four distinct Y fields.",
+  "genuiChartRecordsError": "Chart data must be a list of records.",
+  "genuiChartXError": "X values must all be numbers or all be text. Scatter plots require numbers.",
+  "genuiChartYError": "Y fields must exist and contain numbers or missing values.",
+  "genuiChartPieError": "Pie values must be nonnegative and have a finite total greater than zero.",
+  "genuiChartMissingValues": "{count, plural, =1{1 value is missing; it is not replaced with zero.} other{{count} values are missing; they are not replaced with zero.}}",
+  "@genuiChartMissingValues": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiChartNoVisibleValues": "The selected series have no values to plot.",
+  "genuiChartUnit": "Unit: {unit}",
+  "@genuiChartUnit": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "genuiSomeValuesUnavailable": "Some values are unavailable",
+  "genuiViewChart": "Chart",
+  "genuiViewData": "Data",
+  "genuiTableFilterHint": "Filter visible text",
+  "genuiTableRows": "{count, plural, =1{1 row} other{{count} rows}}",
+  "@genuiTableRows": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiTablePageInfo": "Rows {from}–{to} of {total}",
+  "@genuiTablePageInfo": {
+    "placeholders": {
+      "from": {
+        "type": "int"
+      },
+      "to": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiTablePerPage": "{n}/page",
+  "@genuiTablePerPage": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "genuiTableEmpty": "No matching rows",
+  "genuiSortAsc": "Sorted ascending",
+  "genuiSortDesc": "Sorted descending",
+  "genuiSortNone": "Not sorted",
+  "genuiValueTrue": "True",
+  "genuiValueFalse": "False",
+  "genuiTablePreviousPage": "Previous page",
+  "genuiTableNextPage": "Next page",
+  "genuiTableCellsError": "Table data must contain records with finite scalar values or missing values.",
+  "genuiTableColumnsError": "Choose one to eight distinct fields with labels and optional digits from 0 to 10.",
+  "genuiTableRowKeyError": "Every row needs a non-null scalar key.",
+  "genuiViewStateFailed": "This view change exceeds the saved state limit. Shorten a field or reset the UI and try again.",
+  "genuiAttachState": "Attach current state",
+  "genuiChipExactText": "Exact text to be sent (frozen)",
+  "genuiChipStale": "Source unavailable — remove or attach again",
+  "genuiChipRemove": "Remove attached UI",
+  "genuiReplaceTitle": "Replace attached UI?",
+  "genuiReplaceBody": "A draft can carry one UI state.",
+  "genuiReplaceCurrent": "Current",
+  "genuiReplaceNew": "Replace with",
+  "genuiReplaceConfirm": "Replace",
+  "genuiMergeTitle": "Add to your draft?",
+  "genuiMergeConfirm": "Add",
+  "genuiContextEmpty": "No parameter or result fields are attached.",
+  "genuiContextOmitted": "[Some fields or data rows are omitted.]",
+  "genuiChipOmitted": "The previously attached UI state is unavailable and was not included.",
+  "genuiDraftChanged": "Your draft changed. Try attaching again.",
+  "genuiRepairDraft": "Please repair this interface using the diagnostics and source excerpts below.",
+  "genuiCopySourceMarkdown": "Copy source / Markdown",
+  "genuiTextFailed": "The interface state could not be read. Try again.",
+  "genuiCopyLimit": "Text exceeds the 64 KiB copy limit. Select a smaller section.",
+  "genuiExportSnapshot": "Export read-only snapshot",
+  "genuiExpandedSharedState": "Shares the same state as the message",
+  "genuiExportTooLarge": "This image exceeds 16 megapixels. Select fewer messages or export a smaller UI.",
+  "genuiWebTitle": "Web preview",
+  "genuiWebOpen": "Open",
+  "genuiWebNotReady": "Can be opened after generation finishes",
+  "genuiWebInvalidMeta": "Invalid header; not loaded",
+  "genuiWebSandboxNote": "Sandboxed preview · discarded on close",
+  "genuiWebUnsupported": "Web previews aren't supported on this platform. Export to open in a browser.",
+  "genuiWebExportHtml": "Export HTML",
+  "genuiWebInfo": "Preview information",
+  "genuiWebCspNote": "CSP: default-src 'none' · Restricted network access · Isolated page state",
+  "genuiWebFailed": "Preview initialization or loading failed. View or copy its source.",
+  "genuiWebEmpty": "No HTML document after the header",
+  "genuiWebBlockLimit": "Up to 3 web previews per message; the rest are shown as source",
+  "genuiWebCloseFailed": "Couldn't confirm the previous preview closed. Restart the app before opening another.",
+  "displaySettingsShowGenUiHeader": "Show interactive UI title bar",
+  "displaySettingsShowGenUiHeaderSubtitle": "Hide for a cleaner message. Source and actions remain in the menu below the UI.",
+  "genuiClearFilter": "Clear filter",
+  "genuiClearSelection": "Clear selection",
+  "chatInputBarQueuedPausedReason": "Compression did not finish; sending stays paused",
+  "contextChanged": "History changed. Reopen this action to review its current scope.",
+  "contextOperationSuperseded": "Included in a later summary",
+  "compressIncludeAttachments": "Attachment text & tool results",
+  "contextEditCharacters": "{count} characters",
+  "compressOverSnack": "The summary would exceed the context limit and was not applied.",
+  "contextSummaryHint": "This is the summary used in subsequent requests. Saving changes does not rewrite existing replies. Attachments contribute only available text; images are not reinterpreted.",
+  "compressAdvanced": "Advanced",
+  "compressTaskWaiting": "Waiting for the current reply",
+  "contextBudgetExceeded": "The estimated context exceeds this model’s limit. Shorten the summary, compress again, or choose a model with a larger context.",
+  "@compressApproxTokens": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "contextManualSupplement": "Include manually edited summaries as supplements",
+  "@contextUndoneSnack": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "contextDetailEdited": "Manually edited",
+  "contextSourceLabel": "Summary input",
+  "contextImpactSourceTitle": "Change compressed originals?",
+  "chatInputBarQueuedCompressionFailed": "Compression failed; sending stays paused",
+  "contextTokenInfo": "Summary input ≈ {before} tokens → summary ≈ {after} tokens",
+  "worldBookTransferFailed": "Could not save the entries. Please try again.",
+  "contextDetailKeptCount": "Latest {count} user messages, replies and tools",
+  "toolPermissionRequestApproval": "Ask for approval",
+  "compressNothingNew": "Nothing new to compress since the last summary",
+  "browserActionScreenshot": "Capture screenshot",
+  "displaySettingsPageIosNativeSelectionMenuSubtitle": "Applies to input and messages. Turn off if menus feel slow.",
+  "contextUndoneSnack": "Undone · {from} → {to}",
+  "toolApprovalByFullAccess": "Ran automatically",
+  "displaySettingsPageAutoScrollSubtitle": "While streaming, follow new content when at the bottom. Scrolling up pauses following until you return to the bottom. When off, new content does not scroll automatically.",
+  "toolApprovalRealTarget": "Actual target",
+  "@storageSpaceDeletedUploadsPartial": {
+    "placeholders": {
+      "deleted": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      }
+    }
+  },
+  "compressTaskRetry": "Retry",
+  "wsDeniedPathOutside": "Target is outside the authorized area. Denied.",
+  "contextImpactSaveConfirm": "Save and undo {count} nodes",
+  "contextRestore": "Restore",
+  "compressUsageOriginal": "was {value}",
+  "toolApprovalPendingKind": "Awaiting approval · {kind}",
+  "contextTaskApplying": "Applying summary",
+  "storageSpaceImagesHint": "Deleting images affects chat history and tool results. Avatars and backgrounds in use are protected.",
+  "displaySettingsPageIosNativeSelectionMenuTitle": "iOS 26+ native selection menu",
+  "worldBookMoveEntries": "Move to…",
+  "compressReread": "Re-read compressed originals",
+  "@contextImpactConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatInputBarQueuedPausedHold": "Input remains paused; cancel the queue to edit or send",
+  "contextSummaryTitle": "Context summary",
+  "contextKeepInvalid": "Enter a positive number of user messages.",
+  "@contextInputModeInfo": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "compressTaskAbandon": "Dismiss",
+  "browserAgentTimedOut": "Operation timed out; AI paused",
+  "compressCancelledSnack": "Compression cancelled. Current context is unchanged.",
+  "contextImpactClearTitle": "Undo earlier clear?",
+  "@contextBudgetInfo": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "compressTaskWaitingApproval": "Waiting for tool approval",
+  "contextTaskFailed": "Compression failed",
+  "wsDeniedSkillsReadonly": "Skills folder is read-only.",
+  "compressTaskMerging": "Merging summaries",
+  "toolPermissionFullAccessDesc": "Lets this conversation access files on this device, run commands, and use enabled online tools without asking each time.",
+  "compressStaleSnack": "Chat history changed; the summary was not applied.",
+  "@contextDetailKeptCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@contextTokenInfo": {
+    "placeholders": {
+      "before": {
+        "type": "int"
+      },
+      "after": {
+        "type": "int"
+      }
+    }
+  },
+  "worldBookCopyEntries": "Copy to…",
+  "contextEditEmpty": "Summary cannot be empty. Use Clear context to exclude all earlier history.",
+  "toolApprovalDenyWithReason": "Deny with reason…",
+  "toolApprovalRequestedPath": "Requested path",
+  "toolApprovalScopeOnce": "Applies to this call only",
+  "storageSpaceImageTypeLabel": "Type",
+  "contextImpactUndoTitle": "Undo earlier compression?",
+  "contextOriginalMessages": "View original messages",
+  "storageSpaceDeleteImagesConfirmMessage": "Delete {count} images? Related chat images, tool screenshots, and conversation copies will no longer be available. Avatars and backgrounds in use will be kept.",
+  "chatInputBarQueuedAfterCompress": "Sends after compression",
+  "toolPermissionFullAccessDescMobile": "Lets this conversation run tools automatically inside the sandbox and authorized folders, without asking each time.",
+  "@compressUsageOriginal": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "compressTaskAdjustRetry": "Adjust options and retry",
+  "contextDetailLegacy": "Converted from legacy clear",
+  "contextDetailCurrent": "Current context",
+  "toolPermissionUndo": "Undo",
+  "contextDetailViewOriginals": "View originals",
+  "contextTaskCompleted": "Compression complete",
+  "chatInputBarQueuedPaused": "Paused",
+  "@contextSampledInfo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextCompressMarker": "Context compressed",
+  "contextDetailParts": "{count} segments",
+  "contextEditPending": "Saved; applies after the current reply",
+  "contextTaskRetry": "Retry compression",
+  "contextUndoCompressTooltip": "Undo this compression",
+  "@compressKeepDescription": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextDividerCompressed": "Context compressed",
+  "compressSuccessSnack": "Context compressed · {from} → {to}",
+  "@compressIncludeManual": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextEffectiveHistory": "Current summary and later messages",
+  "compressRereadAll": "All originals in segment",
+  "contextDone": "Done",
+  "contextMore": "More",
+  "compressFailedSnack": "Compression failed: {reason}",
+  "@contextHistoryWindowNote": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "branchInheritNote": "Only inherits context nodes active before this point",
+  "contextTaskInterrupted": "Compression interrupted; input is preserved",
+  "storageSpaceImageTypeAll": "All",
+  "contextRangeInfo": "Replaces {count} messages; keeps {keep} recent user messages and their replies.",
+  "@compressFailedSnack": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "contextInputModeInfo": "Input: {mode} · {source}",
+  "contextDetailKept": "Kept",
+  "worldBookEntriesCopied": "{count, plural, =1{Copied 1 entry} other{Copied {count} entries}}",
+  "toolPermissionSaveFailed": "Couldn’t save. Permission unchanged.",
+  "compressDiscardedSnack": "Context cleared; the running compression was discarded.",
+  "browserActionSelect": "Select option",
+  "@worldBookEntriesCopied": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolPermissionTitle": "Permissions",
+  "contextDetailNext": "Next request",
+  "contextTaskCancel": "Cancel compression",
+  "@contextTaskProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "toolPermissionFullAccess": "Full access",
+  "chatInputBarQueuedCompressionCancelled": "Compression cancelled; sending stays paused",
+  "toolPermissionResetSnack": "Workspace changed · permission reset to Ask for approval",
+  "@contextRangeInfo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "keep": {
+        "type": "int"
+      }
+    }
+  },
+  "contextImpactUndoOne": "Undo",
+  "contextDetailContinueNewChat": "Continue in new chat",
+  "contextTaskPaused": "Sending paused — cancel the queue to edit",
+  "contextTaskReview": "Review the summary before applying",
+  "compressApproxTokens": "Approx. {value} tokens",
+  "@contextImpactUsage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "storageSpaceImageInUseHint": "Change or remove this avatar, background, or icon in its settings before deleting it.",
+  "compressRereadLastLayer": "Expand last layer",
+  "contextRestoreOperation": "Restore operation",
+  "contextOriginalHistory": "Re-read all original messages in this segment",
+  "contextImpactEditTitle": "Save earlier summary?",
+  "contextOpenNewChat": "Open new chat",
+  "wsPathChanged": "Target changed while awaiting approval.",
+  "contextEditUnknownPreview": "Usage is unavailable; it will be checked again before saving.",
+  "contextTaskWait": "Waiting for the current reply and tools to finish",
+  "@storageSpaceDeleteImagesConfirmMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "compressTaskElapsed": "Part {i}/{n} · {seconds}s elapsed",
+  "wsContextChanged": "Conversation context changed. Request expired.",
+  "contextChangeImpact": "This change will also undo {count} affected context operations. Original messages are kept. Continue?",
+  "@compressTaskElapsed": {
+    "placeholders": {
+      "i": {
+        "type": "int"
+      },
+      "n": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "contextImpactSave": "Save",
+  "@contextUndoBudgetInfo": {
+    "placeholders": {
+      "used": {
+        "type": "int"
+      }
+    }
+  },
+  "@contextEditPreview": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "contextTaskProgress": "Compressing {done}/{total} segments",
+  "contextSummaryNotSmaller": "The summary is not shorter than its input. Review it before applying.",
+  "storageSpaceImageTypeTool": "Tool images",
+  "contextPreviousHistory": "Re-read the last compression layer",
+  "contextDetailRead": "Read",
+  "contextViewGenerated": "View generated summary",
+  "contextImpactDeleteDescription": "Delete the originals and undo related summaries so removed content is not sent again. Other messages and independent nodes are unchanged.",
+  "storageSpaceImageTypeAvatar": "Avatars & backgrounds",
+  "contextDetailAfterUndo": "After undo",
+  "contextOperationUndo": "Undo this context operation",
+  "contextHistoryWindowNote": "Recent history is still limited by the chat’s {count}-message sending window.",
+  "contextOverLimitWarning": "Undo may exceed the context limit. You can still undo and recompress; sending checks the limit again.",
+  "storageSpaceImageTypeChat": "Chat images",
+  "worldBookSelectEntries": "Select entries",
+  "compressUsageSummary": "Est. summary",
+  "contextDetailRange": "Messages {from}–{to} · {count} user messages",
+  "contextOperationHidden": "Excluded by a later clear",
+  "contextUndoClearTooltip": "Undo this clear",
+  "@compressSuccessSnack": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "compressKeepDescription": "Keep the latest {count} user messages with their replies and tools. Earlier history is summarized; attachment-only messages also count.",
+  "contextOperationUndone": "Undone",
+  "contextEditPreview": "Approx. {value} tokens after saving. Editing does not change active context.",
+  "contextDetailExcluded": "Excluded history",
+  "worldBookNoMoveTargets": "Create another world book to move entries into it.",
+  "worldBookSelectedEntries": "{count} selected",
+  "contextDetailReplaced": "Replaced",
+  "displaySettingsPageAutoScrollEnabledLabel": "On",
+  "@contextDetailParts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextChangeTitle": "Review affected context",
+  "contextDetailTitle": "Summary",
+  "compressModelGlobal": "Global setting · fixed when started",
+  "wsDeniedMountReadonly": "Read-only mount. Can’t write.",
+  "compressRereadDesc": "Recover details lost across summaries. Uses more tokens.",
+  "toolApprovalSwitchToFullAccess": "Switch to full access",
+  "compressUsageInput": "Summary input",
+  "contextDetailSummaryLabel": "Summary used in later requests",
+  "contextImpactDeleteTitle": "Delete compressed originals?",
+  "compressAdvancedOff": "Re-read originals off",
+  "contextOperationActive": "Currently applied",
+  "compressAdvancedOn": "Re-read originals on",
+  "contextTaskMerging": "Merging summaries",
+  "contextSampledInfo": "Only the selected {count} characters were read; the summary replaces the entire selected history range.",
+  "contextDividerRunning": "Compressing context",
+  "contextClearDetails": "Earlier chat history is excluded from future requests. System instructions, memory and tool definitions still apply.",
+  "compressCopyResult": "Copy result",
+  "contextDetailInUse": "In use",
+  "contextImpactDescription": "Related summaries will be undone together. Original messages and independent nodes are kept; no model is called automatically.",
+  "compressIncludeAttachmentsDesc": "Include available attachment text and bounded tool records. Truncation is marked; images are not reinterpreted.",
+  "worldBookEntriesMoved": "{count, plural, =1{Moved 1 entry} other{Moved {count} entries}}",
+  "contextImpactSourceDescription": "Change the originals and undo their summaries and dependent nodes together. Other messages and independent nodes are kept; no model is called.",
+  "contextEditTitle": "Edit summary",
+  "compressUsageNext": "Next request",
+  "contextSummaryEmpty": "The summary cannot be empty. Use Clear context to exclude history.",
+  "toolApprovalDenied": "Denied",
+  "contextDetailModel": "Model · time",
+  "compressIncludeManual": "Include manual edits · {count}",
+  "contextBudgetInfo": "Estimated next request (including output reserve): {used} / {limit} tokens",
+  "contextTaskDismiss": "Dismiss status",
+  "contextUndoBudgetInfo": "After undo: approximately {used} tokens including output reserve",
+  "storageSpaceImageInUse": "In use",
+  "worldBookSelectionDone": "Done",
+  "@contextChangeImpact": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextDividerFailed": "Compression failed",
+  "toolPermissionUnboundHint": "No workspace bound: this does not turn on file or shell tools.",
+  "contextChangeWaiting": "Waiting for the current reply and tools to finish before applying this change.",
+  "@contextEditCharacters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "storageSpaceDeletedUploadsPartial": "Deleted {deleted} items; kept {kept} items that are in use or could not be deleted.",
+  "contextSourceScopeHint": "Only history after the latest clear is included. This may include older messages outside the normal send window.",
+  "@toolApprovalPendingKind": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "contextTaskPreparing": "Preparing compression",
+  "@worldBookEntriesMoved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextImpactUsage": "Approx. {from} → {to} tokens",
+  "contextImpactConfirm": "Undo {count} nodes",
+  "contextDividerEdited": "edited",
+  "compressAdjust": "Adjust",
+  "compressRegenerate": "Recompress",
+  "@contextDetailRange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@contextImpactSaveConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "toolPermissionEnabledSnack": "Full access enabled for this chat",
+  "contextDetailSuperseded": "Superseded by a later summary",
+  "contextTaskQueued": "Queued — waiting for compression",
+  "contextNewConversation": "Create a new chat with the summary",
+  "contextUnknownLimit": "unknown limit",
+  "browserErrActionTimeout": "Operation timed out; outcome unknown. Check the page before allowing AI to continue.",
+  "toolPermissionRequestApprovalDesc": "Kelivo will ask before accessing files outside the workspace, running desktop commands, or using other tools that need approval.",
+  "contextLimitedInputHint": "Only the selected character window is read. The rest of the replaced history is not included in the summary; original messages remain available.",
+  "contextTaskCancelled": "Compression cancelled",
+  "contextDetailClearTitle": "Context cleared",
+  "contextImpactKeep": "Unchanged",
+  "@worldBookSelectedEntries": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "contextImpactUndoAlso": "Also undone",
+  "contextClearMarker": "Context cleared",
+  "toolPermissionScopeThisChat": "This chat only",
+  "dataDirectoryTitle": "Data directory",
+  "dataDirectoryChange": "Change directory",
+  "dataDirectoryChoose": "Choose an empty local folder",
+  "dataDirectoryHint": "Choose an empty folder on a local drive. Chat history, attachments and app-managed files move after a restart. Small device settings and system caches stay in their system locations.",
+  "dataDirectoryPendingHint": "The move is scheduled for the next restart. Your current data remains in place until copying and verification finish. Destination:",
+  "dataDirectoryRestart": "Restart and move data",
+  "dataDirectoryCancelMove": "Cancel move and keep original directory",
+  "dataDirectoryPreviousHint": "The original copy was retained. Once the new directory has started successfully, you can remove the old copy to free disk space. Clean it before changing directories again.",
+  "dataDirectoryCleanPrevious": "Clean up original copy",
+  "dataDirectoryCleanConfirm": "Remove the retained copy from the directory below? Data in the current directory will be kept. Files changed since the move will not be deleted.",
+  "dataDirectoryMoving": "Moving and verifying data… Please keep Kelivo open.",
+  "dataDirectoryStartupFailed": "Unable to open the data directory",
+  "dataDirectoryRetry": "Retry",
+  "dataDirectoryUnavailable": "The data directory is unavailable. Reconnect the drive or restore the folder to its original location, then retry. No empty database will be created.",
+  "dataDirectoryIdentityMismatch": "This folder does not match the configured data directory. Restore the original folder and retry.",
+  "dataDirectoryNotEmpty": "Choose an empty folder. Existing files will not be overwritten.",
+  "dataDirectoryOverlap": "Choose a separate folder outside the current data directory. Its parent folders and the drive root cannot be used.",
+  "dataDirectoryLocalOnly": "Choose a local drive rather than a network share.",
+  "dataDirectoryFinishPrevious": "Finish or cancel the pending move, and clean up the retained copy before choosing another directory.",
+  "dataDirectoryPendingRestore": "A backup restore is pending. Cancel the directory move and restart to finish restoring, then try the move again.",
+  "dataDirectorySourceChanged": "The original data has changed since the copy was made. It has been kept. Cancel the pending move before starting a new one; retained copies can be inspected manually.",
+  "dataDirectoryCopyChanged": "The destination contains unexpected or changed files. The original data has been kept. Check the destination before retrying.",
+  "dataDirectoryGenericError": "The operation could not finish. Check available disk space, folder permissions and whether another Kelivo process is running, then retry. Existing data has been kept.",
+  "dataDirectoryCancelHint": "Cancelling keeps any files already copied to the destination. You can inspect and remove that partial copy yourself."
 }

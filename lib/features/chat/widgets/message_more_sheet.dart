@@ -1,3 +1,4 @@
+import '../../intelligent_ui/host/ui_copy_actions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
@@ -76,6 +77,13 @@ Future<MessageMoreAction?> showMessageMoreSheet(
         },
       ),
       DesktopContextMenuItem(
+        icon: Lucide.Code,
+        label: l10n.genuiCopySourceMarkdown,
+        onTap: () {
+          afterClose = () => copyUiMessageSource(context, message);
+        },
+      ),
+      DesktopContextMenuItem(
         icon: Lucide.BookOpenText,
         label: l10n.messageMoreSheetRenderWebView,
         onTap: () {
@@ -130,6 +138,7 @@ Future<MessageMoreAction?> showMessageMoreSheet(
         DesktopContextMenuItem(
           icon: Lucide.GitFork,
           label: l10n.messageMoreSheetCreateBranch,
+          subtitle: l10n.branchInheritNote,
           onTap: () {
             selected = MessageMoreAction.fork;
           },
@@ -181,6 +190,7 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
   Widget _actionItem({
     required IconData icon,
     required String label,
+    String? subtitle,
     Color? iconColor,
     bool danger = false,
     VoidCallback? onTap,
@@ -190,7 +200,7 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: SizedBox(
-        height: 48,
+        height: subtitle == null ? 48 : 72,
         child: IosCardPress(
           borderRadius: BorderRadius.circular(14),
           baseColor: sheetTileColor(context),
@@ -209,13 +219,29 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
               Icon(icon, size: 20, color: iconColor ?? fg),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: AppFontWeights.medium,
-                    color: fg,
-                  ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: AppFontWeights.medium,
+                        color: fg,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -275,6 +301,15 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                             message: widget.message,
                           );
                         });
+                      },
+                    ),
+                    _actionItem(
+                      icon: Lucide.Code,
+                      label: l10n.genuiCopySourceMarkdown,
+                      onTap: () {
+                        final parent = widget.parentContext;
+                        Navigator.of(context).pop();
+                        copyUiMessageSource(parent, widget.message);
                       },
                     ),
                     _actionItem(
@@ -342,6 +377,7 @@ class _MessageMoreSheetState extends State<_MessageMoreSheet> {
                       _actionItem(
                         icon: Lucide.GitFork,
                         label: l10n.messageMoreSheetCreateBranch,
+                        subtitle: l10n.branchInheritNote,
                         onTap: () {
                           Navigator.of(context).pop(MessageMoreAction.fork);
                         },

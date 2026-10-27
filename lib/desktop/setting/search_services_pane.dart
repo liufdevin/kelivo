@@ -690,6 +690,7 @@ class _BrandBadge extends StatelessWidget {
     if (s is GoogleSearchOptions) return 'google';
     if (s is MetasoOptions) return 'metaso';
     if (s is OllamaOptions) return 'ollama';
+    if (s is DeepSeekOptions) return 'deepseek';
     if (s is JinaOptions) return 'jina';
     if (s is PerplexityOptions) return 'perplexity';
     if (s is BochaOptions) return 'bocha';
@@ -1059,6 +1060,7 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
       case 'metaso':
       case 'jina':
       case 'ollama':
+      case 'deepseek':
       case 'perplexity':
       case 'bocha':
       case 'doubao':
@@ -1486,6 +1488,8 @@ class _AddServiceDialogState extends State<_AddServiceDialog> {
         return JinaOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'ollama':
         return OllamaOptions(id: id, apiKey: _controllers['apiKey']!.text);
+      case 'deepseek':
+        return DeepSeekOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'perplexity':
         return PerplexityOptions(id: id, apiKey: _controllers['apiKey']!.text);
       case 'bocha':
@@ -1642,6 +1646,8 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
     } else if (s is MetasoOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is OllamaOptions) {
+      _controllers['apiKey'] = TextEditingController(text: s.apiKey);
+    } else if (s is DeepSeekOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
     } else if (s is JinaOptions) {
       _controllers['apiKey'] = TextEditingController(text: s.apiKey);
@@ -1859,6 +1865,7 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         s is MetasoOptions ||
         s is JinaOptions ||
         s is OllamaOptions ||
+        s is DeepSeekOptions ||
         s is PerplexityOptions ||
         s is BochaOptions ||
         s is DoubaoOptions ||
@@ -2414,6 +2421,13 @@ class _EditServiceDialogState extends State<_EditServiceDialog> {
         extraApiKeys: _extraApiKeys,
       );
     }
+    if (s is DeepSeekOptions) {
+      return DeepSeekOptions(
+        id: s.id,
+        apiKey: _controllers['apiKey']!.text,
+        extraApiKeys: _extraApiKeys,
+      );
+    }
     if (s is PerplexityOptions) {
       return PerplexityOptions(
         id: s.id,
@@ -2816,6 +2830,7 @@ class _ServiceTypeChipsState extends State<_ServiceTypeChips> {
     (type: 'metaso', brand: 'metaso'),
     (type: 'jina', brand: 'jina'),
     (type: 'ollama', brand: 'ollama'),
+    (type: 'deepseek', brand: 'deepseek'),
     (type: 'perplexity', brand: 'perplexity'),
     (type: 'bocha', brand: 'bocha'),
     (type: 'doubao', brand: 'doubao'),
@@ -2906,6 +2921,8 @@ String _serviceTypeName(BuildContext context, String type) {
       return l10n.searchServiceNameJina;
     case 'ollama':
       return l10n.searchServiceNameOllama;
+    case 'deepseek':
+      return l10n.searchServiceNameDeepSeek;
     case 'perplexity':
       return l10n.searchServiceNamePerplexity;
     case 'bocha':

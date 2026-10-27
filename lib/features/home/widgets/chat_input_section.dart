@@ -70,6 +70,9 @@ class ChatInputSection extends StatelessWidget {
     this.onStop,
     this.hasQueuedInput = false,
     this.queuedPreviewText,
+    this.queuedStatusLabel,
+    this.queuedSubtitle,
+    this.queuedPaused = false,
     this.onCancelQueuedInput,
     this.onExpandedChanged,
     this.onQuickPhrase,
@@ -79,6 +82,7 @@ class ChatInputSection extends StatelessWidget {
     this.onPickCamera,
     this.onPickPhotos,
     this.onUploadFiles,
+    this.onOpenBrowser,
     this.onToggleLearningMode,
     this.onOpenWorldBook, // 新增世界书支持桌面端
     this.onLongPressLearning,
@@ -116,6 +120,9 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onStop;
   final bool hasQueuedInput;
   final String? queuedPreviewText;
+  final String? queuedStatusLabel;
+  final String? queuedSubtitle;
+  final bool queuedPaused;
   final VoidCallback? onCancelQueuedInput;
   final ValueChanged<bool>? onExpandedChanged;
   final VoidCallback? onQuickPhrase;
@@ -125,6 +132,7 @@ class ChatInputSection extends StatelessWidget {
   final VoidCallback? onPickCamera;
   final VoidCallback? onPickPhotos;
   final VoidCallback? onUploadFiles;
+  final VoidCallback? onOpenBrowser;
   final VoidCallback? onToggleLearningMode;
   final VoidCallback? onOpenWorldBook;
   final VoidCallback? onLongPressLearning;
@@ -158,6 +166,8 @@ class ChatInputSection extends StatelessWidget {
 
     final pk = chatModelProviderKey;
     final mid = chatModelId;
+    final supportsModelTools =
+        pk != null && mid != null && isToolModel(pk, mid);
     final selectedReasoning = _selectedReasoning(settings, a, pk, mid);
     final reasoningSpec = (pk != null && mid != null)
         ? ModelSpecResolver.instance.spec(settings.getProviderConfig(pk), mid)
@@ -232,10 +242,14 @@ class ChatInputSection extends StatelessWidget {
       sendButtonTooltip: sendButtonTooltip,
       hasQueuedInput: hasQueuedInput,
       queuedPreviewText: queuedPreviewText,
+      queuedStatusLabel: queuedStatusLabel,
+      queuedSubtitle: queuedSubtitle,
+      queuedPaused: queuedPaused,
       onCancelQueuedInput: onCancelQueuedInput,
       onExpandedChanged: onExpandedChanged,
-      showToolsButton: _shouldShowToolsButton(pk, mid),
-      toolsActive: _isToolsActive(context, a, workspaceBound),
+      showToolsButton: supportsModelTools,
+      toolsActive:
+          supportsModelTools && _isToolsActive(context, a, workspaceBound),
       showQuickPhraseButton: _hasQuickPhrases(context, a),
       onQuickPhrase: onQuickPhrase,
       onLongPressQuickPhrase: onLongPressQuickPhrase,
@@ -253,6 +267,7 @@ class ChatInputSection extends StatelessWidget {
       onPickCamera: isTablet ? (isDesktop ? null : onPickCamera) : null,
       onPickPhotos: isTablet ? (isDesktop ? null : onPickPhotos) : null,
       onUploadFiles: isTablet ? onUploadFiles : null,
+      onOpenBrowser: isTablet ? onOpenBrowser : null,
       onToggleLearningMode: isTablet ? onToggleLearningMode : null,
       onOpenWorldBook: hasWorldBooks ? onOpenWorldBook : null,
       onLongPressLearning: isTablet ? onLongPressLearning : null,
@@ -385,13 +400,6 @@ class ChatInputSection extends StatelessWidget {
       modelId: modelId,
       assistant: assistant,
     );
-  }
-
-  /// The button hosts local tools and the workspace as well as MCP, so it
-  /// shows for every tool-capable model rather than only when MCP is set up.
-  bool _shouldShowToolsButton(String? pk, String? mid) {
-    if (pk == null || mid == null) return false;
-    return isToolModel(pk, mid);
   }
 
   bool _isToolsActive(BuildContext context, Assistant? a, bool workspaceBound) {
