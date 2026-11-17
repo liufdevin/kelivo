@@ -14,6 +14,7 @@ import '../model_spec/model_spec_resolver.dart';
 import '../custom_request_merger.dart';
 import 'builtin_tools.dart';
 import 'provider_request_headers.dart';
+import 'response_incomplete_exception.dart';
 
 typedef ToolCallHandler =
     Future<Object?> Function(
@@ -114,6 +115,12 @@ String mimeFromPath(String path) {
   return inferMediaMimeFromSource(path, fallbackMime: 'image/png');
 }
 
+String normalizeClaudeImageMime(String mime) {
+  final normalized = mime.trim().toLowerCase();
+  if (normalized == 'image/jpg') return 'image/jpeg';
+  return normalized;
+}
+
 String mimeFromDataUrl(String dataUrl) {
   try {
     final start = dataUrl.indexOf(':');
@@ -173,6 +180,8 @@ Future<ParsedTextAndImages> parseTextAndImages(
   bool keepDisallowedImageText = true,
   bool skipImageParsing = false,
   String? literalText,
+  Map<String, String> imageReferences = const {},
+  bool validateRemoteImages = true,
 }) async {
   if (raw.isEmpty) return const ParsedTextAndImages('', <ImageRef>[]);
   // Utility / text-only prompts (title, summary, compress) must keep
@@ -184,6 +193,17 @@ Future<ParsedTextAndImages> parseTextAndImages(
   // Custom attachment markers are intentionally not recognized here.
   // Attachments arrive via structured parts / media-path keys.
   final images = <ImageRef>[];
+  void addImage(String kind, String source, int offset) {
+    final reference = imageReferences[source];
+    images.add(
+      ImageRef(
+        reference == null ? kind : 'data',
+        reference ?? source,
+        offset: offset,
+      ),
+    );
+  }
+
   final buf = StringBuffer();
   final literalRanges = literalText == null || literalText.isEmpty
       ? <Match>[]
@@ -276,7 +296,7 @@ Future<ParsedTextAndImages> parseTextAndImages(
         }
         if (url.startsWith('data:')) {
           if (allowDataImages) {
-            images.add(ImageRef('data', url));
+            addImage('data', url, m1.start);
           } else if (keepDisallowedImageText) {
             buf.write(full);
           }
@@ -289,13 +309,13 @@ Future<ParsedTextAndImages> parseTextAndImages(
             i = m1.end;
             continue;
           }
-          final ok = await _isValidRemoteImageUrl(url);
+          final ok = !validateRemoteImages || await _isValidRemoteImageUrl(url);
           if (!ok) {
             buf.write(full);
             i = m1.end;
             continue;
           }
-          images.add(ImageRef('url', url));
+          addImage('url', url, m1.start);
           if (keepRemoteMarkdownText) {
             buf.write(full);
           }
@@ -325,7 +345,7 @@ Future<ParsedTextAndImages> parseTextAndImages(
           i = m1.end;
           continue;
         }
-        images.add(ImageRef('path', url));
+        addImage('path', url, m1.start);
         i = m1.end;
         continue;
       }
@@ -599,7 +619,8 @@ class ImageRef {
   final String kind; // 'data' | 'path' | 'url'
   final String src;
   final String? mime;
-  const ImageRef(this.kind, this.src, {this.mime});
+  final int? offset;
+  const ImageRef(this.kind, this.src, {this.mime, this.offset});
 }
 
 class ParsedTextAndImages {
@@ -666,19 +687,25 @@ void logImageFallback({
 /// mask a non-empty error payload. Healthy chunks either lack the `error` key
 /// or carry a null/empty placeholder, which [_throwOnInBandStreamError]
 /// ignores.
-void throwIfInBandStreamError(String data) {
+/// [deferIncomplete] lets a Responses caller emit partial output and final
+/// usage before throwing the returned exception. Other failures still throw.
+ResponseIncompleteException? throwIfInBandStreamError(
+  String data, {
+  bool deferIncomplete = false,
+}) {
   final mayCarryError =
       data.contains('"error"') ||
       data.contains('response.failed') ||
-      data.contains('response.incomplete');
-  if (!mayCarryError) return;
+      data.contains('response.incomplete') ||
+      data.contains('"incomplete_details"');
+  if (!mayCarryError) return null;
   Object? decoded;
   try {
     decoded = jsonDecode(data);
   } catch (_) {
-    return;
+    return null;
   }
-  if (decoded is! Map) return;
+  if (decoded is! Map) return null;
   final type = (decoded['type'] ?? '').toString();
   if (type == 'error') {
     // `event: error` frames: Anthropic-style ones nest the payload under
@@ -690,26 +717,31 @@ void throwIfInBandStreamError(String data) {
     }
     _throwOnInBandStreamError(decoded);
   }
-  if (type == 'response.failed' || type == 'response.incomplete') {
+  final response = decoded['response'] is Map
+      ? decoded['response'] as Map
+      : decoded;
+  if (type == 'response.incomplete' || response['status'] == 'incomplete') {
+    _throwOnInBandStreamError(response['error']);
+    final details = response['incomplete_details'];
+    final reason = details is Map ? details['reason']?.toString().trim() : null;
+    final usage = response['usage'];
+    final input = usage is Map ? usage['input_tokens'] : null;
+    final error = ResponseIncompleteException(
+      reason: reason == null || reason.isEmpty ? 'incomplete' : reason,
+      inputTokens: input is num ? input.toInt() : int.tryParse('$input'),
+    );
+    if (deferIncomplete) return error;
+    throw error;
+  }
+  if (type == 'response.failed' || response['status'] == 'failed') {
     // Responses API terminal failure events nest the error under `response`.
-    final response = decoded['response'];
-    if (response is Map) {
-      _throwOnInBandStreamError(response['error']);
-      final details = response['incomplete_details'];
-      if (details is Map && details.isNotEmpty) {
-        final reason = (details['reason'] ?? '').toString().trim();
-        throw HttpException(
-          reason.isEmpty
-              ? 'Provider error: response incomplete'
-              : 'Provider error: response incomplete ($reason)',
-        );
-      }
-    }
+    _throwOnInBandStreamError(response['error']);
     // A failure event without a parseable payload still must not fall
     // through and be treated as a normal finish.
     throw HttpException('Provider error: $type');
   }
   _throwOnInBandStreamError(decoded['error']);
+  return null;
 }
 
 /// Throws when [error] carries a provider error payload; no-op for the null or

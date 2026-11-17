@@ -1,6 +1,7 @@
 import 'package:Kelivo/shared/widgets/long_message_editor.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../support/android_selection_menu_mock.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:re_editor/re_editor.dart';
@@ -246,9 +247,11 @@ void main() {
     expect(text.text, source);
   });
 
-  testWidgets('short messages keep the default selection toolbar', (
+  testWidgets('short messages keep platform copy and cut actions', (
     tester,
   ) async {
+    final nativeMenu = AndroidSelectionMenuMock();
+    addTearDown(nativeMenu.dispose);
     final text = TextEditingController(text: 'short message');
     addTearDown(text.dispose);
     await show(tester, text);
@@ -257,9 +260,71 @@ void main() {
     await tester.pump();
     tester.state<EditableTextState>(find.byType(EditableText)).showToolbar();
     await tester.pump();
-    expect(find.text('Copy'), findsOneWidget);
-    expect(find.text('Cut'), findsOneWidget);
+    expect(nativeMenu.labels, containsAll(['Copy', 'Cut']));
   });
+
+  testWidgets(
+    'draft direction follows prose while preserving the caret and focus',
+    (tester) async {
+      final controller = TextEditingController();
+      addTearDown(controller.dispose);
+      await show(tester, controller);
+      final field = find.byType(TextField);
+      final editable = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      await tester.tap(field);
+      for (final (draft, direction) in [
+        ('🙂 ۱۲۳', TextDirection.ltr),
+        ('🙂 ۱۲۳ سلام Gemini؟', TextDirection.rtl),
+        ('Gemini', TextDirection.ltr),
+        ('Gemini چیه؟', TextDirection.rtl),
+        ('Gemini چیه و چطور با `v1beta` کار می‌کنه؟', TextDirection.rtl),
+        ('Translate «مرحبا»', TextDirection.ltr),
+        ('Translate كيف حالك؟', TextDirection.ltr),
+        ('Çevir كيف حالك؟', TextDirection.ltr),
+        ('Is العربية a language؟', TextDirection.ltr),
+        (
+          'Gemini چیه با `extremelyLongConfigurationIdentifier`؟',
+          TextDirection.rtl,
+        ),
+        ('Gemini\nچیه؟', TextDirection.ltr),
+        ('中文 עברית', TextDirection.ltr),
+        ('שלום! English', TextDirection.rtl),
+        ('', TextDirection.ltr),
+      ]) {
+        await tester.enterText(field, draft);
+        await tester.pump();
+        expect(editable.renderEditable.textDirection, direction);
+        expect(controller.value.text, draft);
+        expect(
+          controller.selection,
+          TextSelection.collapsed(offset: draft.length),
+        );
+        expect(editable.widget.focusNode.hasFocus, isTrue);
+      }
+      // A supplementary RTL letter must also leave the LTR-only line editor.
+      controller.text = 'x' * 3000;
+      await tester.pump();
+      final lines = tester
+          .widget<CodeEditor>(find.byType(CodeEditor))
+          .controller!;
+      lines.selection = const CodeLineSelection.collapsed(index: 0, offset: 0);
+      lines.replaceSelection('𞤀');
+      await tester.pump();
+      await tester.pump();
+      expect(
+        tester
+            .state<EditableTextState>(find.byType(EditableText))
+            .renderEditable
+            .textDirection,
+        TextDirection.rtl,
+      );
+      expect(controller.text, '𞤀${'x' * 3000}');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 200));
+    },
+  );
 
   testWidgets(
     'inserted bidi text switches back without changing the document',

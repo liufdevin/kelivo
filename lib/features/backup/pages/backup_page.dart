@@ -11,16 +11,18 @@ import 'package:provider/provider.dart';
 import '../../../icons/lucide_adapter.dart';
 import '../../../shared/animations/widgets.dart';
 import '../../../core/services/haptics.dart';
-import '../../../core/database/business_preferences.dart';
 import '../../../core/database/business_repository.dart';
 import '../../../core/models/backup.dart';
 import '../../../core/providers/backup_provider.dart';
+import '../../../core/providers/external_backup_auto_provider.dart';
+import '../widgets/external_backup_controls.dart';
 import '../../../core/providers/local_snapshot_provider.dart';
 import '../../../core/providers/backup_reminder_provider.dart';
 import '../../../core/providers/s3_backup_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/chat/chat_service.dart';
 import '../../../core/services/backup/backup_cancel_token.dart';
+import '../../../core/services/backup/backup_task_progress.dart';
 import '../../../core/services/backup/data_sync.dart';
 import '../backup_task_runner.dart';
 import 'local_snapshots_page.dart';
@@ -53,16 +55,7 @@ String _fmtBytes(int bytes) {
 }
 
 class BackupPage extends StatefulWidget {
-  const BackupPage({
-    super.key,
-    this.debugBackupProvider,
-    this.debugS3BackupProvider,
-  });
-
-  @visibleForTesting
-  final BackupProvider? debugBackupProvider;
-  @visibleForTesting
-  final S3BackupProvider? debugS3BackupProvider;
+  const BackupPage({super.key});
 
   @override
   State<BackupPage> createState() => _BackupPageState();
@@ -75,11 +68,7 @@ class _BackupPageState extends State<BackupPage> {
   Future<bool?> _confirmCherryImport(BuildContext context) async {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final locale = Localizations.localeOf(context);
-    final isZh = locale.languageCode.startsWith('zh');
-    final String body = isZh
-        ? '此功能目前仍处于实验阶段。\n目前仅能导入助手，对话内容，供应商和文件，\n一些供应商需要在baseurl后面添加/v1 or /v1beta。 \n为确保数据安全，建议在导入前先执行备份。\n是否已知晓并继续选择文件？'
-        : 'This feature is experimental.\nTo keep your data safe, it is recommended to back up before importing.\nProceed to choose a file?';
+    final body = l10n.backupPageCherryImportWarning;
 
     return showModalBottomSheet<bool>(
       context: context,
@@ -238,1029 +227,879 @@ class _BackupPageState extends State<BackupPage> {
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
 
-    return MultiProvider(
-      providers: [
-        if (widget.debugBackupProvider != null)
-          ChangeNotifierProvider<BackupProvider>.value(
-            value: widget.debugBackupProvider!,
-          )
-        else
-          ChangeNotifierProvider(
-            create: (_) => BackupProvider(
-              chatService: context.read<ChatService>(),
-              businessRepository: context.read<BusinessRepository>(),
-              businessPreferences: context.read<BusinessPreferences>(),
-              initialConfig: settings.webDavConfig,
-            ),
+    final vm = context.watch<BackupProvider>();
+    final s3Vm = context.watch<S3BackupProvider>();
+    final busy = context.watch<ExternalBackupAutoProvider>().busy;
+    final cfg = vm.config;
+    final s3Cfg = s3Vm.config;
+
+    // iOS-style section header
+    Widget header(String text, {bool first = false}) => Padding(
+      padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: AppFontWeights.semibold,
+          color: cs.onSurface.withValues(alpha: 0.8),
+        ),
+      ),
+    );
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: Tooltip(
+          message: l10n.settingsPageBackButton,
+          child: _TactileIconButton(
+            icon: Lucide.ArrowLeft,
+            color: cs.onSurface,
+            size: 22,
+            onTap: () => Navigator.of(context).maybePop(),
           ),
-        if (widget.debugS3BackupProvider != null)
-          ChangeNotifierProvider<S3BackupProvider>.value(
-            value: widget.debugS3BackupProvider!,
-          )
-        else
-          ChangeNotifierProvider(
-            create: (_) => S3BackupProvider(
-              chatService: context.read<ChatService>(),
-              businessRepository: context.read<BusinessRepository>(),
-              businessPreferences: context.read<BusinessPreferences>(),
-              initialConfig: settings.s3Config,
-            ),
+        ),
+        title: Text(l10n.backupPageTitle),
+        actions: [
+          StorageMigrationNoticeButton(
+            dataDirectory: context
+                .read<LocalSnapshotProvider>()
+                .appDataDirectory,
           ),
-      ],
-      child: Builder(
-        builder: (context) {
-          final vm = context.watch<BackupProvider>();
-          final s3Vm = context.watch<S3BackupProvider>();
-          final cfg = vm.config;
-          final s3Cfg = s3Vm.config;
-
-          // iOS-style section header
-          Widget header(String text, {bool first = false}) => Padding(
-            padding: EdgeInsets.fromLTRB(12, first ? 2 : 18, 12, 6),
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: AppFontWeights.semibold,
-                color: cs.onSurface.withValues(alpha: 0.8),
+          const SizedBox(width: 12),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        children: [
+          // Section 1: 备份管理
+          header(l10n.backupPageBackupManagement, first: true),
+          SectionCard(
+            children: [
+              BackupScopeTile(
+                scope: cfg.scope,
+                onChanged: busy || vm.busy || s3Vm.busy
+                    ? null
+                    : (scope) async {
+                        final newCfg = vm.config.copyWith(scope: scope);
+                        final newS3Cfg = s3Vm.config.copyWith(scope: scope);
+                        vm.updateConfig(newCfg);
+                        s3Vm.updateConfig(newS3Cfg);
+                        await settings.setWebDavConfig(newCfg);
+                        await settings.setS3Config(newS3Cfg);
+                      },
               ),
-            ),
-          );
+              _iosDivider(context),
+              BackupEncryptionTile(busy: busy || vm.busy || s3Vm.busy),
+            ],
+          ),
 
-          return Scaffold(
-            appBar: AppBar(
-              leading: Tooltip(
-                message: l10n.settingsPageBackButton,
-                child: _TactileIconButton(
-                  icon: Lucide.ArrowLeft,
-                  color: cs.onSurface,
-                  size: 22,
-                  onTap: () => Navigator.of(context).maybePop(),
-                ),
+          ..._buildMobileLocalBackupSection(context, l10n, vm, header),
+
+          header(l10n.backupReminderSectionTitle),
+          const ExternalBackupCancelRow(),
+          const _BackupReminderMobileSection(),
+
+          header(l10n.localSnapshotSectionTitle),
+          const _LocalSnapshotMobileSection(),
+
+          // Section 3: WebDAV备份
+          header(l10n.backupPageWebDavBackup),
+          SectionCard(
+            children: [
+              _iosNavRow(
+                context,
+                icon: Lucide.Settings,
+                label: l10n.backupPageWebDavServerSettings,
+                onTap: () =>
+                    _showWebDavSettingsPage(context, settings, vm, cfg),
               ),
-              title: Text(l10n.backupPageTitle),
-              actions: [
-                StorageMigrationNoticeButton(
-                  dataDirectory: context
-                      .read<LocalSnapshotProvider>()
-                      .appDataDirectory,
-                ),
-                const SizedBox(width: 12),
-              ],
-            ),
-            body: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: [
-                // Section 1: 备份管理
-                header(l10n.backupPageBackupManagement, first: true),
-                SectionCard(
-                  children: [
-                    BackupScopeTile(
-                      scope: cfg.scope,
-                      onChanged: vm.busy || s3Vm.busy
-                          ? null
-                          : (scope) async {
-                              final newCfg = vm.config.copyWith(scope: scope);
-                              final newS3Cfg = s3Vm.config.copyWith(
-                                scope: scope,
-                              );
-                              vm.updateConfig(newCfg);
-                              s3Vm.updateConfig(newS3Cfg);
-                              await settings.setWebDavConfig(newCfg);
-                              await settings.setS3Config(newS3Cfg);
-                            },
-                    ),
-                    _iosDivider(context),
-                    BackupEncryptionTile(
-                      enabled: settings.backupEncryptionEnabled,
-                      onChanged: vm.busy || s3Vm.busy
-                          ? null
-                          : settings.setBackupEncryptionPassword,
-                    ),
-                  ],
-                ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Cable,
+                label: l10n.backupPageTestConnection,
+                onTap: busy || vm.busy
+                    ? null
+                    : () async {
+                        await vm.test();
+                        if (!context.mounted) return;
+                        final rawMessage = vm.message;
+                        final message = rawMessage ?? l10n.backupPageTestDone;
+                        showAppSnackBar(
+                          context,
+                          message: message,
+                          type: rawMessage != null && rawMessage != 'OK'
+                              ? NotificationType.error
+                              : NotificationType.success,
+                        );
+                      },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Import,
+                label: l10n.backupPageRestore,
+                onTap: busy || vm.busy
+                    ? null
+                    : () async {
+                        final List<BackupFileItem> list;
+                        try {
+                          list = await _runWithImportingOverlay(
+                            context,
+                            (handle) => vm.listRemote(
+                              onProgress: handle.report,
+                              cancelToken: handle.cancelToken,
+                            ),
+                          );
+                        } on BackupCancelledException {
+                          return;
+                        } catch (_) {
+                          return;
+                        }
+                        if (!mounted) return;
+                        // 按时间倒序排列（最新的在前）
+                        list.sort((a, b) {
+                          // 优先使用 lastModified
+                          if (a.lastModified != null &&
+                              b.lastModified != null) {
+                            return b.lastModified!.compareTo(a.lastModified!);
+                          }
+                          // 如果都没有 lastModified，按文件名倒序（文件名通常包含时间戳）
+                          if (a.lastModified == null &&
+                              b.lastModified == null) {
+                            return b.displayName.compareTo(a.displayName);
+                          }
+                          // 有 lastModified 的排在前面
+                          if (a.lastModified == null) return 1;
+                          return -1;
+                        });
+                        setState(() => _remote = list);
 
-                ..._buildMobileLocalBackupSection(context, l10n, vm, header),
-
-                header(l10n.backupReminderSectionTitle),
-                const _BackupReminderMobileSection(),
-
-                header(l10n.localSnapshotSectionTitle),
-                const _LocalSnapshotMobileSection(),
-
-                // Section 3: WebDAV备份
-                header(l10n.backupPageWebDavBackup),
-                SectionCard(
-                  children: [
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Settings,
-                      label: l10n.backupPageWebDavServerSettings,
-                      onTap: () =>
-                          _showWebDavSettingsPage(context, settings, vm, cfg),
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Cable,
-                      label: l10n.backupPageTestConnection,
-                      onTap: vm.busy
-                          ? null
-                          : () async {
-                              await vm.test();
-                              if (!context.mounted) return;
-                              final rawMessage = vm.message;
-                              final message =
-                                  rawMessage ?? l10n.backupPageTestDone;
-                              showAppSnackBar(
-                                context,
-                                message: message,
-                                type: rawMessage != null && rawMessage != 'OK'
-                                    ? NotificationType.error
-                                    : NotificationType.success,
-                              );
-                            },
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Import,
-                      label: l10n.backupPageRestore,
-                      onTap: vm.busy
-                          ? null
-                          : () async {
-                              final List<BackupFileItem> list;
-                              try {
-                                list = await _runWithImportingOverlay(
-                                  context,
-                                  (handle) => vm.listRemote(
-                                    onProgress: handle.report,
-                                    cancelToken: handle.cancelToken,
-                                  ),
-                                );
-                              } on BackupCancelledException {
-                                return;
-                              } catch (_) {
-                                return;
-                              }
-                              if (!mounted) return;
-                              // 按时间倒序排列（最新的在前）
-                              list.sort((a, b) {
-                                // 优先使用 lastModified
-                                if (a.lastModified != null &&
-                                    b.lastModified != null) {
-                                  return b.lastModified!.compareTo(
-                                    a.lastModified!,
-                                  );
-                                }
-                                // 如果都没有 lastModified，按文件名倒序（文件名通常包含时间戳）
-                                if (a.lastModified == null &&
-                                    b.lastModified == null) {
-                                  return b.displayName.compareTo(a.displayName);
-                                }
-                                // 有 lastModified 的排在前面
-                                if (a.lastModified == null) return 1;
-                                return -1;
-                              });
-                              setState(() => _remote = list);
-
-                              if (!context.mounted) return;
-                              await showModalBottomSheet(
+                        if (!context.mounted) return;
+                        await showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: context.overlaySurface,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder: (ctx) => _RemoteListSheet(
+                            items: _remote,
+                            loading: false,
+                            onDelete: (item) async {
+                              final confirm = await showDialog<bool>(
                                 context: context,
-                                isScrollControlled: true,
-                                backgroundColor: context.overlaySurface,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
+                                builder: (dctx) => AlertDialog(
+                                  title: Text(
+                                    l10n.backupPageDeleteConfirmTitle,
                                   ),
-                                ),
-                                builder: (ctx) => _RemoteListSheet(
-                                  items: _remote,
-                                  loading: false,
-                                  onDelete: (item) async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (dctx) => AlertDialog(
-                                        title: Text(
-                                          l10n.backupPageDeleteConfirmTitle,
-                                        ),
-                                        content: Text(
-                                          l10n.backupPageDeleteConfirmContent(
-                                            item.displayName,
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(false),
-                                            child: Text(l10n.backupPageCancel),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(true),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: cs.error,
-                                            ),
-                                            child: Text(
-                                              l10n.backupPageDeleteTooltip,
-                                            ),
-                                          ),
-                                        ],
+                                  content: Text(
+                                    l10n.backupPageDeleteConfirmContent(
+                                      item.displayName,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dctx).pop(false),
+                                      child: Text(l10n.backupPageCancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dctx).pop(true),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: cs.error,
                                       ),
-                                    );
-
-                                    if (confirm != true) return;
-
-                                    // 1. Close current sheet
-                                    if (context.mounted) {
-                                      Navigator.of(context).pop();
-                                    }
-
-                                    // 2. Show loading dialog
-                                    if (context.mounted) {
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (ctx) =>
-                                            const LoadingDialogCard(),
-                                      );
-                                    }
-
-                                    try {
-                                      final list = await vm.deleteAndReload(
-                                        item,
-                                      );
-
-                                      // Close loading dialog
-                                      if (context.mounted) {
-                                        Navigator.of(
-                                          context,
-                                          rootNavigator: true,
-                                        ).pop();
-                                      }
-
-                                      // Sort list
-                                      list.sort((a, b) {
-                                        if (a.lastModified != null &&
-                                            b.lastModified != null) {
-                                          return b.lastModified!.compareTo(
-                                            a.lastModified!,
-                                          );
-                                        }
-                                        if (a.lastModified == null &&
-                                            b.lastModified == null) {
-                                          return b.displayName.compareTo(
-                                            a.displayName,
-                                          );
-                                        }
-                                        if (a.lastModified == null) return 1;
-                                        return -1;
-                                      });
-
-                                      if (mounted) {
-                                        setState(() => _remote = list);
-                                      }
-
-                                      if (!context.mounted) return;
-
-                                      // Re-open the sheet by calling the same logic again.
-                                      await showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        backgroundColor: context.overlaySurface,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(16),
-                                          ),
-                                        ),
-                                        builder: (ctx) => _RemoteListSheet(
-                                          items: _remote,
-                                          loading: false,
-                                          onDelete: (item) async {
-                                            // Simplified recursive delete logic for subsequent deletions
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (dctx) => AlertDialog(
-                                                title: Text(
-                                                  l10n.backupPageDeleteConfirmTitle,
-                                                ),
-                                                content: Text(
-                                                  l10n.backupPageDeleteConfirmContent(
-                                                    item.displayName,
-                                                  ),
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          dctx,
-                                                        ).pop(false),
-                                                    child: Text(
-                                                      l10n.backupPageCancel,
-                                                    ),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          dctx,
-                                                        ).pop(true),
-                                                    style: TextButton.styleFrom(
-                                                      foregroundColor: cs.error,
-                                                    ),
-                                                    child: Text(
-                                                      l10n.backupPageDeleteTooltip,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true) {
-                                              if (!ctx.mounted) return;
-                                              Navigator.of(ctx).pop();
-                                              if (context.mounted) {
-                                                showDialog(
-                                                  context: context,
-                                                  barrierDismissible: false,
-                                                  builder: (ctx) =>
-                                                      const LoadingDialogCard(),
-                                                );
-                                              }
-                                              try {
-                                                final list = await vm
-                                                    .deleteAndReload(item);
-                                                if (context.mounted) {
-                                                  Navigator.of(
-                                                    context,
-                                                    rootNavigator: true,
-                                                  ).pop();
-                                                }
-                                                list.sort((a, b) {
-                                                  if (a.lastModified != null &&
-                                                      b.lastModified != null) {
-                                                    return b.lastModified!
-                                                        .compareTo(
-                                                          a.lastModified!,
-                                                        );
-                                                  }
-                                                  if (a.lastModified == null &&
-                                                      b.lastModified == null) {
-                                                    return b.displayName
-                                                        .compareTo(
-                                                          a.displayName,
-                                                        );
-                                                  }
-                                                  if (a.lastModified == null) {
-                                                    return 1;
-                                                  }
-                                                  return -1;
-                                                });
-                                                if (mounted) {
-                                                  setState(
-                                                    () => _remote = list,
-                                                  );
-                                                }
-                                              } catch (_) {
-                                                if (context.mounted &&
-                                                    Navigator.canPop(context)) {
-                                                  Navigator.of(
-                                                    context,
-                                                    rootNavigator: true,
-                                                  ).pop();
-                                                }
-                                              }
-                                            }
-                                          },
-                                          onRestore: (item) async {
-                                            Navigator.of(ctx).pop();
-                                            if (!context.mounted) return;
-                                            final mode =
-                                                await _chooseImportModeDialog(
-                                                  context,
-                                                );
-                                            if (mode == null) return;
-                                            if (!context.mounted) return;
-                                            try {
-                                              await _runWithImportingOverlay(
-                                                context,
-                                                (handle) => vm.restoreFromItem(
-                                                  item,
-                                                  mode: mode,
-                                                  onProgress: handle.report,
-                                                  cancelToken:
-                                                      handle.cancelToken,
-                                                  onPassword:
-                                                      backupPasswordPrompt(
-                                                        context,
-                                                      ),
-                                                  onForwardCompatibility:
-                                                      forwardCompatibilityPrompt(
-                                                        context,
-                                                      ),
-                                                ),
-                                              );
-                                            } catch (e) {
-                                              if (e
-                                                  is BackupCancelledException) {
-                                                return;
-                                              }
-                                              if (!context.mounted) return;
-                                              showAppSnackBar(
-                                                context,
-                                                message: l10n
-                                                    .backupPageRestoreFailedMessage(
-                                                      backupRestoreErrorMessage(
-                                                        l10n,
-                                                        e,
-                                                      ),
-                                                    ),
-                                                type: NotificationType.error,
-                                              );
-                                              return;
-                                            }
-                                            if (!context.mounted) return;
-                                            final msg = vm.message;
-                                            if (msg != null &&
-                                                msg != 'Restored') {
-                                              showAppSnackBar(
-                                                context,
-                                                message: msg,
-                                                type: NotificationType.error,
-                                              );
-                                              return;
-                                            }
-                                            await showBackupRestartRequiredDialog(
-                                              context,
-                                              skippedConversations:
-                                                  vm.skippedConversations,
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (e is BackupCancelledException) return;
-                                      if (context.mounted) {
-                                        showAppSnackBar(
-                                          context,
-                                          message: e.toString(),
-                                          type: NotificationType.error,
-                                        );
-                                      }
-                                    }
-                                  },
-                                  onRestore: (item) async {
-                                    Navigator.of(ctx).pop();
-
-                                    if (!context.mounted) return;
-                                    final mode = await _chooseImportModeDialog(
-                                      context,
-                                    );
-
-                                    if (mode == null) return;
-                                    if (!context.mounted) return;
-
-                                    try {
-                                      await _runWithImportingOverlay(
-                                        context,
-                                        (handle) => vm.restoreFromItem(
-                                          item,
-                                          mode: mode,
-                                          onProgress: handle.report,
-                                          cancelToken: handle.cancelToken,
-                                          onPassword: backupPasswordPrompt(
-                                            context,
-                                          ),
-                                          onForwardCompatibility:
-                                              forwardCompatibilityPrompt(
-                                                context,
-                                              ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (e is BackupCancelledException) return;
-                                      if (!context.mounted) return;
-                                      showAppSnackBar(
-                                        context,
-                                        message: backupRestoreErrorMessage(
-                                          l10n,
-                                          e,
-                                        ),
-                                        type: NotificationType.error,
-                                      );
-                                      return;
-                                    }
-                                    if (!context.mounted) return;
-                                    final msg = vm.message;
-                                    if (msg != null && msg != 'Restored') {
-                                      showAppSnackBar(
-                                        context,
-                                        message: msg,
-                                        type: NotificationType.error,
-                                      );
-                                      return;
-                                    }
-                                    await showBackupRestartRequiredDialog(
-                                      context,
-                                      skippedConversations:
-                                          vm.skippedConversations,
-                                    );
-                                  },
+                                      child: Text(l10n.backupPageDeleteTooltip),
+                                    ),
+                                  ],
                                 ),
                               );
-                            },
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Upload,
-                      label: l10n.backupPageBackupNow,
-                      onTap: vm.busy
-                          ? null
-                          : () async {
-                              final reminderProvider = context
-                                  .read<BackupReminderProvider>();
-                              final success = await runBackupTask(
-                                context,
-                                title: l10n.backupPageBackupNow,
-                                task: (handle) async {
-                                  final ok = await vm.backup(
-                                    password: await backupPasswordForExport(
-                                      context,
-                                    ),
-                                    onProgress: handle.report,
-                                    cancelToken: handle.cancelToken,
-                                  );
-                                  if (!ok) {
-                                    throw Exception(
-                                      vm.message ?? 'Backup failed',
+
+                              if (confirm != true) return;
+
+                              // 1. Close current sheet
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+
+                              // 2. Show loading dialog
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (ctx) => const LoadingDialogCard(),
+                                );
+                              }
+
+                              try {
+                                final list = await vm.deleteAndReload(item);
+
+                                // Close loading dialog
+                                if (context.mounted) {
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop();
+                                }
+
+                                // Sort list
+                                list.sort((a, b) {
+                                  if (a.lastModified != null &&
+                                      b.lastModified != null) {
+                                    return b.lastModified!.compareTo(
+                                      a.lastModified!,
                                     );
                                   }
-                                },
-                              );
-                              if (!success || !context.mounted) return;
-                              await reminderProvider.recordBackupCompleted();
-                              if (!context.mounted) return;
-                              showAppSnackBar(
-                                context,
-                                message:
-                                    vm.message ?? l10n.backupPageBackupUploaded,
-                                type: NotificationType.info,
-                              );
-                            },
-                    ),
-                  ],
-                ),
-
-                // Section 3: S3 备份
-                header(l10n.backupPageS3Backup),
-                SectionCard(
-                  children: [
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Settings,
-                      label: l10n.backupPageS3ServerSettings,
-                      onTap: () =>
-                          _showS3SettingsPage(context, settings, s3Vm, s3Cfg),
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Cable,
-                      label: l10n.backupPageTestConnection,
-                      onTap: s3Vm.busy
-                          ? null
-                          : () async {
-                              await s3Vm.test();
-                              if (!context.mounted) return;
-                              final rawMessage = s3Vm.message;
-                              final message =
-                                  rawMessage ?? l10n.backupPageTestDone;
-                              showAppSnackBar(
-                                context,
-                                message: message,
-                                type: rawMessage != null && rawMessage != 'OK'
-                                    ? NotificationType.error
-                                    : NotificationType.success,
-                              );
-                            },
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Import,
-                      label: l10n.backupPageRestore,
-                      onTap: s3Vm.busy
-                          ? null
-                          : () async {
-                              final List<BackupFileItem> list;
-                              try {
-                                list = await _runWithImportingOverlay(
-                                  context,
-                                  (handle) => s3Vm.listRemote(
-                                    onProgress: handle.report,
-                                    cancelToken: handle.cancelToken,
-                                  ),
-                                );
-                              } on BackupCancelledException {
-                                return;
-                              } catch (_) {
-                                return;
-                              }
-                              if (!mounted) return;
-                              list.sort((a, b) {
-                                if (a.lastModified != null &&
-                                    b.lastModified != null) {
-                                  return b.lastModified!.compareTo(
-                                    a.lastModified!,
-                                  );
-                                }
-                                if (a.lastModified == null &&
-                                    b.lastModified == null) {
-                                  return b.displayName.compareTo(a.displayName);
-                                }
-                                if (a.lastModified == null) return 1;
-                                return -1;
-                              });
-                              setState(() => _remoteS3 = list);
-
-                              if (!context.mounted) return;
-                              await showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: context.overlaySurface,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
-                                  ),
-                                ),
-                                builder: (ctx) => _RemoteListSheet(
-                                  items: _remoteS3,
-                                  loading: false,
-                                  onDelete: (item) async {
-                                    final confirm = await showDialog<bool>(
-                                      context: context,
-                                      builder: (dctx) => AlertDialog(
-                                        title: Text(
-                                          l10n.backupPageDeleteConfirmTitle,
-                                        ),
-                                        content: Text(
-                                          l10n.backupPageDeleteConfirmContent(
-                                            item.displayName,
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(false),
-                                            child: Text(l10n.backupPageCancel),
-                                          ),
-                                          TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(dctx).pop(true),
-                                            style: TextButton.styleFrom(
-                                              foregroundColor: cs.error,
-                                            ),
-                                            child: Text(
-                                              l10n.backupPageDeleteTooltip,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirm != true) return;
-
-                                    if (context.mounted) {
-                                      Navigator.of(context).pop();
-                                    }
-
-                                    if (context.mounted) {
-                                      showDialog(
-                                        context: context,
-                                        barrierDismissible: false,
-                                        builder: (ctx) =>
-                                            const LoadingDialogCard(),
-                                      );
-                                    }
-
-                                    try {
-                                      final list = await s3Vm.deleteAndReload(
-                                        item,
-                                      );
-                                      if (context.mounted) {
-                                        Navigator.of(
-                                          context,
-                                          rootNavigator: true,
-                                        ).pop();
-                                      }
-                                      list.sort((a, b) {
-                                        if (a.lastModified != null &&
-                                            b.lastModified != null) {
-                                          return b.lastModified!.compareTo(
-                                            a.lastModified!,
-                                          );
-                                        }
-                                        if (a.lastModified == null &&
-                                            b.lastModified == null) {
-                                          return b.displayName.compareTo(
-                                            a.displayName,
-                                          );
-                                        }
-                                        if (a.lastModified == null) return 1;
-                                        return -1;
-                                      });
-                                      if (mounted) {
-                                        setState(() => _remoteS3 = list);
-                                      }
-                                      if (!context.mounted) return;
-                                      await showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        backgroundColor: context.overlaySurface,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(16),
-                                          ),
-                                        ),
-                                        builder: (ctx) => _RemoteListSheet(
-                                          items: _remoteS3,
-                                          loading: false,
-                                          onDelete: (item) async {
-                                            final confirm = await showDialog<bool>(
-                                              context: context,
-                                              builder: (dctx) => AlertDialog(
-                                                title: Text(
-                                                  l10n.backupPageDeleteConfirmTitle,
-                                                ),
-                                                content: Text(
-                                                  l10n.backupPageDeleteConfirmContent(
-                                                    item.displayName,
-                                                  ),
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          dctx,
-                                                        ).pop(false),
-                                                    child: Text(
-                                                      l10n.backupPageCancel,
-                                                    ),
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.of(
-                                                          dctx,
-                                                        ).pop(true),
-                                                    style: TextButton.styleFrom(
-                                                      foregroundColor: cs.error,
-                                                    ),
-                                                    child: Text(
-                                                      l10n.backupPageDeleteTooltip,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                            if (confirm == true) {
-                                              if (!ctx.mounted) return;
-                                              Navigator.of(ctx).pop();
-                                              if (context.mounted) {
-                                                showDialog(
-                                                  context: context,
-                                                  barrierDismissible: false,
-                                                  builder: (ctx) =>
-                                                      const LoadingDialogCard(),
-                                                );
-                                              }
-                                              try {
-                                                final list = await s3Vm
-                                                    .deleteAndReload(item);
-                                                if (context.mounted) {
-                                                  Navigator.of(
-                                                    context,
-                                                    rootNavigator: true,
-                                                  ).pop();
-                                                }
-                                                list.sort((a, b) {
-                                                  if (a.lastModified != null &&
-                                                      b.lastModified != null) {
-                                                    return b.lastModified!
-                                                        .compareTo(
-                                                          a.lastModified!,
-                                                        );
-                                                  }
-                                                  if (a.lastModified == null &&
-                                                      b.lastModified == null) {
-                                                    return b.displayName
-                                                        .compareTo(
-                                                          a.displayName,
-                                                        );
-                                                  }
-                                                  if (a.lastModified == null) {
-                                                    return 1;
-                                                  }
-                                                  return -1;
-                                                });
-                                                if (mounted) {
-                                                  setState(
-                                                    () => _remoteS3 = list,
-                                                  );
-                                                }
-                                              } catch (_) {
-                                                if (context.mounted &&
-                                                    Navigator.canPop(context)) {
-                                                  Navigator.of(
-                                                    context,
-                                                    rootNavigator: true,
-                                                  ).pop();
-                                                }
-                                              }
-                                            }
-                                          },
-                                          onRestore: (item) async {
-                                            Navigator.of(ctx).pop();
-                                            if (!context.mounted) return;
-                                            final mode =
-                                                await _chooseImportModeDialog(
-                                                  context,
-                                                );
-                                            if (mode == null) return;
-                                            if (!context.mounted) return;
-                                            try {
-                                              await _runWithImportingOverlay(
-                                                context,
-                                                (
-                                                  handle,
-                                                ) => s3Vm.restoreFromItem(
-                                                  item,
-                                                  mode: mode,
-                                                  onProgress: handle.report,
-                                                  cancelToken:
-                                                      handle.cancelToken,
-                                                  onPassword:
-                                                      backupPasswordPrompt(
-                                                        context,
-                                                      ),
-                                                  onForwardCompatibility:
-                                                      forwardCompatibilityPrompt(
-                                                        context,
-                                                      ),
-                                                ),
-                                              );
-                                            } catch (e) {
-                                              if (e
-                                                  is BackupCancelledException) {
-                                                return;
-                                              }
-                                              if (!context.mounted) return;
-                                              showAppSnackBar(
-                                                context,
-                                                message: l10n
-                                                    .backupPageRestoreFailedMessage(
-                                                      backupRestoreErrorMessage(
-                                                        l10n,
-                                                        e,
-                                                      ),
-                                                    ),
-                                                type: NotificationType.error,
-                                              );
-                                              return;
-                                            }
-                                            if (!context.mounted) return;
-                                            final msg = s3Vm.message;
-                                            if (msg != null &&
-                                                msg != 'Restored') {
-                                              showAppSnackBar(
-                                                context,
-                                                message: msg,
-                                                type: NotificationType.error,
-                                              );
-                                              return;
-                                            }
-                                            await showBackupRestartRequiredDialog(
-                                              context,
-                                              skippedConversations:
-                                                  s3Vm.skippedConversations,
-                                            );
-                                          },
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (e is BackupCancelledException) return;
-                                      if (context.mounted) {
-                                        showAppSnackBar(
-                                          context,
-                                          message: e.toString(),
-                                          type: NotificationType.error,
-                                        );
-                                      }
-                                    }
-                                  },
-                                  onRestore: (item) async {
-                                    Navigator.of(ctx).pop();
-
-                                    if (!context.mounted) return;
-                                    final mode = await _chooseImportModeDialog(
-                                      context,
-                                    );
-                                    if (mode == null) return;
-                                    if (!context.mounted) return;
-
-                                    try {
-                                      await _runWithImportingOverlay(
-                                        context,
-                                        (handle) => s3Vm.restoreFromItem(
-                                          item,
-                                          mode: mode,
-                                          onProgress: handle.report,
-                                          cancelToken: handle.cancelToken,
-                                          onPassword: backupPasswordPrompt(
-                                            context,
-                                          ),
-                                          onForwardCompatibility:
-                                              forwardCompatibilityPrompt(
-                                                context,
-                                              ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (e is BackupCancelledException) return;
-                                      if (!context.mounted) return;
-                                      showAppSnackBar(
-                                        context,
-                                        message: backupRestoreErrorMessage(
-                                          l10n,
-                                          e,
-                                        ),
-                                        type: NotificationType.error,
-                                      );
-                                      return;
-                                    }
-                                    if (!context.mounted) return;
-                                    final msg = s3Vm.message;
-                                    if (msg != null && msg != 'Restored') {
-                                      showAppSnackBar(
-                                        context,
-                                        message: msg,
-                                        type: NotificationType.error,
-                                      );
-                                      return;
-                                    }
-                                    await showBackupRestartRequiredDialog(
-                                      context,
-                                      skippedConversations:
-                                          s3Vm.skippedConversations,
-                                    );
-                                  },
-                                ),
-                              );
-                            },
-                    ),
-                    _iosDivider(context),
-                    _iosNavRow(
-                      context,
-                      icon: Lucide.Upload,
-                      label: l10n.backupPageBackupNow,
-                      onTap: s3Vm.busy
-                          ? null
-                          : () async {
-                              final reminderProvider = context
-                                  .read<BackupReminderProvider>();
-                              final success = await runBackupTask(
-                                context,
-                                title: l10n.backupPageBackupNow,
-                                task: (handle) async {
-                                  final ok = await s3Vm.backup(
-                                    password: await backupPasswordForExport(
-                                      context,
-                                    ),
-                                    onProgress: handle.report,
-                                    cancelToken: handle.cancelToken,
-                                  );
-                                  if (!ok) {
-                                    throw Exception(
-                                      s3Vm.message ?? 'Backup failed',
+                                  if (a.lastModified == null &&
+                                      b.lastModified == null) {
+                                    return b.displayName.compareTo(
+                                      a.displayName,
                                     );
                                   }
-                                },
-                              );
-                              if (!success || !context.mounted) return;
-                              await reminderProvider.recordBackupCompleted();
+                                  if (a.lastModified == null) return 1;
+                                  return -1;
+                                });
+
+                                if (mounted) {
+                                  setState(() => _remote = list);
+                                }
+
+                                if (!context.mounted) return;
+
+                                // Re-open the sheet by calling the same logic again.
+                                await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: context.overlaySurface,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
+                                  ),
+                                  builder: (ctx) => _RemoteListSheet(
+                                    items: _remote,
+                                    loading: false,
+                                    onDelete: (item) async {
+                                      // Simplified recursive delete logic for subsequent deletions
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (dctx) => AlertDialog(
+                                          title: Text(
+                                            l10n.backupPageDeleteConfirmTitle,
+                                          ),
+                                          content: Text(
+                                            l10n.backupPageDeleteConfirmContent(
+                                              item.displayName,
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dctx).pop(false),
+                                              child: Text(
+                                                l10n.backupPageCancel,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dctx).pop(true),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: cs.error,
+                                              ),
+                                              child: Text(
+                                                l10n.backupPageDeleteTooltip,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        if (!ctx.mounted) return;
+                                        Navigator.of(ctx).pop();
+                                        if (context.mounted) {
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (ctx) =>
+                                                const LoadingDialogCard(),
+                                          );
+                                        }
+                                        try {
+                                          final list = await vm.deleteAndReload(
+                                            item,
+                                          );
+                                          if (context.mounted) {
+                                            Navigator.of(
+                                              context,
+                                              rootNavigator: true,
+                                            ).pop();
+                                          }
+                                          list.sort((a, b) {
+                                            if (a.lastModified != null &&
+                                                b.lastModified != null) {
+                                              return b.lastModified!.compareTo(
+                                                a.lastModified!,
+                                              );
+                                            }
+                                            if (a.lastModified == null &&
+                                                b.lastModified == null) {
+                                              return b.displayName.compareTo(
+                                                a.displayName,
+                                              );
+                                            }
+                                            if (a.lastModified == null) {
+                                              return 1;
+                                            }
+                                            return -1;
+                                          });
+                                          if (mounted) {
+                                            setState(() => _remote = list);
+                                          }
+                                        } catch (_) {
+                                          if (context.mounted &&
+                                              Navigator.canPop(context)) {
+                                            Navigator.of(
+                                              context,
+                                              rootNavigator: true,
+                                            ).pop();
+                                          }
+                                        }
+                                      }
+                                    },
+                                    onRestore: (item) async {
+                                      Navigator.of(ctx).pop();
+                                      if (!context.mounted) return;
+                                      final mode =
+                                          await _chooseImportModeDialog(
+                                            context,
+                                          );
+                                      if (mode == null) return;
+                                      if (!context.mounted) return;
+                                      try {
+                                        await _runWithImportingOverlay(
+                                          context,
+                                          (handle) => vm.restoreFromItem(
+                                            item,
+                                            mode: mode,
+                                            onProgress: handle.report,
+                                            cancelToken: handle.cancelToken,
+                                            onPassword: backupPasswordPrompt(
+                                              context,
+                                            ),
+                                            onForwardCompatibility:
+                                                forwardCompatibilityPrompt(
+                                                  context,
+                                                ),
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        if (e is BackupCancelledException) {
+                                          return;
+                                        }
+                                        if (!context.mounted) return;
+                                        showAppSnackBar(
+                                          context,
+                                          message: l10n
+                                              .backupPageRestoreFailedMessage(
+                                                backupRestoreErrorMessage(
+                                                  l10n,
+                                                  e,
+                                                ),
+                                              ),
+                                          type: NotificationType.error,
+                                        );
+                                        return;
+                                      }
+                                      if (!context.mounted) return;
+                                      final msg = vm.message;
+                                      if (msg != null && msg != 'Restored') {
+                                        showAppSnackBar(
+                                          context,
+                                          message: msg,
+                                          type: NotificationType.error,
+                                        );
+                                        return;
+                                      }
+                                      await showBackupRestartRequiredDialog(
+                                        context,
+                                        skippedConversations:
+                                            vm.skippedConversations,
+                                      );
+                                    },
+                                  ),
+                                );
+                              } catch (e) {
+                                if (e is BackupCancelledException) return;
+                                if (context.mounted) {
+                                  showAppSnackBar(
+                                    context,
+                                    message: e.toString(),
+                                    type: NotificationType.error,
+                                  );
+                                }
+                              }
+                            },
+                            onRestore: (item) async {
+                              Navigator.of(ctx).pop();
+
                               if (!context.mounted) return;
-                              showAppSnackBar(
+                              final mode = await _chooseImportModeDialog(
                                 context,
-                                message:
-                                    s3Vm.message ??
-                                    l10n.backupPageBackupUploaded,
-                                type: NotificationType.info,
+                              );
+
+                              if (mode == null) return;
+                              if (!context.mounted) return;
+
+                              try {
+                                await _runWithImportingOverlay(
+                                  context,
+                                  (handle) => vm.restoreFromItem(
+                                    item,
+                                    mode: mode,
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                    onPassword: backupPasswordPrompt(context),
+                                    onForwardCompatibility:
+                                        forwardCompatibilityPrompt(context),
+                                  ),
+                                );
+                              } catch (e) {
+                                if (e is BackupCancelledException) return;
+                                if (!context.mounted) return;
+                                showAppSnackBar(
+                                  context,
+                                  message: backupRestoreErrorMessage(l10n, e),
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              if (!context.mounted) return;
+                              final msg = vm.message;
+                              if (msg != null && msg != 'Restored') {
+                                showAppSnackBar(
+                                  context,
+                                  message: msg,
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              await showBackupRestartRequiredDialog(
+                                context,
+                                skippedConversations: vm.skippedConversations,
                               );
                             },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+                          ),
+                        );
+                      },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Upload,
+                label: l10n.backupPageBackupNow,
+                onTap: busy || vm.busy
+                    ? null
+                    : () async {
+                        await runExternalBackup(
+                          context,
+                          BackupDestination.webdav,
+                        );
+                      },
+              ),
+            ],
+          ),
+
+          // Section 3: S3 备份
+          header(l10n.backupPageS3Backup),
+          SectionCard(
+            children: [
+              _iosNavRow(
+                context,
+                icon: Lucide.Settings,
+                label: l10n.backupPageS3ServerSettings,
+                onTap: () =>
+                    _showS3SettingsPage(context, settings, s3Vm, s3Cfg),
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Cable,
+                label: l10n.backupPageTestConnection,
+                onTap: busy || s3Vm.busy
+                    ? null
+                    : () async {
+                        await s3Vm.test();
+                        if (!context.mounted) return;
+                        final rawMessage = s3Vm.message;
+                        final message = rawMessage ?? l10n.backupPageTestDone;
+                        showAppSnackBar(
+                          context,
+                          message: message,
+                          type: rawMessage != null && rawMessage != 'OK'
+                              ? NotificationType.error
+                              : NotificationType.success,
+                        );
+                      },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Import,
+                label: l10n.backupPageRestore,
+                onTap: busy || s3Vm.busy
+                    ? null
+                    : () async {
+                        final List<BackupFileItem> list;
+                        try {
+                          list = await _runWithImportingOverlay(
+                            context,
+                            (handle) => s3Vm.listRemote(
+                              onProgress: handle.report,
+                              cancelToken: handle.cancelToken,
+                            ),
+                          );
+                        } on BackupCancelledException {
+                          return;
+                        } catch (_) {
+                          return;
+                        }
+                        if (!mounted) return;
+                        list.sort((a, b) {
+                          if (a.lastModified != null &&
+                              b.lastModified != null) {
+                            return b.lastModified!.compareTo(a.lastModified!);
+                          }
+                          if (a.lastModified == null &&
+                              b.lastModified == null) {
+                            return b.displayName.compareTo(a.displayName);
+                          }
+                          if (a.lastModified == null) return 1;
+                          return -1;
+                        });
+                        setState(() => _remoteS3 = list);
+
+                        if (!context.mounted) return;
+                        await showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: context.overlaySurface,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(16),
+                            ),
+                          ),
+                          builder: (ctx) => _RemoteListSheet(
+                            items: _remoteS3,
+                            loading: false,
+                            onDelete: (item) async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (dctx) => AlertDialog(
+                                  title: Text(
+                                    l10n.backupPageDeleteConfirmTitle,
+                                  ),
+                                  content: Text(
+                                    l10n.backupPageDeleteConfirmContent(
+                                      item.displayName,
+                                    ),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dctx).pop(false),
+                                      child: Text(l10n.backupPageCancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dctx).pop(true),
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: cs.error,
+                                      ),
+                                      child: Text(l10n.backupPageDeleteTooltip),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm != true) return;
+
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+
+                              if (context.mounted) {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (ctx) => const LoadingDialogCard(),
+                                );
+                              }
+
+                              try {
+                                final list = await s3Vm.deleteAndReload(item);
+                                if (context.mounted) {
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop();
+                                }
+                                list.sort((a, b) {
+                                  if (a.lastModified != null &&
+                                      b.lastModified != null) {
+                                    return b.lastModified!.compareTo(
+                                      a.lastModified!,
+                                    );
+                                  }
+                                  if (a.lastModified == null &&
+                                      b.lastModified == null) {
+                                    return b.displayName.compareTo(
+                                      a.displayName,
+                                    );
+                                  }
+                                  if (a.lastModified == null) return 1;
+                                  return -1;
+                                });
+                                if (mounted) {
+                                  setState(() => _remoteS3 = list);
+                                }
+                                if (!context.mounted) return;
+                                await showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: context.overlaySurface,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
+                                  ),
+                                  builder: (ctx) => _RemoteListSheet(
+                                    items: _remoteS3,
+                                    loading: false,
+                                    onDelete: (item) async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (dctx) => AlertDialog(
+                                          title: Text(
+                                            l10n.backupPageDeleteConfirmTitle,
+                                          ),
+                                          content: Text(
+                                            l10n.backupPageDeleteConfirmContent(
+                                              item.displayName,
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dctx).pop(false),
+                                              child: Text(
+                                                l10n.backupPageCancel,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(dctx).pop(true),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor: cs.error,
+                                              ),
+                                              child: Text(
+                                                l10n.backupPageDeleteTooltip,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        if (!ctx.mounted) return;
+                                        Navigator.of(ctx).pop();
+                                        if (context.mounted) {
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (ctx) =>
+                                                const LoadingDialogCard(),
+                                          );
+                                        }
+                                        try {
+                                          final list = await s3Vm
+                                              .deleteAndReload(item);
+                                          if (context.mounted) {
+                                            Navigator.of(
+                                              context,
+                                              rootNavigator: true,
+                                            ).pop();
+                                          }
+                                          list.sort((a, b) {
+                                            if (a.lastModified != null &&
+                                                b.lastModified != null) {
+                                              return b.lastModified!.compareTo(
+                                                a.lastModified!,
+                                              );
+                                            }
+                                            if (a.lastModified == null &&
+                                                b.lastModified == null) {
+                                              return b.displayName.compareTo(
+                                                a.displayName,
+                                              );
+                                            }
+                                            if (a.lastModified == null) {
+                                              return 1;
+                                            }
+                                            return -1;
+                                          });
+                                          if (mounted) {
+                                            setState(() => _remoteS3 = list);
+                                          }
+                                        } catch (_) {
+                                          if (context.mounted &&
+                                              Navigator.canPop(context)) {
+                                            Navigator.of(
+                                              context,
+                                              rootNavigator: true,
+                                            ).pop();
+                                          }
+                                        }
+                                      }
+                                    },
+                                    onRestore: (item) async {
+                                      Navigator.of(ctx).pop();
+                                      if (!context.mounted) return;
+                                      final mode =
+                                          await _chooseImportModeDialog(
+                                            context,
+                                          );
+                                      if (mode == null) return;
+                                      if (!context.mounted) return;
+                                      try {
+                                        await _runWithImportingOverlay(
+                                          context,
+                                          (handle) => s3Vm.restoreFromItem(
+                                            item,
+                                            mode: mode,
+                                            onProgress: handle.report,
+                                            cancelToken: handle.cancelToken,
+                                            onPassword: backupPasswordPrompt(
+                                              context,
+                                            ),
+                                            onForwardCompatibility:
+                                                forwardCompatibilityPrompt(
+                                                  context,
+                                                ),
+                                          ),
+                                        );
+                                      } catch (e) {
+                                        if (e is BackupCancelledException) {
+                                          return;
+                                        }
+                                        if (!context.mounted) return;
+                                        showAppSnackBar(
+                                          context,
+                                          message: l10n
+                                              .backupPageRestoreFailedMessage(
+                                                backupRestoreErrorMessage(
+                                                  l10n,
+                                                  e,
+                                                ),
+                                              ),
+                                          type: NotificationType.error,
+                                        );
+                                        return;
+                                      }
+                                      if (!context.mounted) return;
+                                      final msg = s3Vm.message;
+                                      if (msg != null && msg != 'Restored') {
+                                        showAppSnackBar(
+                                          context,
+                                          message: msg,
+                                          type: NotificationType.error,
+                                        );
+                                        return;
+                                      }
+                                      await showBackupRestartRequiredDialog(
+                                        context,
+                                        skippedConversations:
+                                            s3Vm.skippedConversations,
+                                      );
+                                    },
+                                  ),
+                                );
+                              } catch (e) {
+                                if (e is BackupCancelledException) return;
+                                if (context.mounted) {
+                                  showAppSnackBar(
+                                    context,
+                                    message: e.toString(),
+                                    type: NotificationType.error,
+                                  );
+                                }
+                              }
+                            },
+                            onRestore: (item) async {
+                              Navigator.of(ctx).pop();
+
+                              if (!context.mounted) return;
+                              final mode = await _chooseImportModeDialog(
+                                context,
+                              );
+                              if (mode == null) return;
+                              if (!context.mounted) return;
+
+                              try {
+                                await _runWithImportingOverlay(
+                                  context,
+                                  (handle) => s3Vm.restoreFromItem(
+                                    item,
+                                    mode: mode,
+                                    onProgress: handle.report,
+                                    cancelToken: handle.cancelToken,
+                                    onPassword: backupPasswordPrompt(context),
+                                    onForwardCompatibility:
+                                        forwardCompatibilityPrompt(context),
+                                  ),
+                                );
+                              } catch (e) {
+                                if (e is BackupCancelledException) return;
+                                if (!context.mounted) return;
+                                showAppSnackBar(
+                                  context,
+                                  message: backupRestoreErrorMessage(l10n, e),
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              if (!context.mounted) return;
+                              final msg = s3Vm.message;
+                              if (msg != null && msg != 'Restored') {
+                                showAppSnackBar(
+                                  context,
+                                  message: msg,
+                                  type: NotificationType.error,
+                                );
+                                return;
+                              }
+                              await showBackupRestartRequiredDialog(
+                                context,
+                                skippedConversations: s3Vm.skippedConversations,
+                              );
+                            },
+                          ),
+                        );
+                      },
+              ),
+              _iosDivider(context),
+              _iosNavRow(
+                context,
+                icon: Lucide.Upload,
+                label: l10n.backupPageBackupNow,
+                onTap: busy || s3Vm.busy
+                    ? null
+                    : () async {
+                        await runExternalBackup(context, BackupDestination.s3);
+                      },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1271,6 +1110,7 @@ class _BackupPageState extends State<BackupPage> {
     BackupProvider vm,
     Widget Function(String text, {bool first}) header,
   ) {
+    final busy = context.watch<ExternalBackupAutoProvider>().busy;
     return [
       header(l10n.backupPageLocalBackup),
       SectionCard(
@@ -1279,28 +1119,29 @@ class _BackupPageState extends State<BackupPage> {
             context,
             icon: Lucide.Export,
             label: l10n.backupPageExportToFile,
-            onTap: () => _doExport(context, vm),
+            subtitle: l10n.backupPageExportToFileSubtitle,
+            onTap: busy ? null : () => _doExport(context, vm),
           ),
           _iosDivider(context),
           _iosNavRow(
             context,
             icon: Lucide.Import2,
             label: l10n.backupPageImportBackupFile,
-            onTap: () => _doImportLocal(context, vm),
+            onTap: busy ? null : () => _doImportLocal(context, vm),
           ),
           _iosDivider(context),
           _iosNavRow(
             context,
             icon: Lucide.Box,
             label: l10n.backupPageImportFromCherryStudio,
-            onTap: () => _doImportCherry(context),
+            onTap: busy ? null : () => _doImportCherry(context),
           ),
           _iosDivider(context),
           _iosNavRow(
             context,
             icon: Lucide.Box,
             label: l10n.backupPageImportFromChatbox,
-            onTap: () => _doImportChatbox(context),
+            onTap: busy ? null : () => _doImportChatbox(context),
           ),
         ],
       ),
@@ -1449,10 +1290,32 @@ class _BackupPageState extends State<BackupPage> {
       final isMobile = Platform.isAndroid || Platform.isIOS;
       if (isMobile) {
         try {
-          final saved = await NativeFileSave.saveFileFromPath(
+          Future<bool> save() => NativeFileSave.saveFileFromPath(
             sourcePath: exported.path,
             fileName: exported.uri.pathSegments.last,
+            requireOutsideAppContainer: Platform.isIOS,
+            dialogTitle: l10n.backupPageChooseBackupFolder,
           );
+          var saved = false;
+          if (Platform.isIOS) {
+            await runBackupTask(
+              context,
+              title: l10n.backupPageExportToFile,
+              task: (handle) async {
+                handle.report(
+                  const BackupProgress(
+                    phase: BackupPhase.finalizing,
+                    processed: 0,
+                    cancellable: false,
+                  ),
+                );
+                saved = await save();
+                if (!saved) throw const BackupCancelledException();
+              },
+            );
+          } else {
+            saved = await save();
+          }
           if (saved && context.mounted) {
             await context
                 .read<BackupReminderProvider>()
@@ -1462,7 +1325,7 @@ class _BackupPageState extends State<BackupPage> {
           if (!context.mounted) return;
           showAppSnackBar(
             context,
-            message: e.toString(),
+            message: backupRestoreErrorMessage(l10n, e),
             type: NotificationType.error,
           );
         }
@@ -1660,7 +1523,17 @@ class _BackupReminderMobileSection extends StatelessWidget {
           onChanged: (value) async {
             final provider = context.read<BackupReminderProvider>();
             if (!value) {
-              await provider.setEnabled(false);
+              try {
+                await provider.setEnabled(false);
+              } catch (error) {
+                if (context.mounted) {
+                  showAppSnackBar(
+                    context,
+                    message: backupRestoreErrorMessage(l10n, error),
+                    type: NotificationType.error,
+                  );
+                }
+              }
               return;
             }
             final minutes = await showIosTimePicker(
@@ -1713,6 +1586,8 @@ class _BackupReminderMobileSection extends StatelessWidget {
             },
           ),
           _iosDivider(context),
+          const ExternalBackupControls(desktop: false),
+          _iosDivider(context),
           _iosNavRow(
             context,
             icon: Lucide.CheckCircle,
@@ -1726,7 +1601,9 @@ class _BackupReminderMobileSection extends StatelessWidget {
           _iosNavRow(
             context,
             icon: Lucide.Calendar,
-            label: l10n.backupReminderNextReminderTitle,
+            label: context.watch<SettingsProvider>().autoBackupEnabled
+                ? l10n.backupAutoNextTitle
+                : l10n.backupReminderNextReminderTitle,
             detailText: backupReminderNextLabel(
               context,
               reminder.nextReminderAt,
@@ -2096,6 +1973,7 @@ Widget _iosNavRow(
   required String label,
   VoidCallback? onTap,
   String? detailText,
+  String? subtitle,
 }) {
   final cs = Theme.of(context).colorScheme;
   final interactive = onTap != null;
@@ -2115,11 +1993,27 @@ Widget _iosNavRow(
                 SizedBox(width: 36, child: Icon(icon, size: 20, color: c)),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    label,
-                    style: TextStyle(fontSize: 15, color: c),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        style: TextStyle(fontSize: 15, color: c),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (detailText != null)

@@ -1,5 +1,7 @@
 import 'package:Kelivo/utils/protected_text.dart';
+import 'package:Kelivo/utils/source_text_map.dart';
 import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/models/message_part_snapshot.dart';
 import 'package:markstream/markstream_core.dart';
 
 /// Original coordinates precede thinking extraction, visual regexes and bubbles.
@@ -7,6 +9,11 @@ import 'package:markstream/markstream_core.dart';
 final class UiMessageSource {
   UiMessageSource._(this.runs, this._parts);
   static final _memo = Expando<UiMessageSource>();
+  static final _negativeSnapshots =
+      Expando<WeakReference<MessagePartSnapshot>>();
+  static const _maxCandidateChanges = 16;
+  // The longest marker, kelivo-web, has ten UTF-16 units.
+  static const _markerOverlap = 9;
   static final empty = UiMessageSource._(const [], const {});
   final List<UiTextRun> runs;
   final Map<int, (UiTextRun, UiRunPart)> _parts;
@@ -15,6 +22,82 @@ final class UiMessageSource {
       _memo[parts] ??= _hasCandidate(parts) ? _parse(parts) : empty;
 
   static bool _hasCandidate(List<MessagePart> parts) {
+    if (parts is! MessagePartSnapshot) return _scanForCandidate(parts);
+    final previous = _negativeSnapshots[parts.sourceIdentity]?.target;
+    final changed =
+        previous != null &&
+            previous.structureRevision == parts.structureRevision &&
+            previous.length == parts.length
+        ? parts.changesSince(previous)
+        : null;
+    // Only reuse an authoritative negative result for bounded text-only edits.
+    // The weak reference never makes an old source snapshot stay alive.
+    final bool found;
+    if (previous != null &&
+        changed != null &&
+        changed.length <= _maxCandidateChanges &&
+        changed.every(
+          (index) =>
+              index >= 0 &&
+              index < parts.length &&
+              previous[index] is TextPart &&
+              parts[index] is TextPart,
+        )) {
+      found = changed.any((index) => _candidateAround(parts, index));
+    } else {
+      found = _scanForCandidate(parts);
+    }
+    _negativeSnapshots[parts.sourceIdentity] = found
+        ? null
+        : WeakReference(parts);
+    return found;
+  }
+
+  static bool _containsMarker(String text) =>
+      text.contains('kelivo-ui') || text.contains('kelivo-web');
+
+  static bool _candidateAround(List<MessagePart> parts, int index) {
+    final text = (parts[index] as TextPart).text;
+    if (_containsMarker(text)) return true;
+    final left = _adjacentText(parts, index, before: true);
+    final right = _adjacentText(parts, index, before: false);
+    if (left.isEmpty && right.isEmpty) return false;
+    if (text.length < _markerOverlap) {
+      return _containsMarker('$left$text$right');
+    }
+    return (left.isNotEmpty &&
+            _containsMarker('$left${text.substring(0, _markerOverlap)}')) ||
+        (right.isNotEmpty &&
+            _containsMarker(
+              '${text.substring(text.length - _markerOverlap)}$right',
+            ));
+  }
+
+  static String _adjacentText(
+    List<MessagePart> parts,
+    int index, {
+    required bool before,
+  }) {
+    var result = '';
+    final step = before ? -1 : 1;
+    for (
+      var i = index + step;
+      i >= 0 && i < parts.length && result.length < _markerOverlap;
+      i += step
+    ) {
+      final part = parts[i];
+      if (part is! TextPart) break;
+      final text = part.text;
+      if (text.isEmpty) continue;
+      final count = (_markerOverlap - result.length).clamp(0, text.length);
+      result = before
+          ? '${text.substring(text.length - count)}$result'
+          : '$result${text.substring(0, count)}';
+    }
+    return result;
+  }
+
+  static bool _scanForCandidate(List<MessagePart> parts) {
     var tail = '';
     for (final part in parts) {
       if (part is! TextPart) {
@@ -22,16 +105,21 @@ final class UiMessageSource {
         continue;
       }
       final text = part.text;
-      if (text.contains('kelivo-ui') ||
-          text.contains('kelivo-web') ||
-          const ['kelivo-ui', 'kelivo-web'].any(
-            (tag) => (tail + text.substring(0, text.length.clamp(0, 9)))
-                .contains(tag),
-          )) {
+      if (text.isEmpty) continue;
+      if (_containsMarker(text)) {
         return true;
       }
-      final end = text.length >= 9 ? text : tail + text;
-      tail = end.substring((end.length - 9).clamp(0, end.length));
+      // A non-text part clears the tail. The common tool/text alternation has
+      // no cross-part marker to check and needs no temporary boundary string.
+      if (tail.isNotEmpty) {
+        final boundary =
+            tail + text.substring(0, text.length.clamp(0, _markerOverlap));
+        if (_containsMarker(boundary)) {
+          return true;
+        }
+      }
+      final end = text.length >= _markerOverlap ? text : tail + text;
+      tail = end.substring((end.length - _markerOverlap).clamp(0, end.length));
     }
     return false;
   }
@@ -269,19 +357,31 @@ final class UiTextSlice {
     this.firstWebMessageOrdinal,
     this.trackedOffsets = const [],
     this.trackedBeforeInsertion = const [],
+    this.sourceMap,
   }) : fences = List.unmodifiable(fences);
   factory UiTextSlice.original(UiTextRun run, int start, int end) =>
-      UiTextSlice._(run, start, end, run.source.substring(start, end), true, [
-        for (final fence in run.fences)
-          if (fence.node.span.start >= start && fence.node.span.end <= end)
-            UiMappedFence(
-              fence,
-              SourceSpan(
-                fence.node.span.start - start,
-                fence.node.span.end - start,
+      UiTextSlice._(
+        run,
+        start,
+        end,
+        run.source.substring(start, end),
+        true,
+        [
+          for (final fence in run.fences)
+            if (fence.node.span.start >= start && fence.node.span.end <= end)
+              UiMappedFence(
+                fence,
+                SourceSpan(
+                  fence.node.span.start - start,
+                  fence.node.span.end - start,
+                ),
               ),
-            ),
-      ]);
+        ],
+        sourceMap: SourceTextMap.identity(
+          end - start,
+          offset: run.joinedStart + start,
+        ),
+      );
   final UiTextRun run;
   final int originalStart, originalEnd;
   final String text;
@@ -290,6 +390,7 @@ final class UiTextSlice {
   final int? firstMessageOrdinal, firstWebMessageOrdinal;
   final List<int> trackedOffsets;
   final List<bool> trackedBeforeInsertion;
+  final SourceTextMap? sourceMap;
 
   /// Remove hidden reasoning before matching whole-run visual expressions and
   /// retain split anchors in the same coordinate system as the protected code.
@@ -318,6 +419,7 @@ final class UiTextSlice {
       buffer.toString(),
       false,
       fences,
+      sourceMap: SourceTextMap.join(pieces.map((piece) => piece.sourceMap!)),
       trackedBeforeInsertion: [
         for (final offset in offsets)
           offset <= (pieces.firstOrNull?.originalStart ?? 0),
@@ -351,6 +453,7 @@ final class UiTextSlice {
         fences,
         firstMessageOrdinal: ordinal,
         firstWebMessageOrdinal: webOrdinal,
+        sourceMap: sourceMap,
       );
 
   int? messageOrdinalOf(UiSourceFence fence) {
@@ -384,6 +487,7 @@ final class UiTextSlice {
         [for (final f in fences) f.span],
         offsets: trackedOffsets,
         beforeInsertion: trackedBeforeInsertion,
+        sourceMap: sourceMap,
       ),
     );
     if (transformed.ranges.length != fences.length) {
@@ -403,6 +507,7 @@ final class UiTextSlice {
       firstWebMessageOrdinal: firstWebMessageOrdinal,
       trackedOffsets: transformed.offsets,
       trackedBeforeInsertion: transformed.beforeInsertion,
+      sourceMap: transformed.sourceMap,
     );
   }
 
@@ -421,6 +526,7 @@ final class UiTextSlice {
             SourceSpan(item.span.start - start, item.span.end - start),
           ),
     ],
+    sourceMap: sourceMap?.slice(start, end),
     firstMessageOrdinal: firstMessageOrdinal == null
         ? null
         : firstMessageOrdinal! +
@@ -445,18 +551,37 @@ final class UiTextSlice {
                   .length,
   );
 
-  UiSourceFence? resolve(DocumentNode document, CodeBlockNode node) {
+  UiSourceFence? resolve(
+    DocumentNode document,
+    CodeBlockNode node, {
+    bool allowStreamingTail = false,
+  }) {
     if (!document.children.contains(node)) {
       return null;
     }
     for (final item in fences) {
-      if (item.fence.topLevel &&
-          node.span.start == item.span.start &&
-          node.span.end == item.span.end &&
+      if (!item.fence.topLevel ||
+          node.span.start != item.span.start ||
+          item.span.slice(text) != item.fence.source) {
+        continue;
+      }
+      if (node.span.end == item.span.end &&
           // A completed prefix can retain its prior document while later text
           // streams. Both source intervals must still equal the original fence.
-          node.span.slice(document.source) == item.fence.source &&
-          node.span.slice(text) == item.fence.source) {
+          node.span.slice(document.source) == item.fence.source) {
+        return item.fence;
+      }
+      // Markstream coalesces long streams, so its tail can lag the host.
+      // Keep the card only for a verified append to the same original fence;
+      // a closed tail may grow its closing marker or trailing whitespace only
+      // if it stays closed and its parsed body is unchanged.
+      if (allowStreamingTail &&
+          node.span.end == document.source.length &&
+          node.span.end < item.span.end &&
+          node.info.trim() == item.fence.node.info.trim() &&
+          text.startsWith(document.source) &&
+          (!node.closed ||
+              (item.fence.node.closed && node.code == item.fence.node.code))) {
         return item.fence;
       }
     }

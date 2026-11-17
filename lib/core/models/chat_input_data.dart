@@ -1,4 +1,5 @@
 import 'composer_draft.dart' show DraftSubmission;
+import 'quote_ref.dart';
 import 'package:Kelivo/features/intelligent_ui/models/ui_context_attachment.dart';
 
 class DocumentAttachment {
@@ -15,6 +16,7 @@ class DocumentAttachment {
 
 class ChatInputData {
   final String text;
+  final List<QuoteRef> quotes;
   final List<String> imagePaths; // absolute file paths or data URLs
   final List<DocumentAttachment> documents; // selected files
   final bool generateImage; // route this submission to the image model
@@ -24,6 +26,7 @@ class ChatInputData {
 
   const ChatInputData({
     required this.text,
+    this.quotes = const [],
     this.imagePaths = const [],
     this.documents = const [],
     this.generateImage = false,
@@ -31,6 +34,9 @@ class ChatInputData {
     this.draftSubmission,
     this.uiContext,
   });
+
+  String quotedText(String Function(int) quoteMarker) =>
+      formatQuotedMessage(text, quotes, quoteMarker: quoteMarker);
 
   bool get isEmpty =>
       text.trim().isEmpty &&

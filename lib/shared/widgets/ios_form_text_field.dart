@@ -13,6 +13,7 @@ class IosFormTextField extends StatelessWidget {
     this.prefix,
     this.maxLines = 1,
     this.minLines,
+    this.scrollPhysics,
     this.inlineLabel,
     this.outerPadding,
     this.fieldWidth,
@@ -46,8 +47,9 @@ class IosFormTextField extends StatelessWidget {
   final TextEditingController controller;
   final String? hintText;
   final Widget? suffix, prefix;
-  final int maxLines;
+  final int? maxLines;
   final int? minLines;
+  final ScrollPhysics? scrollPhysics;
   final bool? inlineLabel;
   final EdgeInsetsGeometry? outerPadding;
   final double? fieldWidth;
@@ -76,8 +78,7 @@ class IosFormTextField extends StatelessWidget {
   bool get _useInlineLabel => inlineLabel ?? (maxLines == 1);
 
   TextAlign _defaultTextAlign() {
-    final kt = keyboardType;
-    if (kt == TextInputType.number || kt == TextInputType.numberWithOptions()) {
+    if (keyboardType?.index == TextInputType.number.index) {
       return TextAlign.end;
     }
     return TextAlign.start;
@@ -115,6 +116,7 @@ class IosFormTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       maxLines: maxLines,
       minLines: minLines,
+      scrollPhysics: scrollPhysics,
       autofocus: autofocus,
       obscureText: obscureText,
       enabled: enabled,
@@ -147,7 +149,7 @@ class IosFormTextField extends StatelessWidget {
             fontSize: 15,
             fontWeight: AppFontWeights.medium,
             color: valueColor,
-            height: maxLines > 1 ? 1.25 : 1.0,
+            height: maxLines != 1 ? 1.25 : 1.0,
           ),
       strutStyle: maxLines == 1 && textStyle == null
           ? const StrutStyle(
@@ -162,7 +164,7 @@ class IosFormTextField extends StatelessWidget {
         constraints: compact && maxLines == 1
             ? const BoxConstraints(minHeight: 44)
             : null,
-        isCollapsed: maxLines > 1,
+        isCollapsed: maxLines != 1,
         hintText: hintText,
         // InputDecorator's dense layout ignores a minimum height when placing
         // text. A zero-width accessory strut centers the line in the full tap
@@ -187,7 +189,7 @@ class IosFormTextField extends StatelessWidget {
               fontSize: 15,
               fontWeight: AppFontWeights.medium,
               color: hintColor,
-              height: maxLines > 1 ? 1.25 : 1.0,
+              height: maxLines != 1 ? 1.25 : 1.0,
             ),
         border: InputBorder.none,
         contentPadding: maxLines == 1
@@ -275,9 +277,9 @@ class IosFormTextField extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsetsDirectional.fromSTEB(
                     prefix == null ? 12 : 6,
-                    maxLines > 1 ? 8 : 0,
+                    maxLines != 1 ? 8 : 0,
                     12,
-                    maxLines > 1 ? 8 : 0,
+                    maxLines != 1 ? 8 : 0,
                   ),
                   child: field,
                 ),
@@ -292,7 +294,7 @@ class IosFormTextField extends StatelessWidget {
             decoration: decoration,
             padding: EdgeInsets.symmetric(
               horizontal: 12,
-              vertical: maxLines > 1 ? 12 : 0,
+              vertical: maxLines != 1 ? 12 : 0,
             ),
             child: field,
           );

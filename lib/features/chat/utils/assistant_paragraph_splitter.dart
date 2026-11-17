@@ -1,4 +1,6 @@
 import 'package:markstream/markstream_core.dart';
+import '../../../utils/source_text_map.dart';
+import '../../intelligent_ui/host/ui_source_map.dart';
 
 /// Splits assistant markdown into paragraph chunks, one per bubble.
 ///
@@ -20,9 +22,33 @@ List<String> splitAssistantParagraphs(String text) => [
 /// Display text retains the existing normalization; [span] also preserves the
 /// exact original interval for widgets whose identity belongs to source text.
 class AssistantParagraph {
-  const AssistantParagraph(this.text, this.span);
+  const AssistantParagraph(this.text, this.span, {this._sourceMap});
   final String text;
   final SourceSpan span;
+  final SourceTextMap? _sourceMap;
+  SourceTextMap get sourceMap =>
+      _sourceMap ?? SourceTextMap.identity(text.length, offset: span.start);
+}
+
+/// Documents rendered as individual assistant bubbles. A native surface must
+/// retain its exact source, while ordinary paragraphs may normalize gaps.
+List<({String text, SourceTextMap? blockMap, UiTextSlice? uiSource})>
+assistantDisplayParagraphs(
+  String text, {
+  required bool split,
+  UiTextSlice? uiSource,
+}) {
+  if (!split) return [(text: text, blockMap: null, uiSource: uiSource)];
+  return [
+    for (final part in splitAssistantParagraphsWithSource(text))
+      (
+        text: uiSource == null ? part.text : part.span.slice(text),
+        blockMap: uiSource == null
+            ? part.sourceMap
+            : SourceTextMap.identity(part.span.length, offset: part.span.start),
+        uiSource: uiSource?.slice(part.span.start, part.span.end),
+      ),
+  ];
 }
 
 List<AssistantParagraph> splitAssistantParagraphsWithSource(String text) {
@@ -37,10 +63,19 @@ List<AssistantParagraph> splitAssistantParagraphsWithSource(String text) {
   var currentStart = 0, currentEnd = 0;
 
   void flush() {
-    final chunk = current.join('\n').trim();
+    final raw = current.join('\n');
+    final chunk = raw.trim();
+    final trimStart = raw.length - raw.trimLeft().length;
     if (chunk.isNotEmpty) {
       chunks.add(
-        AssistantParagraph(chunk, SourceSpan(currentStart, currentEnd)),
+        AssistantParagraph(
+          chunk,
+          SourceSpan(currentStart, currentEnd),
+          sourceMap: SourceTextMap.identity(
+            chunk.length,
+            offset: currentStart + trimStart,
+          ),
+        ),
       );
     }
     current.clear();
@@ -86,9 +121,19 @@ List<AssistantParagraph> _mergeRelatedChunks(List<AssistantParagraph> chunks) {
   final merged = <AssistantParagraph>[];
   for (final chunk in chunks) {
     if (merged.isNotEmpty && _shouldMerge(merged.last.text, chunk.text)) {
+      final previous = merged.last;
+      final gap = chunk.span.start - previous.span.end;
       merged[merged.length - 1] = AssistantParagraph(
         '${merged.last.text}\n\n${chunk.text}',
         SourceSpan(merged.last.span.start, chunk.span.end),
+        sourceMap: SourceTextMap.join([
+          previous.sourceMap,
+          SourceTextMap.identity(
+            gap,
+            offset: previous.span.end,
+          ).replace([(0, gap, 2)]),
+          chunk.sourceMap,
+        ]),
       );
       continue;
     }

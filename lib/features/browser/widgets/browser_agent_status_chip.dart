@@ -5,6 +5,7 @@ import '../../../l10n/app_localizations.dart';
 import '../models/browser_agent_activity.dart';
 import 'browser_glass.dart';
 import 'browser_surface_controls.dart';
+import 'package:Kelivo/theme/app_font_weights.dart';
 
 export '../models/browser_agent_activity.dart';
 
@@ -13,13 +14,11 @@ class BrowserAgentStatusChip extends StatelessWidget {
   const BrowserAgentStatusChip({
     super.key,
     required this.activity,
-    this.pauseReason,
     required this.onPause,
     required this.onResume,
   });
 
   final BrowserAgentActivity activity;
-  final BrowserAgentPauseReason? pauseReason;
   final VoidCallback onPause;
   final VoidCallback onResume;
 
@@ -28,11 +27,7 @@ class BrowserAgentStatusChip extends StatelessWidget {
     if (activity == BrowserAgentActivity.idle) return const SizedBox.shrink();
     final l = AppLocalizations.of(context)!;
     final paused = activity == BrowserAgentActivity.paused;
-    final label = paused
-        ? pauseReason == BrowserAgentPauseReason.timeout
-              ? l.browserAgentTimedOut
-              : l.browserAgentPaused
-        : l.browserAgentWorking;
+    final label = paused ? l.browserAgentPaused : l.browserAgentWorking;
     final action = paused ? l.browserAllowAgent : l.browserTakeOver;
     final colors = Theme.of(context).colorScheme;
     return Align(
@@ -89,7 +84,7 @@ class BrowserAgentStatusChip extends StatelessWidget {
                       action,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: AppFontWeights.semibold,
                         color: colors.primary,
                       ),
                     ),

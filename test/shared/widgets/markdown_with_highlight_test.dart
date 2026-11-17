@@ -925,7 +925,7 @@ Inline ***strong emphasis*** text.
 
   for (final width in [360.0, 700.0]) {
     testWidgets(
-      'desktop table fades five actions on hover without shifting content at $width',
+      'desktop table floats only five buttons without reserving space at $width',
       (tester) async {
         final previous = debugDefaultTargetPlatformOverride;
         debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
@@ -949,6 +949,15 @@ Inline ***strong emphasis*** text.
             findsNWidgets(5),
           );
           final bounds = tester.getRect(find.byType(Table));
+          expect(
+            bounds.top,
+            closeTo(
+              tester.getTopLeft(find.byType(MarkstreamTableBlock)).dy + 4,
+              .1,
+            ),
+          );
+          final blockBounds = tester.getRect(find.byType(MarkstreamTableBlock));
+          expect(blockBounds.height, closeTo(bounds.height + 8, .01));
           expect(tester.widget<AnimatedOpacity>(toolbar).opacity, 0);
           final mouse = await tester.createGesture(
             kind: ui.PointerDeviceKind.mouse,
@@ -967,6 +976,15 @@ Inline ***strong emphasis*** text.
           await tester.pumpAndSettle();
           expect(tester.widget<AnimatedOpacity>(toolbar).opacity, 1);
           expect(tester.getRect(find.byType(Table)), bounds);
+          expect(
+            tester.getRect(find.byType(MarkstreamTableBlock)),
+            blockBounds,
+          );
+          final buttons = tester.getRect(toolbar);
+          expect(buttons.width, closeTo(5 * 28, .01));
+          expect(buttons.height, closeTo(28, .01));
+          expect(buttons.right, closeTo(bounds.right, .01));
+          expect(buttons.overlaps(bounds), isFalse);
           await mouse.moveTo(tester.getCenter(toolbar));
           await tester.pumpAndSettle();
           expect(tester.widget<AnimatedOpacity>(toolbar).opacity, 1);
@@ -1008,11 +1026,11 @@ Inline ***strong emphasis*** text.
       );
       expect(
         (container.foregroundDecoration as BoxDecoration).borderRadius,
-        BorderRadius.circular(MarkstreamTheme.radiusMd),
+        BorderRadius.circular(16),
       );
       expect(
         tester.getRect(_action(MarkstreamActionKind.copyCode)).right,
-        closeTo(tester.getRect(surface).right - 4, .1),
+        closeTo(tester.getRect(surface).right - 12, .1),
       );
       expect(
         tester.getRect(find.byTooltip('Save as file')).right,
@@ -2570,8 +2588,9 @@ $code
     (tester) async {
       addTearDown(MermaidImageCache.clear);
       addTearDown(() => debugMermaidBitmapRenderOverride = null);
+      final render = Completer<MermaidBitmapRenderResult>();
       debugMermaidBitmapRenderOverride = (code, isDark, themeVars) {
-        return Completer<MermaidBitmapRenderResult>().future;
+        return render.future;
       };
 
       await tester.pumpWidget(
@@ -2596,6 +2615,8 @@ A-->B
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.byType(Image), findsNothing);
       expect(_paragraphsWith('graph TD', contains: true), isEmpty);
+      render.complete(MermaidBitmapRenderResult.failed());
+      await tester.pump();
     },
   );
 
@@ -4116,8 +4137,14 @@ press5
       );
       await tester.pump();
 
-      expect(_paragraphsWith(RegExp(r'</?theater>'), contains: true), isEmpty);
-      expect(_paragraphsWith('返回 List 给 ', contains: true), hasLength(1));
+      expect(
+        _paragraphsWith(RegExp(r'</?theater>'), contains: true),
+        hasLength(2),
+      );
+      expect(
+        _paragraphsWith('返回 List<String> 给 <username>', contains: true),
+        hasLength(1),
+      );
       expect(_paragraphsWith('更多信息', contains: false), hasLength(1));
       expect(_paragraphsWith('隐藏内容', contains: false), isEmpty);
 
@@ -4585,22 +4612,33 @@ press5
     expect(_paragraphsWith('链接', contains: false), hasLength(1));
   });
 
-  testWidgets('MarkdownWithCodeHighlight normalizes strong weight on Android', (
-    tester,
-  ) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
-    try {
-      await tester.pumpWidget(_markdownHarness('这是 **粗体** 文本'));
-      await tester.pump();
+  testWidgets(
+    'MarkdownWithCodeHighlight normalizes headings and table weight on Android',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      try {
+        await tester.pumpWidget(
+          _markdownHarness(
+            '# 一级标题\n\n## 二级标题\n\n这是 **粗体** 文本\n\n| 表头 |\n| --- |\n| 正文 |',
+          ),
+        );
+        await tester.pump();
 
-      final spans = _resolvedTextSpansFromRichText(tester);
-      final strongSpan = spans.singleWhere((span) => span.text == '粗体');
+        final spans = _resolvedTextSpansFromRichText(tester);
+        final strongSpan = spans.singleWhere((span) => span.text == '粗体');
 
-      expect(strongSpan.style.fontWeight, FontWeight.w500);
-    } finally {
-      debugDefaultTargetPlatformOverride = null;
-    }
-  });
+        expect(strongSpan.style.fontWeight, FontWeight.w500);
+        for (final text in ['一级标题', '二级标题', '表头']) {
+          expect(
+            spans.singleWhere((span) => span.text == text).style.fontWeight,
+            FontWeight.w500,
+          );
+        }
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 
   testWidgets('MarkdownWithCodeHighlight keeps p tag spacing compact', (
     tester,
@@ -4762,13 +4800,15 @@ press5
       );
     });
 
-    testWidgets('code block fill is composited with surface', (tester) async {
+    testWidgets('default code block retains its original translucent fill', (
+      tester,
+    ) async {
       await tester.pumpWidget(_markdownHarness('```dart\nvoid main() {}\n```'));
       await tester.pump();
 
       final block = find.byKey(const ValueKey('markstream-code-surface'));
       expect(block, findsOneWidget);
-      expect(fillAlpha(tester, block), 1);
+      expect(fillAlpha(tester, block), .8);
     });
 
     testWidgets('inline code fill is translucent in light mode', (

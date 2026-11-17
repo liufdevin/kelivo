@@ -1,4 +1,5 @@
 import 'package:Kelivo/utils/protected_text.dart';
+import 'package:Kelivo/utils/source_text_map.dart';
 import 'package:markstream/markstream_core.dart' show SourceSpan;
 import 'dart:convert';
 
@@ -173,7 +174,7 @@ List<TimelineProjectedStep> groupBrowserTimelineSteps(
 );
 
 class TimelineProjectedBlock {
-  const TimelineProjectedBlock.text(this.text, {this.uiSource})
+  const TimelineProjectedBlock.text(this.text, {this.uiSource, this.sourceMap})
     : steps = const [],
       imageUri = null,
       imageKey = null,
@@ -181,6 +182,7 @@ class TimelineProjectedBlock {
 
   const TimelineProjectedBlock.thinking(this.steps)
     : text = null,
+      sourceMap = null,
       uiSource = null,
       imageUri = null,
       imageKey = null,
@@ -191,11 +193,13 @@ class TimelineProjectedBlock {
     this.imageKey,
     this.aspectRatio,
   }) : text = null,
+       sourceMap = null,
        uiSource = null,
        steps = const [];
 
   final String? text;
   final UiTextSlice? uiSource;
+  final SourceTextMap? sourceMap;
   final String? imageUri;
   final String? imageKey;
   final double? aspectRatio;
@@ -266,6 +270,8 @@ class TimelineProjection {
     required this.fromParts,
     required this.blocks,
     this.partsArrivalOrdered = false,
+    this.previous,
+    this.unchangedBlockPrefix = 0,
   });
 
   final bool fromParts;
@@ -277,11 +283,17 @@ class TimelineProjection {
   /// Legal historical [contentSplits] still restore prefix → tool/thinking →
   /// suffix when this is false.
   final bool partsArrivalOrdered;
+
+  /// Incremental projections retain only a weak link to the preceding result.
+  /// Blocks before [unchangedBlockPrefix] have the same identity and contents.
+  /// Ordinary projections leave these unset and require a complete filter.
+  final WeakReference<TimelineProjection>? previous;
+  final int unchangedBlockPrefix;
 }
 
 /// One visible assistant block after role settings and approval filters.
 class TimelineVisibleBlock {
-  const TimelineVisibleBlock.text(this.text, {this.uiSource})
+  const TimelineVisibleBlock.text(this.text, {this.uiSource, this.sourceMap})
     : imageUri = null,
       imageKey = null,
       aspectRatio = null,
@@ -293,17 +305,20 @@ class TimelineVisibleBlock {
     this.aspectRatio,
   }) : text = null,
        uiSource = null,
+       sourceMap = null,
        thinkingSteps = const [];
 
   const TimelineVisibleBlock.thinking(this.thinkingSteps)
     : text = null,
       uiSource = null,
+      sourceMap = null,
       imageUri = null,
       imageKey = null,
       aspectRatio = null;
 
   final String? text;
   final UiTextSlice? uiSource;
+  final SourceTextMap? sourceMap;
   final String? imageUri;
   final String? imageKey;
   final double? aspectRatio;
@@ -413,6 +428,7 @@ TimelineProjection projectAssistantTimeline({
   required List<TimelineToolRef> liveTools,
   required List<TimelineReasoningRef> reasoningSegments,
   required String visualContent,
+  SourceTextMap? visualSourceMap,
   List<int>? contentSplitOffsets,
   List<int>? reasoningCountAtSplit,
   List<int>? toolCountAtSplit,
@@ -469,6 +485,21 @@ TimelineProjection projectAssistantTimeline({
         (parseInlineThinking ?? reasoningSegments.isEmpty) &&
         !parts.any((part) => part is ReasoningPart);
     var displayParts = parts;
+    var joinedOffset = 0;
+    var sourceMaps = <SourceTextMap?>[
+      for (final part in parts)
+        if (part is TextPart)
+          (() {
+            final map = SourceTextMap.identity(
+              part.text.length,
+              offset: joinedOffset,
+            );
+            joinedOffset += part.text.length;
+            return map;
+          })()
+        else
+          null,
+    ];
     List<UiTextSlice?>? textSources = uiSource.hasFences
         ? [
             for (final (ordinal, part) in parts.indexed)
@@ -487,26 +518,31 @@ TimelineProjection projectAssistantTimeline({
       if (ranges.hiddenRanges.isNotEmpty) {
         displayParts = <MessagePart>[];
         final projectedSources = textSources == null ? null : <UiTextSlice?>[];
+        final projectedMaps = <SourceTextMap?>[];
         ThinkingTagParser.walkSlices(
           parts,
           joined,
           ranges,
           onVisible: (text, ordinal, span) {
             displayParts.add(TextPart(text));
+            projectedMaps.add(sourceMaps[ordinal]!.slice(span.start, span.end));
             projectedSources?.add(
               uiSource.sliceForPart(ordinal, span.start, span.end),
             );
           },
           onThinking: (_, text) {
             displayParts.add(ReasoningPart(text));
+            projectedMaps.add(null);
             projectedSources?.add(null);
           },
           onOther: (part) {
             displayParts.add(part);
+            projectedMaps.add(null);
             projectedSources?.add(null);
           },
         );
         textSources = projectedSources;
+        sourceMaps = projectedMaps;
       }
     }
     return mergeLiveToolsIntoProjection(
@@ -516,6 +552,7 @@ TimelineProjection projectAssistantTimeline({
         blocks: _projectFromParts(
           parts: displayParts,
           textSources: textSources,
+          sourceMaps: sourceMaps,
           reasoningSegments: reasoningSegments,
           transformText: transformText,
           transformProtectedText: transformProtectedText,
@@ -542,7 +579,10 @@ TimelineProjection projectAssistantTimeline({
         blocks: visualContent.trim().isEmpty
             ? const <TimelineProjectedBlock>[]
             : <TimelineProjectedBlock>[
-                TimelineProjectedBlock.text(visualContent),
+                TimelineProjectedBlock.text(
+                  visualContent,
+                  sourceMap: visualSourceMap,
+                ),
               ],
       ),
       liveTools,
@@ -571,7 +611,10 @@ TimelineProjection projectAssistantTimeline({
         blocks: <TimelineProjectedBlock>[
           TimelineProjectedBlock.thinking(mixed),
           if (visualContent.trim().isNotEmpty)
-            TimelineProjectedBlock.text(visualContent),
+            TimelineProjectedBlock.text(
+              visualContent,
+              sourceMap: visualSourceMap,
+            ),
         ],
       ),
       liveTools,
@@ -585,7 +628,17 @@ TimelineProjection projectAssistantTimeline({
     final safeOffset = offsets[i].clamp(0, visualContent.length);
     final textSlice = visualContent.substring(textStart, safeOffset);
     if (textSlice.trim().isNotEmpty) {
-      blocks.add(TimelineProjectedBlock.text(textSlice.trim()));
+      final trimStart = textSlice.length - textSlice.trimLeft().length;
+      final trimmed = textSlice.trim();
+      blocks.add(
+        TimelineProjectedBlock.text(
+          trimmed,
+          sourceMap: visualSourceMap?.slice(
+            textStart + trimStart,
+            textStart + trimStart + trimmed.length,
+          ),
+        ),
+      );
     }
     final targetReasoning = reasoningCounts[i];
     final targetTool = toolCounts[i];
@@ -606,7 +659,17 @@ TimelineProjection projectAssistantTimeline({
   }
   final trailing = visualContent.substring(textStart);
   if (trailing.trim().isNotEmpty) {
-    blocks.add(TimelineProjectedBlock.text(trailing.trim()));
+    final trimStart = trailing.length - trailing.trimLeft().length;
+    final trimmed = trailing.trim();
+    blocks.add(
+      TimelineProjectedBlock.text(
+        trimmed,
+        sourceMap: visualSourceMap?.slice(
+          textStart + trimStart,
+          textStart + trimStart + trimmed.length,
+        ),
+      ),
+    );
   }
   return mergeLiveToolsIntoProjection(
     TimelineProjection(
@@ -689,7 +752,13 @@ TimelineProjection? _projectNativeSplits({
       if (mapped.text.trim().isEmpty) continue;
       ordinal += mapped.topLevelFenceCount;
       webOrdinal += mapped.topLevelWebFenceCount;
-      blocks.add(TimelineProjectedBlock.text(mapped.text, uiSource: mapped));
+      blocks.add(
+        TimelineProjectedBlock.text(
+          mapped.text,
+          uiSource: mapped,
+          sourceMap: mapped.sourceMap,
+        ),
+      );
     }
   }
 
@@ -830,6 +899,7 @@ bool _shouldProjectFromParts({
 List<TimelineProjectedBlock> _projectFromParts({
   required List<MessagePart> parts,
   List<UiTextSlice?>? textSources,
+  List<SourceTextMap?>? sourceMaps,
   required List<TimelineReasoningRef> reasoningSegments,
   String Function(String text)? transformText,
   ProtectedText Function(ProtectedText)? transformProtectedText,
@@ -860,25 +930,40 @@ List<TimelineProjectedBlock> _projectFromParts({
     pending = <TimelineProjectedStep>[];
   }
 
-  void emitText(String text, UiTextSlice? source) {
+  void emitText(String text, UiTextSlice? source, SourceTextMap? sourceMap) {
     final mapped = source == null
         ? null
         : sourceProjection!
               .project(source)
               .withFirstMessageOrdinal(uiOrdinal, webOrdinal: webOrdinal);
-    final visual = mapped?.text ?? transformText?.call(text) ?? text;
+    final transformed = mapped == null && transformProtectedText != null
+        ? transformProtectedText(
+            ProtectedText(text, const [], sourceMap: sourceMap),
+          )
+        : null;
+    final visual =
+        mapped?.text ?? transformed?.text ?? transformText?.call(text) ?? text;
     if (visual.trim().isEmpty) return;
     uiOrdinal += mapped?.topLevelFenceCount ?? 0;
     webOrdinal += mapped?.topLevelWebFenceCount ?? 0;
     flushSteps();
-    blocks.add(TimelineProjectedBlock.text(visual, uiSource: mapped));
+    blocks.add(
+      TimelineProjectedBlock.text(
+        visual,
+        uiSource: mapped,
+        sourceMap:
+            mapped?.sourceMap ??
+            transformed?.sourceMap ??
+            (visual == text ? sourceMap : null),
+      ),
+    );
   }
 
   void flushText() {
     final text = pendingText;
     if (text == null) return;
     pendingText = null;
-    emitText(text.text, text);
+    emitText(text.text, text, text.sourceMap);
   }
 
   for (final (partIndex, part) in parts.indexed) {
@@ -888,7 +973,7 @@ List<TimelineProjectedBlock> _projectFromParts({
         final source = textSources?[partIndex];
         if (source == null) {
           flushText();
-          emitText(text, null);
+          emitText(text, null, sourceMaps?[partIndex]);
         } else {
           final appended = pendingText?.append(source);
           if (appended != null) {
@@ -914,15 +999,17 @@ List<TimelineProjectedBlock> _projectFromParts({
           ),
         );
       case ReasoningPart(:final text):
-        if (text.isEmpty) continue;
         final overlayIndex = inlineThinking ? 0 : reasoningIndex;
         final provided = overlayIndex < reasoningSegments.length
             ? reasoningSegments[overlayIndex]
             : null;
         reasoningIndex++;
+        reasoningCount++;
+        final ordinal = sourceOrdinal++;
+        if (text.isEmpty && provided?.loading != true) continue;
         pending.add(
           TimelineProjectedStep.reasoning(
-            sourceOrdinal: sourceOrdinal++,
+            sourceOrdinal: ordinal,
             reasoning: TimelineReasoningRef(
               text: text,
               expanded:
@@ -933,7 +1020,7 @@ List<TimelineProjectedBlock> _projectFromParts({
               finishedAt: provided?.finishedAt,
               toolStartIndex: provided?.toolStartIndex ?? toolCount,
             ),
-            reasoningCountAfter: ++reasoningCount,
+            reasoningCountAfter: reasoningCount,
             toolCountAfter: toolCount,
             reasoningOverlayIndex: provided == null ? null : overlayIndex,
           ),
@@ -1003,12 +1090,14 @@ List<TimelineProjectedStep> _interleaveReasoningAndTools({
       );
       toolIndex++;
     }
-    if (segment.text.isNotEmpty) {
+    reasoningCount++;
+    final ordinal = sourceOrdinal++;
+    if (segment.text.isNotEmpty || segment.loading) {
       steps.add(
         TimelineProjectedStep.reasoning(
-          sourceOrdinal: sourceOrdinal++,
+          sourceOrdinal: ordinal,
           reasoning: segment,
-          reasoningCountAfter: ++reasoningCount,
+          reasoningCountAfter: reasoningCount,
           toolCountAfter: toolCount,
           reasoningOverlayIndex: i,
         ),
@@ -1119,37 +1208,101 @@ List<TimelineVisibleBlock> visibleAssistantTimeline(
   required bool showToolCards,
   required bool Function(TimelineToolRef tool) isPendingApproval,
 }) {
-  final visible = <TimelineVisibleBlock>[];
-  for (final block in projection.blocks) {
-    if (block.isText && (block.text?.trim().isNotEmpty ?? false)) {
-      visible.add(
-        TimelineVisibleBlock.text(block.text!, uiSource: block.uiSource),
+  return [
+    for (final block in projection.blocks)
+      if (_visibleAssistantBlock(
+            block,
+            showThinkingCards: showThinkingCards,
+            showToolCards: showToolCards,
+            isPendingApproval: isPendingApproval,
+          )
+          case final visible?)
+        visible,
+  ];
+}
+
+/// Per-message visibility state. Only a changed suffix visits the block memo;
+/// published lists stay immutable for widgets that still hold an older result.
+class TimelineVisibilityCache {
+  TimelineProjection? _projection;
+  List<TimelineVisibleBlock> _visible = const [];
+  final _visiblePrefixCounts = <int>[0];
+  bool? _showThinkingCards, _showToolCards;
+  int filteredBlockCount = 0;
+
+  List<TimelineVisibleBlock> project(
+    TimelineProjection projection, {
+    required bool showThinkingCards,
+    required bool showToolCards,
+    required bool Function(TimelineToolRef tool) isPendingApproval,
+  }) {
+    final canReuse =
+        showToolCards &&
+        _showToolCards == showToolCards &&
+        _showThinkingCards == showThinkingCards;
+    if (canReuse && identical(projection, _projection)) return _visible;
+    final prefix =
+        canReuse &&
+            _projection != null &&
+            identical(projection.previous?.target, _projection)
+        ? projection.unchangedBlockPrefix
+        : 0;
+    final visible = _visible.sublist(0, _visiblePrefixCounts[prefix]);
+    _visiblePrefixCounts.length = prefix + 1;
+    for (var i = prefix; i < projection.blocks.length; i++) {
+      filteredBlockCount++;
+      final block = _visibleAssistantBlock(
+        projection.blocks[i],
+        showThinkingCards: showThinkingCards,
+        showToolCards: showToolCards,
+        isPendingApproval: isPendingApproval,
       );
-      continue;
+      if (block != null) visible.add(block);
+      _visiblePrefixCounts.add(visible.length);
     }
-    if (block.isImage && (block.imageUri?.trim().isNotEmpty ?? false)) {
-      visible.add(
-        TimelineVisibleBlock.image(
-          block.imageUri!,
-          imageKey: block.imageKey,
-          aspectRatio:
-              block.aspectRatio ?? timelineImageAspects[block.imageKey],
-        ),
-      );
-      continue;
-    }
+    _projection = projection;
+    _showThinkingCards = showThinkingCards;
+    _showToolCards = showToolCards;
+    return _visible = List.unmodifiable(visible);
+  }
+}
+
+TimelineVisibleBlock? _visibleAssistantBlock(
+  TimelineProjectedBlock block, {
+  required bool showThinkingCards,
+  required bool showToolCards,
+  required bool Function(TimelineToolRef tool) isPendingApproval,
+}) {
+  // With tool cards visible, approval changes cannot affect filtering.
+  final cached = showToolCards ? _visibleBlockMemo[block] : null;
+  if (cached != null && cached.$1 == showThinkingCards) return cached.$2;
+  final TimelineVisibleBlock? visible;
+  if (block.isText && (block.text?.trim().isNotEmpty ?? false)) {
+    visible = TimelineVisibleBlock.text(
+      block.text!,
+      uiSource: block.uiSource,
+      sourceMap: block.sourceMap,
+    );
+  } else if (block.isImage && (block.imageUri?.trim().isNotEmpty ?? false)) {
+    visible = TimelineVisibleBlock.image(
+      block.imageUri!,
+      imageKey: block.imageKey,
+      aspectRatio: block.aspectRatio ?? timelineImageAspects[block.imageKey],
+    );
+  } else {
     final thinking = _filteredThinkingSteps(
       block,
       showThinkingCards: showThinkingCards,
       showToolCards: showToolCards,
       isPendingApproval: isPendingApproval,
     );
-    if (thinking.isNotEmpty) {
-      visible.add(TimelineVisibleBlock.thinking(thinking));
-    }
+    visible = thinking.isEmpty ? null : TimelineVisibleBlock.thinking(thinking);
   }
+  if (showToolCards) _visibleBlockMemo[block] = (showThinkingCards, visible);
   return visible;
 }
+
+final _visibleBlockMemo = Expando<(bool, TimelineVisibleBlock?)>();
 
 int visibleTimelineStepCount(List<VisibleTimelineBlock> blocks) {
   var count = 0;

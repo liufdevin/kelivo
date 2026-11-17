@@ -5,6 +5,8 @@
  import UserNotifications
  import SwiftUI
  import Translation
+ import UniformTypeIdentifiers
+ import Photos
 
 
 @main
@@ -83,7 +85,7 @@
       let fileSaveChannel = FlutterMethodChannel(name: "app.file_save", binaryMessenger: controller.binaryMessenger)
       fileSaveHandler.presentingViewController = controller
       fileSaveChannel.setMethodCallHandler { [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) in
-        guard call.method == "saveFileFromPath" else {
+        guard call.method == "saveFileFromPath" || call.method == "saveImageToGallery" else {
           result(FlutterMethodNotImplemented)
           return
         }
@@ -400,6 +402,10 @@ private final class IosOAuthHandler: NSObject, ASWebAuthenticationPresentationCo
 private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
   weak var presentingViewController: UIViewController?
   private var pendingResult: FlutterResult?
+  private var externalBackupSource: URL?
+  private var initialDirectory: URL?
+  private let backupQueue = DispatchQueue(label: "psyche.kelivo.backup-export", qos: .userInitiated)
+  private static let backupDirectoryKey = "backup_export_directory_bookmark"
 
   func handle(call: FlutterMethodCall, result: @escaping FlutterResult) {
     if pendingResult != nil {
@@ -424,32 +430,83 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
       return
     }
 
+    if call.method == "saveImageToGallery" {
+      saveImageToGallery(at: sourceURL, result: result)
+      return
+    }
+
     guard let presenter = topViewController(from: presentingViewController) else {
       result(FlutterError(code: "unavailable", message: "Unable to present document picker.", details: nil))
       return
     }
 
     pendingResult = result
+    externalBackupSource = args["requireOutsideAppContainer"] as? Bool == true ? sourceURL : nil
 
-    DispatchQueue.main.async { [weak self] in
+    backupQueue.async { [weak self] in
       guard let self else { return }
-
-      let picker: UIDocumentPickerViewController
-      if #available(iOS 14.0, *) {
-        picker = UIDocumentPickerViewController(forExporting: [sourceURL], asCopy: true)
-      } else {
-        picker = UIDocumentPickerViewController(url: sourceURL, in: .exportToService)
+      var preferredDirectory: URL?
+      if self.externalBackupSource != nil,
+         let data = UserDefaults.standard.data(forKey: Self.backupDirectoryKey) {
+        var stale = false
+        if let directory = try? URL(resolvingBookmarkData: data, options: [.withoutUI],
+                                    relativeTo: nil, bookmarkDataIsStale: &stale),
+           !BackupExportDestination.isInsideAppContainer(directory),
+           directory.startAccessingSecurityScopedResource() {
+          preferredDirectory = directory
+        }
       }
 
-      picker.delegate = self
-      picker.modalPresentationStyle = .formSheet
-      if let popover = picker.popoverPresentationController {
-        popover.sourceView = presenter.view
-        popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
-        popover.permittedArrowDirections = []
+      let directory = preferredDirectory
+      DispatchQueue.main.async {
+        self.initialDirectory = directory
+        let picker: UIDocumentPickerViewController
+        if self.externalBackupSource != nil {
+          picker = UIDocumentPickerViewController(forOpeningContentTypes: [.folder], asCopy: false)
+          picker.allowsMultipleSelection = false
+          picker.directoryURL = directory
+          picker.title = args["dialogTitle"] as? String
+        } else if #available(iOS 14.0, *) {
+          picker = UIDocumentPickerViewController(forExporting: [sourceURL], asCopy: true)
+        } else {
+          picker = UIDocumentPickerViewController(url: sourceURL, in: .exportToService)
+        }
+
+        picker.delegate = self
+        picker.modalPresentationStyle = .formSheet
+        if let popover = picker.popoverPresentationController {
+          popover.sourceView = presenter.view
+          popover.sourceRect = CGRect(x: presenter.view.bounds.midX, y: presenter.view.bounds.midY, width: 1, height: 1)
+          popover.permittedArrowDirections = []
+        }
+
+        presenter.present(picker, animated: true)
+      }
+    }
+  }
+
+  private func saveImageToGallery(at source: URL, result: @escaping FlutterResult) {
+    PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+      guard status == .authorized else {
+        DispatchQueue.main.async {
+          result(FlutterError(code: "photo_permission_denied", message: "Permission to add photos was denied.", details: nil))
+        }
+        return
       }
 
-      presenter.present(picker, animated: true)
+      PHPhotoLibrary.shared().performChanges({
+        PHAssetCreationRequest.forAsset().addResource(with: .photo, fileURL: source, options: nil)
+      }) { success, error in
+        // Saving only needs add access. Reading the asset back would fail when
+        // Photos read access is denied, even though the original was saved.
+        DispatchQueue.main.async {
+          if success {
+            result(true)
+          } else {
+            result(FlutterError(code: "save_failed", message: error?.localizedDescription ?? "Unable to save image to Photos.", details: nil))
+          }
+        }
+      }
     }
   }
 
@@ -458,16 +515,40 @@ private final class NativeFileSaveHandler: NSObject, UIDocumentPickerDelegate {
   }
 
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+    if let source = externalBackupSource, let directory = urls.first {
+      backupQueue.async {
+        let accessed = directory.startAccessingSecurityScopedResource()
+        defer { if accessed { directory.stopAccessingSecurityScopedResource() } }
+        do {
+          try BackupExportDestination.copy(source: source, to: directory)
+          if let bookmark = try? directory.bookmarkData(options: [.minimalBookmark],
+                                                        includingResourceValuesForKeys: nil, relativeTo: nil) {
+            UserDefaults.standard.set(bookmark, forKey: Self.backupDirectoryKey)
+          }
+          DispatchQueue.main.async { self.finish(with: true) }
+        } catch {
+          let code = error is BackupExportDestination.ExportError
+            ? "backup_destination_inside_app" : "save_failed"
+          DispatchQueue.main.async {
+            self.finish(with: FlutterError(code: code, message: error.localizedDescription, details: nil))
+          }
+        }
+      }
+      return
+    }
     finish(with: !urls.isEmpty)
   }
 
   func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentAt url: URL) {
-    finish(with: true)
+    documentPicker(controller, didPickDocumentsAt: [url])
   }
 
-  private func finish(with value: Bool) {
+  private func finish(with value: Any) {
     let result = pendingResult
     pendingResult = nil
+    externalBackupSource = nil
+    initialDirectory?.stopAccessingSecurityScopedResource()
+    initialDirectory = nil
     result?(value)
   }
 

@@ -10,6 +10,7 @@ import '../pages/browser_management_page.dart';
 import 'browser_glass.dart';
 import 'browser_library.dart';
 import 'browser_surface_controls.dart';
+import 'package:Kelivo/theme/app_font_weights.dart';
 
 typedef _BrowserSettingsValues = ({
   BrowserSearchEngine searchEngine,
@@ -18,6 +19,7 @@ typedef _BrowserSettingsValues = ({
   bool restoreTabs,
   bool saveHistory,
   bool agentEnabled,
+  int operationTimeoutSeconds,
   BrowserSurfaceStyle surfaceStyle,
   bool supportsWebsiteDataClear,
 });
@@ -59,6 +61,7 @@ class BrowserSettingsPanel extends StatelessWidget {
             restoreTabs: settings.restoreTabs,
             saveHistory: settings.saveHistory,
             agentEnabled: settings.agentEnabled,
+            operationTimeoutSeconds: settings.operationTimeoutSeconds,
             surfaceStyle: settings.surfaceStyle,
             supportsWebsiteDataClear: service.supportsWebsiteDataClear,
           );
@@ -73,9 +76,9 @@ class BrowserSettingsPanel extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
               child: Text(
                 l.browserSurfaceStyle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: AppFontWeights.semibold,
                 ),
               ),
             ),
@@ -166,6 +169,14 @@ class BrowserSettingsPanel extends StatelessWidget {
                       service.settings.copyWith(agentEnabled: value),
                     ),
                   ),
+                ),
+                _choiceRow(
+                  icon: LucideIcons.timer,
+                  label: l.browserOperationTimeout,
+                  value: l.browserOperationTimeoutSeconds(
+                    s.operationTimeoutSeconds,
+                  ),
+                  onTap: () => _chooseOperationTimeout(context),
                 ),
               ],
             ),
@@ -301,6 +312,56 @@ class BrowserSettingsPanel extends StatelessWidget {
         ),
       );
     }
+  }
+
+  Future<void> _chooseOperationTimeout(BuildContext context) async {
+    final l = AppLocalizations.of(context)!;
+    final seconds = await showBrowserDialog<int>(
+      context,
+      maxWidth: 380,
+      child: Builder(
+        builder: (dialogContext) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            BrowserDialogHeader(title: l.browserOperationTimeout),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: Text(
+                l.browserOperationTimeoutDescription,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+              child: BrowserSurfaceGroup(
+                key: const ValueKey('browserOperationTimeoutOptions'),
+                filled: false,
+                children: [
+                  for (final seconds in BrowserSettings.operationTimeoutOptions)
+                    BrowserSurfaceRow(
+                      label: l.browserOperationTimeoutSeconds(seconds),
+                      trailing:
+                          service.settings.operationTimeoutSeconds == seconds
+                          ? const Icon(LucideIcons.check, size: 20)
+                          : null,
+                      onTap: () => Navigator.of(dialogContext).pop(seconds),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (seconds == null) return;
+    await _run(
+      () => service.updateSettings(
+        service.settings.copyWith(operationTimeoutSeconds: seconds),
+      ),
+    );
   }
 
   Future<void> _chooseUserAgent(BuildContext context) async {
@@ -497,7 +558,9 @@ class _SurfaceChoice extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                fontWeight: selected
+                    ? AppFontWeights.strong
+                    : AppFontWeights.regular,
               ),
             ),
             const SizedBox(height: 5),

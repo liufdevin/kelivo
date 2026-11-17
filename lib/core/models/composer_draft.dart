@@ -1,11 +1,15 @@
+import 'image_edit_document.dart';
+import 'image_upload_quality.dart';
 import 'package:flutter/foundation.dart';
 import 'chat_input_data.dart';
+import 'quote_ref.dart';
 import 'package:Kelivo/features/intelligent_ui/models/ui_context_attachment.dart';
 
 /// The editor value, before the send path trims text or filters attachments.
 class ComposerDraftInput {
   const ComposerDraftInput({
     this.text = '',
+    this.quotes = const [],
     this.selectionBase = -1,
     this.selectionExtent = -1,
     this.images = const [],
@@ -15,6 +19,7 @@ class ComposerDraftInput {
   });
 
   final String text;
+  final List<QuoteRef> quotes;
   final int selectionBase;
   final int selectionExtent;
   final List<DraftImage> images;
@@ -24,12 +29,16 @@ class ComposerDraftInput {
   bool get isEmpty =>
       text.isEmpty && images.isEmpty && documents.isEmpty && uiContext == null;
   Iterable<String> get paths sync* {
-    yield* images.map((image) => image.path);
+    for (final image in images) {
+      yield image.path;
+      if (image.sourcePath != null) yield image.sourcePath!;
+    }
     yield* documents.map((document) => document.path);
   }
 
   ComposerDraftInput copyWith({
     String? text,
+    List<QuoteRef>? quotes,
     int? selectionBase,
     int? selectionExtent,
     List<DraftImage>? images,
@@ -38,6 +47,7 @@ class ComposerDraftInput {
     bool clearUiContext = false,
   }) => ComposerDraftInput(
     text: text ?? this.text,
+    quotes: quotes ?? this.quotes,
     selectionBase: selectionBase ?? this.selectionBase,
     selectionExtent: selectionExtent ?? this.selectionExtent,
     images: images ?? this.images,
@@ -48,6 +58,7 @@ class ComposerDraftInput {
 
   ChatInputData toInput({DraftSubmission? submission}) => ChatInputData(
     text: text,
+    quotes: quotes,
     imagePaths: images.map((image) => image.path).toList(),
     documents: documents,
     allowImagesApiRouting: allowImagesApiRouting,
@@ -58,6 +69,7 @@ class ComposerDraftInput {
   factory ComposerDraftInput.fromInput(ChatInputData input) =>
       ComposerDraftInput(
         text: input.text,
+        quotes: input.quotes,
         images: [for (final path in input.imagePaths) DraftImage(path: path)],
         documents: List.of(input.documents),
         allowImagesApiRouting: input.allowImagesApiRouting,
@@ -66,6 +78,7 @@ class ComposerDraftInput {
 
   Map<String, dynamic> toJson() => {
     'text': text,
+    'quotes': quotes.map((quote) => quote.toJson()).toList(),
     'selectionBase': selectionBase,
     'selectionExtent': selectionExtent,
     'images': images.map((image) => image.toJson()).toList(),
@@ -80,6 +93,7 @@ class ComposerDraftInput {
   factory ComposerDraftInput.fromJson(Map<String, dynamic> json) =>
       ComposerDraftInput(
         text: json['text'] as String,
+        quotes: QuoteRef.decodeList(json['quotes']),
         selectionBase: json['selectionBase'] as int,
         selectionExtent: json['selectionExtent'] as int,
         images: [
@@ -104,18 +118,15 @@ class ComposerDraftInput {
 
   bool sameValue(ComposerDraftInput other) =>
       text == other.text &&
+      listEquals(quotes, other.quotes) &&
       selectionBase == other.selectionBase &&
       selectionExtent == other.selectionExtent &&
       allowImagesApiRouting == other.allowImagesApiRouting &&
       uiContext == other.uiContext &&
-      listEquals(
-        images
-            .map((image) => (image.path, image.processing, image.failed))
-            .toList(),
-        other.images
-            .map((image) => (image.path, image.processing, image.failed))
-            .toList(),
-      ) &&
+      images.length == other.images.length &&
+      Iterable<int>.generate(
+        images.length,
+      ).every((i) => images[i].sameValue(other.images[i])) &&
       listEquals(
         documents.map((doc) => (doc.path, doc.fileName, doc.mime)).toList(),
         other.documents
@@ -127,19 +138,73 @@ class ComposerDraftInput {
 class DraftImage {
   const DraftImage({
     required this.path,
+    this.sourcePath,
+    bool? sourceIsOriginal,
+    this.edits = const ImageEditDocument(),
+    this.quality,
+    this.customQuality,
     this.processing = false,
     this.failed = false,
-  });
+  }) : sourceIsOriginal = sourceIsOriginal ?? (sourcePath != null);
   final String path;
+  final String? sourcePath;
+  final bool sourceIsOriginal;
+  final ImageEditDocument edits;
+  final ImageUploadQuality? quality;
+  final int? customQuality;
   final bool processing;
   final bool failed;
+  DraftImage copyWith({
+    String? path,
+    String? sourcePath,
+    bool? sourceIsOriginal,
+    ImageEditDocument? edits,
+    ImageUploadQuality? quality,
+    int? customQuality,
+    bool? processing,
+    bool? failed,
+  }) => DraftImage(
+    path: path ?? this.path,
+    sourcePath: sourcePath ?? this.sourcePath,
+    sourceIsOriginal: sourceIsOriginal ?? this.sourceIsOriginal,
+    edits: edits ?? this.edits,
+    quality: quality ?? this.quality,
+    customQuality: customQuality ?? this.customQuality,
+    processing: processing ?? this.processing,
+    failed: failed ?? this.failed,
+  );
+  bool sameValue(DraftImage other) =>
+      path == other.path &&
+      sourcePath == other.sourcePath &&
+      sourceIsOriginal == other.sourceIsOriginal &&
+      quality == other.quality &&
+      customQuality == other.customQuality &&
+      processing == other.processing &&
+      failed == other.failed &&
+      edits.sameValue(other.edits);
   Map<String, dynamic> toJson() => {
     'path': path,
+    'sourcePath': sourcePath,
+    'sourceIsOriginal': sourceIsOriginal,
+    'edits': edits.toJson(),
+    'quality': quality?.name,
+    'customQuality': customQuality,
     'processing': processing,
     'failed': failed,
   };
   factory DraftImage.fromJson(Map<String, dynamic> json) => DraftImage(
     path: json['path'] as String,
+    sourcePath: json['sourcePath'] as String?,
+    sourceIsOriginal: json['sourceIsOriginal'] as bool?,
+    edits: json['edits'] == null
+        ? const ImageEditDocument()
+        : ImageEditDocument.fromJson(
+            Map<String, dynamic>.from(json['edits'] as Map),
+          ),
+    quality: json['quality'] == null
+        ? null
+        : ImageUploadQuality.values.byName(json['quality'] as String),
+    customQuality: json['customQuality'] as int?,
     processing: json['processing'] as bool,
     failed: json['failed'] as bool,
   );

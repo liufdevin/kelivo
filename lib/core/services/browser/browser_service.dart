@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart' show Theme;
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../features/browser/models/browser_models.dart';
 import '../../../features/browser/models/browser_agent_activity.dart';
 import '../api/tool_call_cancellation.dart';
@@ -23,13 +24,25 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     BrowserStore? store,
     BrowserEngineFactory? engineFactory,
     this._supported,
-  }) : _store = store ?? BrowserStore(),
+    int? liveViewLimit,
+  }) : liveViewLimit =
+           liveViewLimit ??
+           (const {
+                 TargetPlatform.macOS,
+                 TargetPlatform.windows,
+                 TargetPlatform.linux,
+               }.contains(defaultTargetPlatform)
+               ? maxLiveViews
+               : 3),
+       _store = store ?? BrowserStore(),
        _engineFactory = engineFactory ?? NativeBrowserEngine.create;
 
   static final BrowserService instance = BrowserService();
   // Bound agent fan-out and native memory separately from saved/user tabs.
   static const int maxAgentTabsPerSession = 3;
-  static const int maxLiveViews = 3;
+  static const int maxLiveViews = 6;
+  final int liveViewLimit;
+  bool hasLiveEngine(String id) => _engines.containsKey(id);
   static const int maxCachedPreviews = 8;
   static const int maxHistory = 2000;
   static const _uuid = Uuid();
@@ -69,7 +82,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, Future<void>> _closingGroups = {};
   final Map<String, CancelToken> _downloadTokens = {};
   final Map<String, int> _sessionEpochs = {};
-  final Map<String, Completer<void>> _sessionCancellation = {};
+  final Map<String, Completer<String>> _sessionCancellation = {};
   final Map<String, int> _mountedTabs = {};
   final Map<String, List<_BrowserViewHostState>> _viewHosts = {};
   final Map<String, ({String html, String? baseUrl, String documentUrl})>
@@ -102,11 +115,10 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   String? _agentSessionId;
   String? _agentAction;
   String? _agentTabId;
-  bool _agentPaused = false;
   bool _clearingWebsiteData = false;
-  BrowserAgentPauseReason? _agentPauseReason;
-  String? _pausedAgentSessionId;
-  String? _pausedAgentTabId;
+  int _userAgentUpdates = 0;
+  final Map<String?, BrowserAgentPause> _agentPauses = {};
+  final Set<String> _tabsAwaitingObservation = {};
   _BrowserAction? _runningAgentGuard;
   // Content mode follows the host OS, never a tablet/window-width breakpoint.
   BrowserSettings _settings = BrowserSettings(
@@ -137,10 +149,11 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _tabs.where((tab) => tab.id == _activeTabId).firstOrNull;
   String? get agentSessionId => _agentSessionId;
   String? get agentAction => _agentAction;
-  bool get agentPaused => _agentPaused;
-  BrowserAgentPauseReason? get agentPauseReason => _agentPauseReason;
-  String? get pausedAgentSessionId => _pausedAgentSessionId;
-  String? get pausedAgentTabId => _pausedAgentTabId;
+  bool get agentPaused => _agentPauses.isNotEmpty;
+  BrowserAgentPause? agentPauseFor(String? sessionId) =>
+      _agentPauses[sessionId];
+  bool requiresAgentObservation(String tabId) =>
+      _tabsAwaitingObservation.contains(tabId);
   String? get agentTabId => _agentTabId;
 
   /// Scoped display state; enabling permission or resuming never starts a task.
@@ -149,9 +162,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     bool matches(String? owner, String? target) =>
         (sessionId == null || owner == sessionId) &&
         (tabId == null || target == null || target == tabId);
-    if (_agentPaused &&
-        _agentPauseReason != null &&
-        (sessionId == null || _pausedAgentSessionId == sessionId)) {
+    if (agentPauseFor(sessionId) != null) {
       return BrowserAgentActivity.paused;
     }
     if (_isRunningAgentAction && matches(_agentSessionId, _agentTabId)) {
@@ -165,7 +176,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     return guard != null &&
         _agentAction != null &&
         _settings.agentEnabled &&
-        !_agentPaused &&
+        agentPauseFor(guard.sessionId) == null &&
         guard.epoch == _controlEpoch &&
         guard.sessionEpoch == (_sessionEpochs[guard.sessionId] ?? 0) &&
         guard.cancellation?.isCancelled() != true;
@@ -267,8 +278,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   static bool _isPageUrl(String value) {
-    if (value == 'about:blank' ||
-        BrowserWorkspaceResources.isWorkspaceUrl(value)) {
+    if (value == 'about:blank' || BrowserWorkspaceResources.isLocalUrl(value)) {
       return true;
     }
     final uri = Uri.tryParse(value);
@@ -295,7 +305,10 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     ).hasMatch(value);
     if (explicit && !hostWithPort) {
       if (!_isPageUrl(value)) {
-        throw const FormatException('Use HTTP(S) or kelivo://workspace/ pages');
+        throw const FormatException('Use HTTP(S) or local Kelivo file pages');
+      }
+      if (BrowserWorkspaceResources.isLocalUrl(value)) {
+        return BrowserWorkspaceResources.normalizeLocalUrl(value);
       }
       return Uri.parse(value).toString();
     }
@@ -351,6 +364,10 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       throw StateError('browser_tab_not_owned');
     }
     final selected = selectedTabForSession(sessionId);
+    if (action == null && selected != null) {
+      final viewed = _engines.remove(selected.id);
+      if (viewed != null) _engines[selected.id] = viewed;
+    }
     if (_selectedSessionId == sessionId && _activeTabId == selected?.id) return;
     if (_activeTabId != selected?.id) unawaited(refreshActivePreview());
     _selectedSessionId = sessionId;
@@ -372,10 +389,15 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     if (_activeTabId != tab.id) unawaited(refreshActivePreview());
     _activeTabId = tab.id;
     _selectedSessionId = owner;
+    if (action == null) {
+      final engine = _engines.remove(tab.id);
+      if (engine != null) _engines[tab.id] = engine;
+    }
   }
 
   Future<BrowserTab> createTab({
     String? url,
+    String? title,
     String? ownerSessionId,
     int? windowId,
     String? openerTabId,
@@ -397,6 +419,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     }
     final tab = BrowserTab(
       id: 'tab-${_uuid.v4()}',
+      title: title ?? '',
       url: normalizeAddress(url ?? '', searchEngine: _settings.searchEngine),
       ownerSessionId: ownerSessionId,
       windowId: windowId,
@@ -419,6 +442,10 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> selectTab(String id) async {
     _checkAction(id);
     final tab = requireTab(id);
+    if (Zone.current[_actionKey] == null) {
+      final viewed = _engines.remove(id);
+      if (viewed != null) _engines[id] = viewed;
+    }
     if (_activeTabId == id &&
         (tab.ownerSessionId == null ||
             _lastTabBySession[tab.ownerSessionId] == id)) {
@@ -481,6 +508,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     final popupGroupId = _tabs[index].popupGroupId ?? id;
     final wasMounted = _mountedTabs.containsKey(id);
     _tabs.removeAt(index);
+    _tabsAwaitingObservation.remove(id);
     _scrollStates.remove(id);
     _htmlDocuments.remove(id);
     _navigationRevisions.remove(id);
@@ -558,13 +586,26 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   String _target(String? id) =>
       id ?? _activeTabId ?? (throw StateError('browser_no_active_tab'));
 
+  /// Address editing without native engine creation, used on unsupported hosts.
+  Future<void> setSavedAddress(String id, String url) async {
+    _checkAction(id);
+    requireTab(id);
+    _updateTab(
+      id,
+      BrowserPageState(url: normalizeAddress(url), isLoading: false),
+    );
+  }
+
   Future<void> navigate(String input, {String? tabId}) async {
     final id = _target(tabId);
     _checkAction(id);
     final url = normalizeAddress(input, searchEngine: _settings.searchEngine);
-    if (BrowserWorkspaceResources.isWorkspaceUrl(url)) {
+    if (BrowserWorkspaceResources.isLocalUrl(url)) {
       final owner = requireTab(id).ownerSessionId;
-      final scope = await BrowserWorkspaceResources.instance.scope(owner);
+      final scope = await BrowserWorkspaceResources.instance.scope(
+        owner,
+        pageUrl: url,
+      );
       try {
         await scope.file(Uri.parse(url));
       } finally {
@@ -576,37 +617,42 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
     final previous = requireTab(id);
-    _htmlDocuments.remove(id);
-    final index = _tabs.indexWhere((tab) => tab.id == id);
-    if (index >= 0) _tabs[index] = _tabs[index].copyWith(hasContent: false);
     final revision = (_navigationRevisions[id] ?? 0) + 1;
     _navigationRevisions[id] = revision;
     var created = false;
-    _updateTab(id, BrowserPageState(url: url, isLoading: true, progress: 0));
-    final engine = await _engine(id, onCreated: () => created = true);
-    _checkAction(id);
-    requireTab(id);
-    if (_navigationRevisions[id] != revision) return;
-    if (!created) {
-      try {
-        await _runEngineOperation(id, () => engine.navigate(url));
-      } catch (error) {
-        if (error is StateError &&
-            error.message == 'browser_tab_owner_changed' &&
-            identical(_engines[id], engine) &&
-            _navigationRevisions[id] == revision) {
-          _updateTab(
-            id,
-            BrowserPageState(
-              url: previous.url,
-              title: previous.title,
-              isLoading: previous.isLoading,
-              progress: previous.progress,
-            ),
-          );
-        }
-        rethrow;
+    _updateTab(id, const BrowserPageState(isLoading: true, progress: 0));
+    try {
+      final engine = await _engine(
+        id,
+        initialUrl: url,
+        onCreated: () => created = true,
+      );
+      _checkAction(id);
+      requireTab(id);
+      if (_navigationRevisions[id] != revision) return;
+      if (!created) {
+        await _runEngineOperation(
+          id,
+          engine,
+          () => engine.navigate(url),
+          kind: _BrowserOperation.navigation,
+        );
       }
+    } catch (error) {
+      if (_navigationRevisions[id] == revision) {
+        final failure = BrowserFailure.from(error);
+        _updateTab(
+          id,
+          BrowserPageState(
+            url: failure.outcomeUnknown ? null : previous.url,
+            title: failure.outcomeUnknown ? null : previous.title,
+            isLoading: failure.outcomeUnknown ? null : false,
+            progress: failure.outcomeUnknown ? null : previous.progress,
+            error: failure.message,
+          ),
+        );
+      }
+      rethrow;
     }
   }
 
@@ -625,7 +671,11 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     }
     _invalidatePreview(tabId);
     _notify();
-    await _call(tabId, (engine) => engine.loadHtml(html, baseUrl: baseUrl));
+    await _call(
+      tabId,
+      (engine) => engine.loadHtml(html, baseUrl: baseUrl),
+      kind: _BrowserOperation.navigation,
+    );
     _htmlDocuments[tabId] = (
       html: html,
       baseUrl: baseUrl,
@@ -643,7 +693,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _invalidatePreview(id);
       _notify();
       return engine.back();
-    });
+    }, kind: _BrowserOperation.navigation);
   }
 
   Future<void> forward({String? tabId}) {
@@ -652,7 +702,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _invalidatePreview(id);
       _notify();
       return engine.forward();
-    });
+    }, kind: _BrowserOperation.navigation);
   }
 
   Future<void> reload({String? tabId}) {
@@ -661,7 +711,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _invalidatePreview(id);
       _notify();
       return engine.reload();
-    });
+    }, kind: _BrowserOperation.navigation);
   }
 
   Future<void> stop({String? tabId}) =>
@@ -694,14 +744,37 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     String source, {
     required String tabId,
     bool awaitPromise = false,
+    bool readOnly = false,
+    Duration? timeout,
   }) => _call(
     tabId,
     (engine) => engine.evaluate(source, awaitPromise: awaitPromise),
+    kind: readOnly ? _BrowserOperation.observation : _BrowserOperation.mutation,
+    timeout: timeout == null
+        ? null
+        : Duration(
+            microseconds: timeout.inMicroseconds.clamp(
+              1,
+              Duration(
+                seconds: _settings.operationTimeoutSeconds,
+              ).inMicroseconds,
+            ),
+          ),
   );
   void checkAgentAction(String tabId) => _checkAction(tabId);
 
-  Future<Uint8List?> captureScreenshot({required String tabId}) =>
-      _call(tabId, (engine) => engine.screenshot());
+  /// Only a successfully decoded page snapshot/extraction acknowledges the
+  /// unknown outcome. A wait probe or screenshot request alone is insufficient.
+  void didObserveAgentTab(String tabId) {
+    _checkAction(tabId);
+    _tabsAwaitingObservation.remove(tabId);
+  }
+
+  Future<Uint8List?> captureScreenshot({required String tabId}) => _call(
+    tabId,
+    (engine) => engine.screenshot(),
+    kind: _BrowserOperation.observation,
+  );
 
   /// Memory-only last views survive panel dismissal and ordinary engine eviction.
   /// A separate cache budget bounds their count; navigation/close discards the
@@ -994,13 +1067,22 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _call(_target(tabId), (engine) => engine.find(text));
   Future<void> findNext({bool forward = true, String? tabId}) =>
       _call(_target(tabId), (engine) => engine.findNext(forward));
-  Future<void> clearFind({String? tabId}) =>
-      _call(_target(tabId), (engine) => engine.clearFind());
+  Future<void> clearFind({String? tabId}) async {
+    final id = tabId ?? _activeTabId;
+    if (id == null) return;
+    _checkAction(id);
+    // Cleanup must not revive a released page or allocate an unsupported view.
+    final engine = _engines[id];
+    if (engine != null) {
+      await _runEngineOperation(id, engine, engine.clearFind);
+    }
+  }
 
   Future<T> _call<T>(
     String id,
     Future<T> Function(BrowserEngine) action, {
-    bool pauseOnTimeout = true,
+    _BrowserOperation kind = _BrowserOperation.mutation,
+    Duration? timeout,
   }) async {
     _checkAction(id);
     final engine = await _engine(id);
@@ -1008,31 +1090,132 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     requireTab(id);
     return _runEngineOperation(
       id,
+      engine,
       () => action(engine),
-      pauseOnTimeout: pauseOnTimeout,
+      kind: kind,
+      timeout: timeout,
     );
   }
 
   Future<T> _runEngineOperation<T>(
     String id,
+    BrowserEngine engine,
     Future<T> Function() action, {
-    bool pauseOnTimeout = true,
+    _BrowserOperation kind = _BrowserOperation.mutation,
+    Duration? timeout,
   }) async {
+    final budget =
+        timeout ?? Duration(seconds: _settings.operationTimeoutSeconds);
+    final guard = Zone.current[_actionKey] as _BrowserAction?;
+    if (guard != null &&
+        kind == _BrowserOperation.mutation &&
+        requiresAgentObservation(id)) {
+      throw const BrowserFailure(
+        'browser_observation_required',
+        'A previous command has an unconfirmed outcome. This command was not sent.',
+        'Use snapshot or extract to inspect the current page before choosing another action. Do not blindly repeat the previous command. Reload or close the tab if it is unresponsive.',
+        outcomeUnknown: true,
+        details: {'phase': 'not_dispatched'},
+      );
+    }
+    final operationId = _uuid.v4();
     final T result;
     try {
-      result = await action().timeout(const Duration(seconds: 30));
+      result = await action().timeout(budget);
     } on TimeoutException {
-      if (pauseOnTimeout && Zone.current[_actionKey] != null) {
-        // A late result from a cancelled action must not replace a newer
-        // takeover, resume or permission change with a timeout pause.
-        _checkAction(id);
-        _pauseAgentActions(BrowserAgentPauseReason.timeout);
-        throw StateError(_agentTimeoutError);
-      }
-      rethrow;
+      _checkAction(id);
+      if (guard == null || kind == _BrowserOperation.wait) rethrow;
+      // A deadline only ends our wait. It neither cancels native execution nor
+      // transfers control to the user. Keep observation and recovery available.
+      final recovery = await _inspectTimedOutOperation(id, engine, kind);
+      _checkAction(id);
+      final unknown = kind != _BrowserOperation.observation;
+      if (unknown) _tabsAwaitingObservation.add(id);
+      throw BrowserFailure(
+        unknown
+            ? 'browser_action_timeout_outcome_unknown'
+            : 'browser_read_timeout',
+        unknown
+            ? 'The browser command timed out; its outcome is not confirmed.'
+            : 'The browser observation timed out.',
+        recovery['page_responsive'] == true
+            ? unknown
+                  ? 'Inspect the current page with snapshot or extract before deciding what to do next. The previous command may still complete; do not automatically repeat it.'
+                  : 'Inspect the page again or retry this read-only observation.'
+            : 'The page did not respond to a short health check. Inspect, reload or close this tab, or continue in another tab. Do not repeat an unconfirmed mutation.',
+        outcomeUnknown: unknown,
+        details: {
+          'operation_id': operationId,
+          'action': guard.label,
+          'operation_kind': kind.name,
+          'phase': 'dispatched',
+          'timeout_ms': budget.inMilliseconds,
+          // WebView stopLoading is not JavaScript cancellation.
+          'execution_stopped': false,
+          'may_have_late_effects': unknown,
+          ...recovery,
+        },
+      );
     }
     _checkAction(id);
     return result;
+  }
+
+  Future<Map<String, Object?>> _inspectTimedOutOperation(
+    String id,
+    BrowserEngine engine,
+    _BrowserOperation kind,
+  ) async {
+    const probeBudget = Duration(seconds: 1);
+    Future<Map<String, Object?>?> probe() async {
+      _checkAction(id);
+      if (!identical(_engines[id], engine)) return null;
+      try {
+        Object? value = await engine
+            .evaluate(
+              'JSON.stringify({kelivo_health:true,url:location.href,ready_state:document.readyState})',
+            )
+            .timeout(probeBudget);
+        _checkAction(id);
+        if (!identical(_engines[id], engine)) return null;
+        for (var i = 0; i < 2 && value is String; i++) {
+          value = jsonDecode(value);
+        }
+        if (value is Map && value['kelivo_health'] == true) {
+          return {
+            'page_responsive': true,
+            if (value['url'] is String)
+              'current_url': publicDocumentUrl(id, value['url'] as String),
+            if (value['ready_state'] is String)
+              'ready_state': value['ready_state'],
+          };
+        }
+      } catch (_) {
+        // A blocked renderer or a missing callback cannot prove cancellation.
+      }
+      return null;
+    }
+
+    var state = await probe();
+    _checkAction(id);
+    var loadingStopped = false;
+    // Stop only an unresponsive navigation. Read failures must not interrupt
+    // the page, and stopping loading cannot undo a dispatched click or input.
+    if (state == null &&
+        kind == _BrowserOperation.navigation &&
+        identical(_engines[id], engine)) {
+      try {
+        await engine.stop().timeout(probeBudget);
+        loadingStopped = true;
+      } catch (_) {}
+      _checkAction(id);
+      state = await probe();
+    }
+    return {
+      'page_responsive': false,
+      'loading_stopped': loadingStopped,
+      ...?state,
+    };
   }
 
   Future<void> waitForLoad({
@@ -1047,20 +1230,25 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       await _call(
         tabId,
         (engine) => engine.waitForLoad(timeout, stage: stage),
-        pauseOnTimeout: false,
+        kind: _BrowserOperation.wait,
+        // The engine's stage deadline must expire before the transport wrapper.
+        timeout: timeout + const Duration(seconds: 1),
       );
     } on TimeoutException {
       throw BrowserFailure.loadTimeout(stage.name);
     }
   }
 
-  Future<BrowserEngine> _engine(String id, {VoidCallback? onCreated}) {
+  Future<BrowserEngine> _engine(
+    String id, {
+    String? initialUrl,
+    VoidCallback? onCreated,
+  }) {
     _checkAction(id);
     requireTab(id);
     _idleTimer?.cancel();
-    final ready = _engines.remove(id);
+    final ready = _engines[id];
     if (ready != null) {
-      _engines[id] = ready;
       return Future<BrowserEngine>.sync(() async {
         await ready.resume();
         _checkAction(id);
@@ -1073,13 +1261,12 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       _checkAction(id);
       var tab = requireTab(id);
       if (!isSupported) throw UnsupportedError('browser_platform_unsupported');
-      final existing = _engines.remove(id);
+      final existing = _engines[id];
       if (existing != null) {
-        _engines[id] = existing;
         await existing.resume();
         return existing;
       }
-      if (_engines.length >= maxLiveViews) {
+      if (_engines.length >= liveViewLimit) {
         String? evictionGroup() {
           for (final key in _engines.keys) {
             final group = _engineGroups[key] ?? key;
@@ -1124,7 +1311,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
               tab.runtimeVersion;
       final creating = runZoned(
         () => _engineFactory(
-          tab: tab,
+          tab: initialUrl == null ? tab : tab.copyWith(url: initialUrl),
           settings: _settings,
           onChanged: (state) {
             if (isCurrent()) _updateTab(id, state);
@@ -1230,10 +1417,11 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
       }
       onCreated?.call();
       final document = _htmlDocuments[id];
-      if (document != null) {
+      if (document != null && initialUrl == null) {
         await engine.loadHtml(document.html, baseUrl: document.baseUrl);
       }
       _scheduleIdleRelease();
+      _notify();
       return engine;
     });
     operation.then(completer.complete, onError: completer.completeError);
@@ -1308,6 +1496,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     );
     _tabs[index] = tab;
     if (state.rendererTerminated) {
+      _tabsAwaitingObservation.remove(id);
       _tabs[index] = tab.copyWith(
         runtimeVersion: tab.runtimeVersion + 1,
         error: tab.error,
@@ -1375,6 +1564,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     // the old instance that this operation is about to destroy.
     final retired = {for (final id in ids) id: _engines.remove(id)};
     for (final id in ids) {
+      _tabsAwaitingObservation.remove(id);
       _nativePreviewFlights.remove(id);
       _engineGroups.remove(id);
     }
@@ -1385,6 +1575,10 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
           detachPopup: true,
           clearWindowId: true,
           runtimeVersion: tab.runtimeVersion + 1,
+          isLoading: false,
+          progress: 0,
+          canGoBack: false,
+          canGoForward: false,
           error: tab.error,
         );
       }
@@ -1457,6 +1651,11 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     if (!BrowserSettings.isValidUserAgent(settings.customUserAgent)) {
       throw const FormatException('Invalid browser User-Agent');
     }
+    if (!BrowserSettings.operationTimeoutOptions.contains(
+      settings.operationTimeoutSeconds,
+    )) {
+      throw const FormatException('Invalid browser operation timeout');
+    }
     settings = settings.copyWith(
       customUserAgent: settings.customUserAgent.trim(),
     );
@@ -1470,26 +1669,36 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     final userAgentChanged =
         settings.desktopMode != old.desktopMode ||
         settings.customUserAgent != old.customUserAgent;
-    // Merely opening settings is observation. Applying a different UA reloads
-    // the document, so hand control over before changing a running task's page.
-    if (userAgentChanged && _isRunningAgentAction) {
-      takeOver(sessionId: _agentSessionId, tabId: _agentTabId);
-    }
-    if (userAgentChanged || settings.surfaceStyle != old.surfaceStyle) {
-      for (final engine in _engines.values.toList()) {
-        await engine.updateSettings(settings);
-      }
-    }
     if (userAgentChanged) {
-      final tab = activeTab;
-      if (tab != null &&
-          tab.url != 'about:blank' &&
-          _engines.containsKey(tab.id)) {
-        await reload(tabId: tab.id);
-      }
+      _userAgentUpdates++;
     }
-    _notify();
-    await flush();
+    try {
+      // A UA change affects every engine and reloads the visible page. Cancel
+      // old work globally and exclude new commands until those updates finish.
+      if (userAgentChanged) {
+        if (_isRunningAgentAction) {
+          takeOver(sessionId: _agentSessionId, tabId: _agentTabId);
+        }
+        _invalidateAgentActions();
+      }
+      if (userAgentChanged || settings.surfaceStyle != old.surfaceStyle) {
+        for (final engine in _engines.values.toList()) {
+          await engine.updateSettings(settings);
+        }
+      }
+      if (userAgentChanged) {
+        final tab = activeTab;
+        if (tab != null &&
+            tab.url != 'about:blank' &&
+            _engines.containsKey(tab.id)) {
+          await reload(tabId: tab.id);
+        }
+      }
+      _notify();
+      await flush();
+    } finally {
+      if (userAgentChanged) _userAgentUpdates--;
+    }
   }
 
   Future<void> clearWebsiteData() async {
@@ -1519,29 +1728,21 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     required Future<T> Function() action,
   }) async {
     await initialize();
-    if (!_settings.agentEnabled) throw StateError('browser_agent_disabled');
-    if (_clearingWebsiteData) throw StateError('browser_clearing_website_data');
-    if (_agentPaused) {
-      throw StateError(
-        _agentPauseReason == BrowserAgentPauseReason.timeout
-            ? _agentTimeoutError
-            : 'browser_human_control',
-      );
-    }
-    if (sessionId.isEmpty) {
-      throw ArgumentError('Browser actions require a session');
-    }
+    _checkAgentPermission(sessionId);
+    if (_userAgentUpdates != 0) throw StateError('browser_settings_updating');
+    final pause = agentPauseFor(sessionId);
+    if (pause != null) throw StateError('browser_human_control');
     final cancellation = ToolCallCancellation.current;
-    cancellation?.throwIfCancelled();
     final guard = _BrowserAction(
       sessionId,
       _controlEpoch,
       _sessionEpochs[sessionId] ?? 0,
       cancellation,
+      label,
     );
     final controlCancelled = _controlCancelled.future;
     final sessionCancelled =
-        (_sessionCancellation[sessionId] ??= Completer<void>()).future;
+        (_sessionCancellation[sessionId] ??= Completer<String>()).future;
     final result = Completer<T>();
     final operation = (_agentQueue ?? Future<void>.value()).then(
       (_) => runZoned(() async {
@@ -1557,10 +1758,7 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
           final value = await Future.any<T>([
             running,
             controlCancelled.then<T>((error) => throw StateError(error)),
-            sessionCancelled.then<T>(
-              (_) =>
-                  throw StateError('browser_action_cancelled_outcome_unknown'),
-            ),
+            sessionCancelled.then<T>((error) => throw StateError(error)),
             if (cancellation != null)
               cancellation.cancelled.then<T>((_) {
                 if (cancellationRelevant) cancelAgentActions(sessionId);
@@ -1598,20 +1796,37 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     return result.future;
   }
 
+  /// Saved tab state stays observable while page commands are paused or draining.
+  Future<List<BrowserTab>> listAgentTabs(String sessionId) async {
+    await initialize();
+    _checkAgentPermission(sessionId);
+    return tabsForSession(sessionId);
+  }
+
+  void _checkAgentPermission(String sessionId) {
+    if (_disposed) throw StateError('browser_disposed');
+    if (!_settings.agentEnabled) throw StateError('browser_agent_disabled');
+    if (_clearingWebsiteData) throw StateError('browser_clearing_website_data');
+    if (sessionId.isEmpty) {
+      throw ArgumentError('Browser actions require a session');
+    }
+    ToolCallCancellation.current?.throwIfCancelled();
+  }
+
   void _checkAction([String? tabId]) {
     if (_disposed) throw StateError('browser_disposed');
     final guard = Zone.current[_actionKey] as _BrowserAction?;
     if (guard == null) return;
     guard.cancellation?.throwIfCancelled();
-    if (_agentPaused && _agentPauseReason == BrowserAgentPauseReason.timeout) {
-      throw StateError(_agentTimeoutError);
-    }
+    final pause = agentPauseFor(guard.sessionId);
+    final paused = pause != null;
     if (!_settings.agentEnabled ||
-        _agentPaused ||
+        paused ||
         guard.epoch != _controlEpoch ||
         guard.sessionEpoch != (_sessionEpochs[guard.sessionId] ?? 0)) {
       throw StateError('browser_action_cancelled_outcome_unknown');
     }
+    if (_userAgentUpdates != 0) throw StateError('browser_settings_updating');
     if (tabId != null) {
       requireAgentTab(guard.sessionId, tabId);
       _agentTabId = tabId;
@@ -1630,23 +1845,28 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
-  static const _agentTimeoutError = 'browser_action_timeout_outcome_unknown';
-
   void _pauseAgentActions(
     BrowserAgentPauseReason reason, {
     String? sessionId,
     String? tabId,
   }) {
-    _agentPaused = true;
-    _agentPauseReason = reason;
-    _pausedAgentSessionId =
-        sessionId ?? _agentSessionId ?? activeTab?.ownerSessionId;
-    _pausedAgentTabId = tabId ?? _agentTabId ?? _activeTabId;
-    _invalidateAgentActions(
-      error: reason == BrowserAgentPauseReason.timeout
-          ? _agentTimeoutError
-          : 'browser_action_cancelled_outcome_unknown',
-    );
+    final owner =
+        sessionId ??
+        (tabId == null ? null : requireTab(tabId).ownerSessionId) ??
+        _agentSessionId ??
+        _selectedSessionId;
+    final target =
+        tabId ??
+        (owner == _agentSessionId ? _agentTabId : null) ??
+        (owner == null ? activeTab?.id : selectedTabForSession(owner)?.id);
+    _agentPauses[owner] = (reason: reason, tabId: target);
+    if (owner != null) {
+      _invalidateAgentSession(owner);
+    }
+    if (target != null) {
+      unawaited(_engines[target]?.stop().catchError((Object _) {}));
+    }
+    _notify();
   }
 
   void _invalidateAgentActions({
@@ -1662,25 +1882,24 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void allowAgentControl({String? sessionId}) {
-    if (sessionId != null &&
-        _pausedAgentSessionId != null &&
-        sessionId != _pausedAgentSessionId) {
-      return;
-    }
-    _clearAgentPause();
+    _agentPauses.remove(sessionId ?? _selectedSessionId);
     _notify();
   }
 
   void _clearAgentPause() {
-    _agentPaused = false;
-    _agentPauseReason = null;
-    _pausedAgentSessionId = null;
-    _pausedAgentTabId = null;
+    _agentPauses.clear();
+  }
+
+  void _invalidateAgentSession(
+    String sessionId, {
+    String error = 'browser_action_cancelled_outcome_unknown',
+  }) {
+    _sessionEpochs[sessionId] = (_sessionEpochs[sessionId] ?? 0) + 1;
+    _sessionCancellation.remove(sessionId)?.complete(error);
   }
 
   void cancelAgentActions(String sessionId) {
-    _sessionEpochs[sessionId] = (_sessionEpochs[sessionId] ?? 0) + 1;
-    _sessionCancellation.remove(sessionId)?.complete();
+    _invalidateAgentSession(sessionId);
     for (final tab in _tabs.where((tab) => tab.ownerSessionId == sessionId)) {
       unawaited(
         _engines[tab.id]?.stop().catchError((Object _) {}) ??
@@ -1838,10 +2057,12 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   /// Keep already visited platform views mounted until their bounded runtime
   /// is evicted. Tab selection only changes which child is painted.
   Widget buildViewport({
+    bool loadMissingViews = true,
     bool deferNewViews = false,
     double previewTopInset = 0,
   }) => _BrowserTabViewport(
     service: this,
+    loadMissingViews: loadMissingViews,
     deferNewViews: deferNewViews,
     previewTopInset: previewTopInset,
   );
@@ -1989,26 +2210,32 @@ class BrowserService extends ChangeNotifier with WidgetsBindingObserver {
   }
 }
 
+enum _BrowserOperation { observation, mutation, navigation, wait }
+
 class _BrowserAction {
   const _BrowserAction(
     this.sessionId,
     this.epoch,
     this.sessionEpoch,
     this.cancellation,
+    this.label,
   );
   final String sessionId;
   final int epoch;
   final int sessionEpoch;
   final ToolCallCancellation? cancellation;
+  final String label;
 }
 
 class _BrowserTabViewport extends StatefulWidget {
   const _BrowserTabViewport({
     required this.service,
+    required this.loadMissingViews,
     required this.deferNewViews,
     required this.previewTopInset,
   });
   final BrowserService service;
+  final bool loadMissingViews;
   final bool deferNewViews;
   final double previewTopInset;
 
@@ -2031,6 +2258,7 @@ class _BrowserTabViewportState extends State<_BrowserTabViewport> {
       );
       final active = service.activeTab;
       if (active != null &&
+          (widget.loadMissingViews || service.hasLiveEngine(active.id)) &&
           (active.hasContent || active.url != 'about:blank')) {
         _visited[active.id] = active.runtimeVersion;
       }
@@ -2316,6 +2544,14 @@ class _BrowserViewHostState extends State<_BrowserViewHost> {
       builder: (context, snapshot) {
         final error = snapshot.error ?? _attachmentError;
         if (error != null) {
+          if (error is StateError &&
+              error.message == 'browser_storage_bridge_unsupported') {
+            return Center(
+              child: Text(
+                AppLocalizations.of(context)!.browserStorageUnsupported,
+              ),
+            );
+          }
           return Center(child: Text(error.toString()));
         }
         final engine = snapshot.data;

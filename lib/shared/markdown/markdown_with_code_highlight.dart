@@ -27,9 +27,13 @@ class MarkdownWithCodeHighlight extends StatefulWidget {
     this.highlightRanges = const [],
     this.highlightColor,
     this.uiHost,
+    this.detailsStateKey,
   });
   final String text;
   final UiHostBinding? uiHost;
+
+  /// Stable message/text-block identity for folding across viewport recycling.
+  final Object? detailsStateKey;
   final void Function(String id)? onCitationTap;
   final String? Function(String id)? citationIndexResolver;
   final TextStyle? baseStyle;
@@ -75,12 +79,14 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
       streaming: widget.streaming,
       options: markdownParserOptions(settings),
       theme: theme,
-      extensions: kelivoMarkdownExtensions,
+      extensions: markdownExtensionsFor(context),
       codeHighlighter: KelivoCodeHighlighter.forTheme(theme),
       mathRenderer: const KelivoMathRenderer(),
       imageBuilder: const KelivoImageBuilder(),
       linkHandler: const KelivoLinkHandler(),
       codeOptions: markdownCodeOptions(settings),
+      detailsExpansionState: markdownDetailsExpansionState,
+      detailsStateKey: widget.detailsStateKey,
       labels: markdownLabels(context),
       exporting: exporting,
       cullToViewport: !exporting,
@@ -88,6 +94,7 @@ class _MarkdownWithCodeHighlightState extends State<MarkdownWithCodeHighlight> {
     return MarkdownLinkScope(
       source: _source,
       conversationId: widget.conversationId,
+      imageStorage: PageStorage.maybeOf(context),
       child: CitationScope(
         onTap: widget.onCitationTap,
         resolve: widget.citationIndexResolver,

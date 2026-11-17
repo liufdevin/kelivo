@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'assistant_regex.dart';
 import 'health_data_type.dart';
+import 'memory_entry.dart';
 import 'preset_message.dart';
 import 'reasoning_request.dart';
 
@@ -56,6 +57,7 @@ class Assistant {
   final String messageTemplate; // e.g. "{{ message }}"
   final bool searchEnabled; // per-assistant external web search switch
   final List<String> mcpServerIds; // bound MCP server IDs
+  final bool allowConversationMcp;
   final List<String> localToolIds; // enabled local tool IDs
   /// Default workspace for new conversations started with this assistant.
   final String? defaultWorkspaceId;
@@ -85,6 +87,7 @@ class Assistant {
   final List<Map<String, String>> customBody; // [{key:'foo', value:'{"a":1}'}]
   // Memory features (§4.1)
   final bool enableMemory;
+  final Set<MemoryType> memoryFullInjectionTypes;
   final bool autoOrganizeMemory;
   final int memoryOrganizeEveryNTurns;
   final MemorySmartAddMode memorySmartAddMode;
@@ -123,6 +126,7 @@ class Assistant {
     this.messageTemplate = '{{ message }}',
     this.searchEnabled = false,
     this.mcpServerIds = const <String>[],
+    this.allowConversationMcp = false,
     this.localToolIds = const <String>[],
     this.defaultWorkspaceId,
     this.defaultWorkspaceSetup = DefaultWorkspaceSetup.automatic,
@@ -138,6 +142,7 @@ class Assistant {
     this.customHeaders = const <Map<String, String>>[],
     this.customBody = const <Map<String, String>>[],
     this.enableMemory = false,
+    this.memoryFullInjectionTypes = const {},
     this.autoOrganizeMemory = false,
     this.memoryOrganizeEveryNTurns = defaultMemoryOrganizeEveryNTurns,
     this.memorySmartAddMode = MemorySmartAddMode.batched,
@@ -174,6 +179,7 @@ class Assistant {
     String? messageTemplate,
     bool? searchEnabled,
     List<String>? mcpServerIds,
+    bool? allowConversationMcp,
     List<String>? localToolIds,
     String? defaultWorkspaceId,
     DefaultWorkspaceSetup? defaultWorkspaceSetup,
@@ -188,6 +194,7 @@ class Assistant {
     List<Map<String, String>>? customHeaders,
     List<Map<String, String>>? customBody,
     bool? enableMemory,
+    Set<MemoryType>? memoryFullInjectionTypes,
     bool? autoOrganizeMemory,
     int? memoryOrganizeEveryNTurns,
     MemorySmartAddMode? memorySmartAddMode,
@@ -242,6 +249,7 @@ class Assistant {
       messageTemplate: messageTemplate ?? this.messageTemplate,
       searchEnabled: searchEnabled ?? this.searchEnabled,
       mcpServerIds: mcpServerIds ?? this.mcpServerIds,
+      allowConversationMcp: allowConversationMcp ?? this.allowConversationMcp,
       localToolIds: localToolIds ?? this.localToolIds,
       defaultWorkspaceId: clearDefaultWorkspaceId
           ? null
@@ -273,6 +281,9 @@ class Assistant {
       customHeaders: customHeaders ?? this.customHeaders,
       customBody: customBody ?? this.customBody,
       enableMemory: enableMemory ?? this.enableMemory,
+      memoryFullInjectionTypes: Set<MemoryType>.unmodifiable(
+        memoryFullInjectionTypes ?? this.memoryFullInjectionTypes,
+      ),
       autoOrganizeMemory: autoOrganizeMemory ?? this.autoOrganizeMemory,
       memoryOrganizeEveryNTurns:
           memoryOrganizeEveryNTurns ?? this.memoryOrganizeEveryNTurns,
@@ -315,6 +326,7 @@ class Assistant {
     'messageTemplate': messageTemplate,
     'searchEnabled': searchEnabled,
     'mcpServerIds': mcpServerIds,
+    'allowConversationMcp': allowConversationMcp,
     'localToolIds': localToolIds,
     'defaultWorkspaceId': defaultWorkspaceId,
     'defaultWorkspaceSetup': defaultWorkspaceSetup.name,
@@ -329,6 +341,10 @@ class Assistant {
     'customHeaders': customHeaders,
     'customBody': customBody,
     'enableMemory': enableMemory,
+    'memoryFullInjectionTypes': MemoryType.values
+        .where(memoryFullInjectionTypes.contains)
+        .map(MemoryEntry.typeToString)
+        .toList(),
     'autoOrganizeMemory': autoOrganizeMemory,
     'memoryOrganizeEveryNTurns': memoryOrganizeEveryNTurns,
     'memorySmartAddMode': memorySmartAddModeToString(memorySmartAddMode),
@@ -378,6 +394,7 @@ class Assistant {
     searchEnabled: json['searchEnabled'] as bool? ?? false,
     mcpServerIds:
         (json['mcpServerIds'] as List?)?.cast<String>() ?? const <String>[],
+    allowConversationMcp: json['allowConversationMcp'] as bool? ?? false,
     localToolIds:
         (json['localToolIds'] as List?)?.cast<String>() ?? const <String>[],
     defaultWorkspaceId: json['defaultWorkspaceId'] as String?,
@@ -442,6 +459,15 @@ class Assistant {
       return const <Map<String, String>>[];
     })(),
     enableMemory: json['enableMemory'] as bool? ?? false,
+    memoryFullInjectionTypes: Set<MemoryType>.unmodifiable(
+      MemoryType.values.where(
+        (type) =>
+            (json['memoryFullInjectionTypes'] as List?)?.contains(
+              MemoryEntry.typeToString(type),
+            ) ??
+            false,
+      ),
+    ),
     autoOrganizeMemory: json['autoOrganizeMemory'] as bool? ?? false,
     memoryOrganizeEveryNTurns: (() {
       final raw = (json['memoryOrganizeEveryNTurns'] as num?)?.toInt();

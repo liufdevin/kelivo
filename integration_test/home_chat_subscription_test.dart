@@ -1,3 +1,6 @@
+import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/services/api/generation/text_generation_result.dart';
+import 'package:Kelivo/l10n/app_localizations_en.dart';
 import 'dart:io';
 
 import 'package:Kelivo/core/database/app_database.dart';
@@ -60,7 +63,7 @@ void main() {
     );
     await repo.close();
     try {
-      await app.main();
+      await app.main(const []);
       final finder = find.byType(MessageListView);
       for (var i = 0; i < 200 && finder.evaluate().isEmpty; i++) {
         await tester.pump(const Duration(milliseconds: 100));
@@ -105,7 +108,9 @@ void main() {
             keepUserMessages: 6,
           ),
           model: 'fixture',
-          generate: (_, _) async => 'summary',
+          generate: (_, _, _, _) async =>
+              const TextGenerationResult(parts: [TextPart('summary')]),
+          quoteMarker: AppLocalizationsEn().selectionQuoteMarker,
         ),
       );
       await tester.pump();

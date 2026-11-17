@@ -1,6 +1,15 @@
+import '../services/composer_document_route.dart';
+import '../../chat/controllers/conversation_find_controller.dart';
+import '../../chat/models/conversation_find_candidate.dart';
+import '../../chat/services/conversation_find_service.dart';
+import '../../chat/widgets/conversation_find_bar.dart';
+import '../../../shared/widgets/app_selection_area.dart';
+import '../../../shared/widgets/source_rect_scroll.dart';
+import '../../../shared/markdown/kelivo_markdown_extensions.dart';
 import 'package:Kelivo/features/intelligent_ui/host/ui_search_navigation.dart';
 import '../../intelligent_ui/host/ui_host_scope.dart';
 import '../../chat/widgets/context_dialog.dart';
+import '../../chat/widgets/image_context_panel.dart';
 import '../../../core/models/context_compression_task.dart';
 import '../../../core/models/context_operation.dart';
 import '../services/tool_approval_service.dart';
@@ -9,12 +18,17 @@ import '../../chat/widgets/context_operation_actions.dart';
 import '../../chat/widgets/context_compression_status.dart';
 import '../../browser/browser_navigation.dart';
 import 'package:Kelivo/shared/text_input/message_editing_controller.dart';
+import '../../chat/controllers/quote_editing_controller.dart';
+import '../../chat/widgets/quote_interaction_scope.dart';
+import '../../../core/models/quote_ref.dart';
 import '../../../core/services/chat/chat_service.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, mapEquals, ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'
-    show MissingPluginException, Clipboard, ClipboardData;
+    show MissingPluginException, Clipboard, ClipboardData, LogicalKeyboardKey;
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:provider/provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -27,6 +41,7 @@ import '../../../shared/widgets/snackbar.dart';
 import '../../../theme/app_font_weights.dart';
 import '../../../theme/design_tokens.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/hotkey_provider.dart';
 import '../../../core/services/model_spec/model_spec_resolver.dart';
 import '../../../core/providers/assistant_provider.dart';
 import '../../../core/providers/quick_phrase_provider.dart';
@@ -34,7 +49,6 @@ import '../../../core/providers/instruction_injection_provider.dart';
 import '../../../core/providers/world_book_provider.dart';
 import '../../../core/models/quick_phrase.dart';
 import '../../../core/models/chat_input_data.dart';
-import '../../../core/models/chat_message.dart';
 import '../../../core/models/compress_context_options.dart';
 import '../../../core/services/android_process_text.dart';
 import '../../../core/services/incoming_share_service.dart';
@@ -63,6 +77,7 @@ import '../../mcp/pages/mcp_page.dart';
 import '../../provider/pages/providers_page.dart';
 import '../../quick_phrase/pages/quick_phrases_page.dart';
 import '../../quick_phrase/widgets/quick_phrase_menu.dart';
+import '../../workspace/widgets/skills/conversation_skills_sheet.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/mini_map_sheet.dart';
 import '../widgets/instruction_injection_sheet.dart';
@@ -74,8 +89,7 @@ import '../widgets/chat_input_section.dart';
 import '../widgets/conversation_system_prompt_button.dart';
 import '../widgets/chat_input_overlay_layout.dart';
 import '../widgets/chat_selection_app_bar.dart';
-import '../widgets/chat_selection_delete_bar.dart';
-import '../widgets/chat_selection_export_bar.dart';
+import '../widgets/chat_selection_action_bar.dart';
 import '../widgets/user_message_edit_overlay.dart';
 import '../utils/model_display_helper.dart';
 import '../utils/chat_layout_constants.dart';
@@ -149,16 +163,6 @@ class _TemporaryConversationEmptyState extends StatelessWidget {
   }
 }
 
-String _compressContextErrorMessage(AppLocalizations l10n, String error) {
-  return switch (error) {
-    'no_messages' => l10n.compressContextNoMessages,
-    'no_conversation' => l10n.compressContextNoConversation,
-    'no_model' => l10n.compressContextNoModel,
-    'empty_summary' => l10n.compressContextEmptySummary,
-    _ => '${l10n.compressContextFailed}: $error',
-  };
-}
-
 class _HomePageState extends State<HomePage>
     with TickerProviderStateMixin, RouteAware, WidgetsBindingObserver {
   // ============================================================================
@@ -170,12 +174,13 @@ class _HomePageState extends State<HomePage>
       InteractiveDrawerController();
   final ValueNotifier<int> _assistantPickerCloseTick = ValueNotifier<int>(0);
   final FocusNode _inputFocus = FocusNode();
-  final TextEditingController _inputController = MessageEditingController();
+  final QuoteEditingController _inputController = QuoteEditingController();
   final ChatInputBarController _mediaController = ChatInputBarController();
   scroll_ctrl.ChatAutoFollowScrollController _scrollController =
       scroll_ctrl.ChatAutoFollowScrollController();
   String? _scrollConversationId;
   final GlobalKey _inputBarKey = GlobalKey();
+  final GlobalKey _reasoningButtonKey = GlobalKey();
   final GlobalKey _selectionMiniMapKey = GlobalKey();
   final GlobalKey _selectionActionBarKey = GlobalKey();
   bool _scrollNavHovering = false;
@@ -191,6 +196,329 @@ class _HomePageState extends State<HomePage>
   // ============================================================================
 
   late HomePageController _controller;
+  late final QuoteInteractionController _quoteInteractions;
+  bool _quoteSyncScheduled = false;
+  (String?, int)? _quoteSourceVersion;
+  int _quoteJumpSerial = 0;
+  late final ConversationFindController _find;
+  final _findField = TextEditingController();
+  final _findFocus = FocusNode();
+  final _chatFocus = FocusNode(debugLabel: 'Conversation');
+  bool _returnToComposer = false;
+  String? _findConversation;
+  Map<String, int> _findVersions = const {};
+  ValueListenable<int>? _findRevision;
+  final _liveFindRows = <String, ConversationFindCandidate>{};
+  ConversationFindService? _findPresentation;
+
+  ConversationFindService _findService() {
+    final settings = context.read<SettingsProvider>();
+    final id = _controller.currentConversation?.assistantId;
+    return ConversationFindService(
+      assistant: id == null
+          ? null
+          : context.read<AssistantProvider>().getById(id),
+      userMarkdown: settings.enableUserMarkdown,
+      assistantMarkdown: settings.enableAssistantMarkdown,
+      splitAssistantParagraphs: settings.assistantBubbleSplitParagraphs,
+      reasoningMarkdown: settings.enableReasoningMarkdown,
+      parserOptions: markdownParserOptions(settings),
+      translationPlaceholder: AppLocalizations.of(
+        context,
+      )!.chatMessageWidgetTranslating,
+    );
+  }
+
+  ConversationFindCandidate _findSnapshot(ConversationFindCandidate row) {
+    if (!row.streaming ||
+        !_controller.streamingContentNotifier.hasNotifier(row.id)) {
+      return row;
+    }
+    return ConversationFindCandidate(
+      _controller.conversationFindStreamSnapshot(row.toMessage()),
+      surfaces: row.surfaces,
+    );
+  }
+
+  Future<Map<String, List<ConversationFindHit>>> _searchConversation(
+    String query,
+    FindOptions options,
+    bool Function() current,
+  ) async {
+    final id = _controller.currentConversation?.id;
+    if (id == null) return {};
+    final service = _findPresentation = _findService();
+    return service.search(
+      context.read<ChatService>().conversationFindCandidates(id),
+      query,
+      options,
+      isCurrent: current,
+      liveCandidate: (row) {
+        if (row.streaming) _liveFindRows[row.id] = row;
+        return _findSnapshot(row);
+      },
+    );
+  }
+
+  void _onFindTextChanged(String id) {
+    _find.streamChanged(id, () async {
+      final stored = _liveFindRows[id];
+      final message = _controller.messages.where((m) => m.id == id).firstOrNull;
+      final row = message == null
+          ? stored
+          : ConversationFindCandidate(
+              message,
+              surfaces: stored?.surfaces ?? const {},
+            );
+      if (row == null) return const [];
+      final result = await _findService().search(
+        Stream.value([_findSnapshot(row)]),
+        _find.query,
+        _find.options,
+      );
+      return result[id] ?? const [];
+    });
+  }
+
+  Future<void> _revealFind(
+    ConversationFindHit hit,
+    bool Function() valid,
+  ) async {
+    bool current() =>
+        mounted &&
+        valid() &&
+        _controller.currentConversation?.id == _findConversation;
+    final conversationId = _findConversation;
+    if (conversationId == null || !current()) return;
+    await _controller.scrollToMessageId(
+      hit.messageId,
+      stillCurrent: current,
+      beforeScroll: () {
+        if (hit.part == FindPart.translation) {
+          _controller.ensureTranslationExpanded(hit.messageId);
+        }
+        if (hit.part == FindPart.reasoning) {
+          _controller.ensureReasoningExpanded(hit.messageId);
+          if (hit.segment case final index?) {
+            _controller.ensureReasoningSegmentExpanded(hit.messageId, index);
+          }
+        }
+      },
+      revealMatch: (isCurrent, {required waitForMount}) {
+        if (hit.surfaceKey case final key?) {
+          return _controller.uiSearchNavigation.revealMatch(
+            conversationId,
+            hit.messageId,
+            key,
+            isCurrent,
+          );
+        }
+        return scrollToSourceGeometry(
+          locate: () => _quoteInteractions.findRect(hit),
+          scrollToRect: _controller.scrollToSourceRect,
+          isCurrent: isCurrent,
+          waitForMount: waitForMount,
+        );
+      },
+    );
+  }
+
+  void _onFindChanged() {
+    if (!_find.opened || _find.searching || _find.current == null) {
+      _controller.cancelFindJump();
+    }
+  }
+
+  void _onFindHistoryChanged() => _find.refresh();
+
+  void _syncFindSession() {
+    final id = _controller.currentConversation?.id;
+    if (id != _findConversation) {
+      _findRevision?.removeListener(_onFindHistoryChanged);
+      _findRevision = null;
+      _findConversation = id;
+      _findPresentation = null;
+      _findVersions = const {};
+      _liveFindRows.clear();
+      _find.setConversation(id);
+      _findField.clear();
+    } else if (_find.opened &&
+        !mapEquals(_findVersions, _controller.versionSelections)) {
+      _findVersions = Map.of(_controller.versionSelections);
+      _find.refresh(preserve: false);
+    }
+  }
+
+  void _openConversationFind() {
+    if (!mounted) return;
+    _syncFindSession();
+    if (!_find.opened) {
+      _returnToComposer =
+          _inputFocus.hasFocus || _controller.userMessageEditState != null;
+      final id = _findConversation;
+      _findVersions = Map.of(_controller.versionSelections);
+      if (id != null) {
+        _findRevision =
+            context.read<ChatService>().compressionHistoryRevisionListenable(id)
+              ..addListener(_onFindHistoryChanged);
+      }
+    }
+    final selected =
+        _inputFocus.hasFocus &&
+            _inputController.selection.isValid &&
+            !_inputController.selection.isCollapsed
+        ? _inputController.selection.textInside(_inputController.text)
+        : AppSelectionArea.focusedSelection;
+    final wasOpen = _find.opened;
+    _find.open(selection: selected?.trim().isEmpty == true ? null : selected);
+    if (!wasOpen && !PlatformUtils.isDesktop) setState(() {});
+    _findField.value = TextEditingValue(
+      text: _find.query,
+      selection: TextSelection(baseOffset: 0, extentOffset: _find.query.length),
+    );
+    _findFocus.requestFocus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _find.opened) _findFocus.requestFocus();
+    });
+  }
+
+  void _closeConversationFind() {
+    _find.close();
+    if (!PlatformUtils.isDesktop) setState(() {});
+    _controller.uiSearchNavigation.clear();
+    _findRevision?.removeListener(_onFindHistoryChanged);
+    _findRevision = null;
+    _liveFindRows.clear();
+    if (_returnToComposer) {
+      _inputFocus.requestFocus();
+    } else {
+      _chatFocus.requestFocus();
+    }
+  }
+
+  Widget _findKeyBinding(Widget child) {
+    final apple = PlatformUtils.isMacOS || PlatformUtils.isIOS;
+    final shortcut = SingleActivator(
+      LogicalKeyboardKey.keyF,
+      meta: apple,
+      control: !apple,
+    );
+    final claimed =
+        PlatformUtils.isDesktop &&
+        context.select<HotkeyProvider?, bool>(
+          (provider) => provider?.handlesShortcut(shortcut) ?? false,
+        );
+    return CallbackShortcuts(
+      bindings: {if (!claimed) shortcut: _openConversationFind},
+      child: child,
+    );
+  }
+
+  Widget _chatFindShortcuts(Widget body) => _findKeyBinding(
+    Focus(
+      focusNode: _chatFocus,
+      autofocus: true,
+      skipTraversal: true,
+      child: body,
+    ),
+  );
+
+  PreferredSizeWidget _mobileFindHeader() => PreferredSize(
+    preferredSize: const Size.fromHeight(kToolbarHeight),
+    child: _findKeyBinding(
+      SafeArea(
+        bottom: false,
+        child: SizedBox(
+          height: kToolbarHeight,
+          child: _conversationFindBar(desktop: false),
+        ),
+      ),
+    ),
+  );
+
+  ConversationFindBar _conversationFindBar({required bool desktop}) =>
+      ConversationFindBar(
+        find: _find,
+        field: _findField,
+        focusNode: _findFocus,
+        compact: desktop,
+        onClose: _closeConversationFind,
+      );
+
+  void _syncQuoteHighlights() {
+    if (_quoteSyncScheduled) return;
+    _quoteSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _quoteSyncScheduled = false;
+      if (mounted) _quoteInteractions.setDraftQuotes(_inputController.quotes);
+    });
+  }
+
+  Future<void> _insertSelectionQuote(QuoteRef quote) async {
+    final conversationId = _controller.currentConversation?.id;
+    await _inputController.retireMessageInput();
+    if (!mounted) return;
+    try {
+      if (_controller.currentConversation?.id != conversationId) return;
+      final result = _inputController.insertQuote(quote);
+      final l10n = AppLocalizations.of(context)!;
+      if (result == QuoteInsertion.duplicate ||
+          result == QuoteInsertion.limit) {
+        showAppSnackBar(
+          context,
+          message: result == QuoteInsertion.duplicate
+              ? l10n.quoteDuplicate
+              : l10n.quoteLimit,
+        );
+      }
+    } finally {
+      _inputController.resumeInput();
+    }
+    _inputFocus.requestFocus();
+  }
+
+  Future<bool> _jumpToQuote(QuoteRef quote) async {
+    if (!quote.hasSourceRange) return false;
+    final serial = ++_quoteJumpSerial;
+    final previousConversation = _controller.currentConversation?.id;
+    final source = (await context.read<ChatService>().loadMessagesByIds([
+      quote.messageId,
+    ])).firstOrNull;
+    if (!mounted ||
+        serial != _quoteJumpSerial ||
+        _controller.currentConversation?.id != previousConversation) {
+      return false;
+    }
+    final labels = AppLocalizations.of(context)!;
+    if (source == null) {
+      showAppSnackBar(context, message: labels.quoteSourceMissing);
+      return false;
+    }
+    if (_controller.currentConversation?.id != source.conversationId) {
+      await _controller.switchConversationAnimated(source.conversationId);
+    }
+    bool isCurrent() =>
+        mounted &&
+        serial == _quoteJumpSerial &&
+        _controller.currentConversation?.id == source.conversationId;
+    if (!isCurrent()) return false;
+    await _controller.setSelectedVersion(
+      source.groupId ?? source.id,
+      source.version,
+    );
+    if (!isCurrent()) return false;
+    await _controller.scrollToMessageId(source.id);
+    if (!isCurrent()) return false;
+    await _quoteInteractions.scrollToSource(
+      quote,
+      scrollToRect: _controller.scrollToSourceRect,
+      isCurrent: isCurrent,
+    );
+    if (!mounted || !isCurrent()) return false;
+    _quoteInteractions.reveal(quote);
+    showAppSnackBar(context, message: labels.quoteLocated);
+    return true;
+  }
 
   // ============================================================================
   // Lifecycle
@@ -214,6 +542,23 @@ class _HomePageState extends State<HomePage>
       scrollController: _scrollController,
     );
 
+    _find = ConversationFindController(
+      search: _searchConversation,
+      onReveal: _revealFind,
+    )..addListener(_onFindChanged);
+    _controller.onFindTextChanged = _onFindTextChanged;
+    _controller.onFindGenerationFinished = (id) {
+      if (id == _findConversation) {
+        _liveFindRows.clear();
+        _find.refresh();
+      }
+    };
+    _quoteInteractions = QuoteInteractionController(
+      onQuote: _insertSelectionQuote,
+      onJump: _jumpToQuote,
+      sourceExists: (id) => context.read<ChatService>().messageExists(id),
+    );
+    _inputController.addListener(_syncQuoteHighlights);
     _controller.onRevealConversation = () => _drawerController.jumpTo(0);
     _controller.addListener(_onControllerChanged);
     _drawerController.addListener(_onDrawerValueChanged);
@@ -277,9 +622,18 @@ class _HomePageState extends State<HomePage>
     } catch (_) {}
     _processTextSub?.cancel();
     _incomingShares?.dispose();
+    _findRevision?.removeListener(_onFindHistoryChanged);
+    _controller.onFindTextChanged = null;
+    _controller.onFindGenerationFinished = null;
+    _find.dispose();
+    _findFocus.dispose();
+    _findField.dispose();
+    _chatFocus.dispose();
     _controller.removeListener(_onControllerChanged);
     _drawerController.removeListener(_onDrawerValueChanged);
     _controller.dispose();
+    _inputController.removeListener(_syncQuoteHighlights);
+    _quoteInteractions.dispose();
     _inputFocus.dispose();
     _inputController.dispose();
     _scrollController.dispose();
@@ -312,10 +666,13 @@ class _HomePageState extends State<HomePage>
         void retry() => _controller.compressContext(
           options: task.options,
           targetConversationId: task.conversationId,
+          beforeMessageId: task.protectedMessageId,
+          effectiveMessageIds: task.effectiveMessageIds,
         );
         void options() => _showCompressContextOptions(
           targetConversationId: task.conversationId,
           initialOptions: task.options,
+          initialError: task.error,
           reviewPending: false,
         );
         switch (phase) {
@@ -361,11 +718,11 @@ class _HomePageState extends State<HomePage>
           case CompressionPhase.review:
             showAppSnackBar(
               context,
-              message: task.error == 'context_budget_exceeded'
-                  ? l10n.compressOverSnack
-                  : l10n.contextSummaryNotSmaller,
+              message: task.error == null
+                  ? l10n.compressionPreviewOnly
+                  : compressionErrorLabel(l10n, task.error!),
               type: NotificationType.warning,
-              actionLabel: l10n.compressAdjust,
+              actionLabel: l10n.contextViewGenerated,
               onAction: () => showCompressionReview(
                 context,
                 chat: chat,
@@ -375,30 +732,21 @@ class _HomePageState extends State<HomePage>
             );
           case CompressionPhase.failed:
           case CompressionPhase.interrupted:
-            final stale = task.error?.contains('context_changed') ?? false;
-            final nothing = task.error?.contains('no_messages') ?? false;
-            final reason = compressionErrorLabel(
+            final action = compressionRecoveryActions(
               l10n,
-              task.error ?? l10n.contextTaskInterrupted,
-            ).split('\n').first;
+              error: task.error,
+              native: task.options.native,
+              onRetry: retry,
+              onAdjust: options,
+            ).first;
             showAppSnackBar(
               context,
-              message: stale
-                  ? l10n.compressStaleSnack
-                  : nothing
-                  ? l10n.compressNothingNew
-                  : l10n.compressFailedSnack(
-                      reason.length > 160
-                          ? '${reason.substring(0, 160)}…'
-                          : reason,
-                    ),
+              message: task.error == null
+                  ? compressionStatusLabel(l10n, task)
+                  : compressionErrorLabel(l10n, task.error!),
               type: NotificationType.warning,
-              actionLabel: nothing
-                  ? l10n.compressAdjust
-                  : stale
-                  ? l10n.compressRegenerate
-                  : l10n.compressTaskRetry,
-              onAction: nothing ? options : retry,
+              actionLabel: action.label,
+              onAction: action.onTap,
             );
           default:
             break;
@@ -448,8 +796,19 @@ class _HomePageState extends State<HomePage>
   }
 
   void _onControllerChanged() {
+    _syncFindSession();
     _observeCompression();
     final conversationId = _controller.currentConversation?.id;
+    final quoteVersion = (
+      conversationId,
+      conversationId == null
+          ? 0
+          : context.read<ChatService>().getMessageCount(conversationId),
+    );
+    if (quoteVersion != _quoteSourceVersion) {
+      _quoteSourceVersion = quoteVersion;
+      _quoteInteractions.refreshSources();
+    }
     if (conversationId != null && conversationId != _scrollConversationId) {
       _scrollConversationId = conversationId;
       final previous = _scrollController;
@@ -637,7 +996,10 @@ class _HomePageState extends State<HomePage>
             onDraft: _controller.stageUiDraft,
             child: UiSearchNavigationScope(
               navigation: _controller.uiSearchNavigation,
-              child: _buildPage(context),
+              child: QuoteInteractionScope(
+                controller: _quoteInteractions,
+                child: _buildPage(context),
+              ),
             ),
           ),
         ),
@@ -645,9 +1007,22 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildPage(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
+    final desktop = !kIsWeb && _controller.isDesktopPlatform;
     final cs = Theme.of(context).colorScheme;
     final settings = context.watch<SettingsProvider>();
     final assistant = context.watch<AssistantProvider>().currentAssistant;
+    final previous = _findPresentation;
+    if (_find.opened && previous != null) {
+      final next = _findService();
+      if (!previous.usesSamePresentation(next)) {
+        _findPresentation = next;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _find.opened && identical(_findPresentation, next)) {
+            _find.refresh();
+          }
+        });
+      }
+    }
 
     final modelInfo = getModelDisplayInfo(
       settings,
@@ -655,16 +1030,12 @@ class _HomePageState extends State<HomePage>
       assistant: assistant,
     );
 
-    final title = _controller.isTemporaryConversation
-        ? AppLocalizations.of(context)!.temporaryChatTitle
-        : ((_controller.currentConversation?.title ?? '').trim().isNotEmpty)
-        ? _controller.currentConversation!.title
-        : _controller.titleForLocale();
-
-    if (width >= AppBreakpoints.tablet) {
+    _controller.setCompactDesktopLayout(
+      desktop && width < AppBreakpoints.tablet,
+    );
+    if (desktop || width >= AppBreakpoints.tablet) {
       return _buildTabletLayout(
         context,
-        title: title,
         providerName: modelInfo.providerName,
         modelDisplay: modelInfo.modelDisplay,
         cs: cs,
@@ -673,7 +1044,6 @@ class _HomePageState extends State<HomePage>
 
     return _buildMobileLayout(
       context,
-      title: title,
       providerName: modelInfo.providerName,
       modelDisplay: modelInfo.modelDisplay,
       cs: cs,
@@ -682,7 +1052,6 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildMobileLayout(
     BuildContext context, {
-    required String title,
     required String? providerName,
     required String? modelDisplay,
     required ColorScheme cs,
@@ -694,7 +1063,7 @@ class _HomePageState extends State<HomePage>
       drawerController: _drawerController,
       assistantPickerCloseTick: _assistantPickerCloseTick,
       loadingConversationIds: _controller.loadingConversationIds,
-      title: title,
+      conversationId: _controller.currentConversation?.id,
       providerName: providerName,
       modelDisplay: modelDisplay,
       onToggleDrawer: () => _drawerController.toggle(),
@@ -736,7 +1105,9 @@ class _HomePageState extends State<HomePage>
             messageId: msgId,
             surfaceKey: surfaceKey,
           ),
-      appBarOverride: _controller.selecting
+      appBarOverride: _find.opened
+          ? _mobileFindHeader()
+          : _controller.selecting
           ? ChatSelectionAppBar(
               selectedCount: _controller.selectedCount,
               allSelected: allSelected,
@@ -749,7 +1120,9 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildMobileBody(context, cs)),
+      body: _chatFindShortcuts(
+        _wrapWithDropTarget(_buildMobileBody(context, cs)),
+      ),
     );
   }
 
@@ -811,7 +1184,6 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildTabletLayout(
     BuildContext context, {
-    required String title,
     required String? providerName,
     required String? modelDisplay,
     required ColorScheme cs,
@@ -824,21 +1196,25 @@ class _HomePageState extends State<HomePage>
       scaffoldKey: _scaffoldKey,
       assistantPickerCloseTick: _assistantPickerCloseTick,
       loadingConversationIds: _controller.loadingConversationIds,
-      title: title,
+      conversationId: _controller.currentConversation?.id,
       providerName: providerName,
       modelDisplay: modelDisplay,
+      modelProviderKey: _resolvedChatModel().providerKey,
+      modelId: _resolvedChatModel().modelId,
+      compact:
+          _controller.isDesktopPlatform &&
+          MediaQuery.sizeOf(context).width < AppBreakpoints.tablet,
       tabletSidebarOpen: _controller.tabletSidebarOpen,
-      rightSidebarOpen: _controller.rightSidebarOpen,
       embeddedSidebarWidth: _controller.embeddedSidebarWidth,
-      rightSidebarWidth: _controller.rightSidebarWidth,
       sidebarMinWidth: HomePageController.sidebarMinWidth,
       sidebarMaxWidth: HomePageController.sidebarMaxWidth,
       onToggleSidebar: _controller.toggleTabletSidebar,
-      onToggleRightSidebar: _controller.toggleRightSidebar,
       onSelectConversation: (id) {
+        _controller.closeCompactSidebar();
         _controller.switchConversationAnimated(id);
       },
       onNewConversation: () async {
+        _controller.closeCompactSidebar();
         await _controller.createNewConversationAnimated();
       },
       onCreateNewConversation: () async {
@@ -855,20 +1231,22 @@ class _HomePageState extends State<HomePage>
       globalSearchMode: _controller.isGlobalSearchMode,
       globalSearchQuery: _controller.globalSearchQuery,
       onGlobalSearchQueryChanged: _controller.setGlobalSearchQuery,
-      onOpenGlobalSearchResult: (convId, msgId, surfaceKey) =>
-          _controller.openGlobalSearchResult(
-            conversationId: convId,
-            messageId: msgId,
-            surfaceKey: surfaceKey,
-          ),
+      onOpenGlobalSearchResult: (convId, msgId, surfaceKey) {
+        _controller.closeCompactSidebar();
+        return _controller.openGlobalSearchResult(
+          conversationId: convId,
+          messageId: msgId,
+          surfaceKey: surfaceKey,
+        );
+      },
       onSelectModel: () =>
           showModelSelectSheet(context, controller: _controller),
       onSidebarWidthChanged: _controller.updateSidebarWidth,
       onSidebarWidthChangeEnd: _controller.saveSidebarWidth,
-      onRightSidebarWidthChanged: _controller.updateRightSidebarWidth,
-      onRightSidebarWidthChangeEnd: _controller.saveRightSidebarWidth,
       buildAssistantBackground: _buildAssistantBackground,
-      appBarOverride: _controller.selecting
+      appBarOverride: !PlatformUtils.isDesktop && _find.opened
+          ? _mobileFindHeader()
+          : _controller.selecting
           ? ChatSelectionAppBar(
               selectedCount: _controller.selectedCount,
               allSelected: allSelected,
@@ -881,7 +1259,9 @@ class _HomePageState extends State<HomePage>
               onInvertSelection: _controller.invertSelection,
             )
           : null,
-      body: _wrapWithDropTarget(_buildTabletBody(context, cs)),
+      body: _chatFindShortcuts(
+        _wrapWithDropTarget(_buildTabletBody(context, cs)),
+      ),
     );
   }
 
@@ -922,33 +1302,22 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildSelectionActionBar(BuildContext context) {
-    if (_controller.selectionMode == ChatSelectionMode.delete) {
-      return ChatSelectionDeleteBar(
-        key: _selectionActionBarKey,
-        hasMultiVersionSelection:
-            _controller.selectedMessagesIncludeMultipleVersions,
-        onDeleteCurrentVersions: () {
-          unawaited(
-            _handleDeleteSelectedMessages(context, deleteAllVersions: false),
-          );
-        },
-        onDeleteAllVersions: () {
-          unawaited(
-            _handleDeleteSelectedMessages(context, deleteAllVersions: true),
-          );
-        },
-      );
-    }
-
-    return ChatSelectionExportBar(
+    return ChatSelectionActionBar(
       key: _selectionActionBarKey,
-      onExportMarkdown: _controller.exportSelectedAsMarkdown,
-      onExportTxt: _controller.exportSelectedAsTxt,
-      onExportImage: _controller.exportSelectedAsImage,
-      showThinkingTools: _controller.showThinkingTools,
-      showThinkingContent: _controller.showThinkingContent,
-      onToggleThinkingTools: _controller.toggleThinkingTools,
-      onToggleThinkingContent: _controller.toggleThinkingContent,
+      hasSelection: _controller.selectedCount > 0,
+      hasMultiVersionSelection:
+          _controller.selectedMessagesIncludeMultipleVersions,
+      onShare: _controller.exportSelectedMessages,
+      onDeleteCurrentVersions: () {
+        unawaited(
+          _handleDeleteSelectedMessages(context, deleteAllVersions: false),
+        );
+      },
+      onDeleteAllVersions: () {
+        unawaited(
+          _handleDeleteSelectedMessages(context, deleteAllVersions: true),
+        );
+      },
     );
   }
 
@@ -1114,10 +1483,14 @@ class _HomePageState extends State<HomePage>
         onRetry: () => _controller.compressContext(
           options: task.options,
           targetConversationId: task.conversationId,
+          beforeMessageId: task.protectedMessageId,
+          effectiveMessageIds: task.effectiveMessageIds,
         ),
         onAdjust: () => _showCompressContextOptions(
           targetConversationId: task.conversationId,
           initialOptions: task.options,
+          initialError: task.error,
+          reviewPending: false,
         ),
       ),
       contextOperations: contextOperations,
@@ -1129,12 +1502,7 @@ class _HomePageState extends State<HomePage>
         onViewOriginal: _controller.scrollToMessageId,
         onRecompress: () =>
             _showCompressContextOptions(targetConversationId: conversationId),
-        onContinueNewChat: () async {
-          final copy = await chat.duplicateConversation(conversationId);
-          if (mounted && copy != null) {
-            await _controller.switchConversationAnimated(copy.id);
-          }
-        },
+        onOpenConversation: _controller.switchConversationAnimated,
       ),
       onUndoContextOperation: (operation) =>
           changeContextOperationWithConfirmation(
@@ -1163,6 +1531,7 @@ class _HomePageState extends State<HomePage>
       bottomContentPadding: bottomContentPadding,
       dividerPadding: dividerPadding,
       streamingContentNotifier: _controller.streamingContentNotifier,
+      conversationFind: _find,
       spotlightMessageId: _controller.spotlightMessageId,
       spotlightToken: _controller.spotlightToken,
       removingSlotIds: _controller.removingSlotIds,
@@ -1171,7 +1540,10 @@ class _HomePageState extends State<HomePage>
       onLoadMoreBefore: _controller.loadMoreBefore,
       hasMoreAfter: _controller.chatController.hasMoreAfter,
       onLoadMoreAfter: _controller.loadMoreAfter,
-      onUserScrollIntent: _controller.scrollCtrl.handleUserScrollIntent,
+      onUserScrollIntent: () {
+        _controller.cancelFindJump();
+        _controller.scrollCtrl.handleUserScrollIntent();
+      },
       chatFontScale: settings.chatFontScale,
       collapseThinking: settings.autoCollapseThinking,
       collapseThinkingSteps: settings.collapseThinkingSteps,
@@ -1199,28 +1571,35 @@ class _HomePageState extends State<HomePage>
       },
       onRegenerateMessage: (message) =>
           _controller.regenerateAtMessage(message),
+      onRetryWithoutImages: (message) =>
+          _controller.regenerateAtMessage(message, omitImages: true),
+      onSetContextStart: (message) async {
+        try {
+          await chat.setConversationContextStart(
+            message.conversationId,
+            message.id,
+          );
+        } catch (error) {
+          if (!context.mounted) return;
+          showAppSnackBar(
+            context,
+            message: error.toString(),
+            type: NotificationType.error,
+          );
+        }
+      },
       onResendMessage: (message) => _controller.regenerateAtMessage(message),
       onTranslateMessage: (message) => _controller.translateMessage(message),
       onEditMessage: (message) => _controller.editMessage(message),
       onContinueImageGeneration: (message) =>
           _controller.continueImageGeneration(message),
-      onDeleteMessage: (message, byGroup) =>
-          _handleDeleteMessage(context, message, byGroup),
-      onDeleteAllVersions: (message, byGroup) => _handleDeleteMessage(
-        context,
-        message,
-        byGroup,
-        deleteAllVersions: true,
-      ),
+      onDeleteMessage: _controller.deleteMessageVersions,
       onForkConversation: _controller.isTemporaryConversation
           ? null
           : (message) => _controller.forkConversation(message),
-      onShareMessage: (index, messages) =>
-          _controller.shareMessage(index, messages),
       onSelectMessages: (index, messages) => _controller.startMessageSelection(
         messageIndex: index,
         messageList: messages,
-        mode: ChatSelectionMode.delete,
       ),
       onSpeakMessage: (message) => _controller.speakMessage(message),
       onSuggestionTap: (suggestion) => _controller.sendSuggestion(suggestion),
@@ -1242,14 +1621,35 @@ class _HomePageState extends State<HomePage>
   }
 
   Widget _buildChatInputBar(BuildContext context, {required bool isTablet}) {
-    final conversation = _controller.currentConversation;
+    final conversation = watchComposerConversation(
+      context,
+      _controller.currentConversation,
+    );
     final settings = context.watch<SettingsProvider>();
+    final assistants = context.watch<AssistantProvider>();
+    // The toolbar edits the selected assistant's capabilities. During a switch
+    // its model can differ briefly from the conversation that owns this draft.
     final chatModel = resolveChatModel(
       settings,
       conversation: conversation,
-      assistant: context.watch<AssistantProvider>().currentAssistant,
+      assistant: assistants.currentAssistant,
+    );
+    final owner = assistants.resolveConversationAssistant(
+      conversation?.assistantId,
     );
     return ChatInputSection(
+      documentRoute: resolveComposerDocumentRoute(
+        context,
+        conversation: conversation,
+        settings: settings,
+        assistant: owner,
+        model: resolveChatModel(
+          settings,
+          conversation: conversation,
+          assistant: owner,
+        ),
+        listen: true,
+      ),
       inputBarKey: _inputBarKey,
       chatModelProviderKey: chatModel.providerKey,
       chatModelId: chatModel.modelId,
@@ -1298,12 +1698,21 @@ class _HomePageState extends State<HomePage>
           assistantId: assistant?.id,
         );
         if (id == null || !context.mounted) return;
-        await showDesktopSkillsPopover(
-          context,
-          anchorKey: _inputBarKey,
-          conversationId: id,
-          assistant: assistant,
-        );
+        if (_controller.isDesktopPlatform) {
+          await showDesktopSkillsPopover(
+            context,
+            anchorKey: _inputBarKey,
+            conversationId: id,
+            assistant: assistant,
+          );
+        } else {
+          _controller.dismissKeyboard();
+          await showConversationSkillsSheet(
+            context,
+            conversationId: id,
+            assistant: assistant,
+          );
+        }
       },
       onOpenTools: () {
         final a = context.read<AssistantProvider>().currentAssistant;
@@ -1313,6 +1722,7 @@ class _HomePageState extends State<HomePage>
             context,
             anchorKey: _inputBarKey,
             assistantId: a.id,
+            conversationId: _controller.currentConversation?.id,
             supportsModelTools:
                 chatModel.providerKey != null &&
                 chatModel.modelId != null &&
@@ -1336,6 +1746,7 @@ class _HomePageState extends State<HomePage>
         ).push(MaterialPageRoute(builder: (_) => const McpPage()));
       },
       onOpenSearch: _openSearchSettings,
+      reasoningButtonKey: _reasoningButtonKey,
       onConfigureReasoning: () async {
         await _openReasoningSettings();
       },
@@ -1389,6 +1800,7 @@ class _HomePageState extends State<HomePage>
       onLongPressLearning: _showLearningPromptSheet,
       onClearContext: _clearContextWithNotice,
       onCompressContext: _handleDesktopCompressContext,
+      onContextOperations: _showContextOperations,
       backgroundImageActive: _assistantBackgroundActive(context),
     );
   }
@@ -1460,57 +1872,84 @@ class _HomePageState extends State<HomePage>
       fit: StackFit.expand,
       children: [
         _buildScrollButtons(),
-        UserMessageEditOverlay(
-          visible: editState != null && !_controller.selecting,
-          previewText: editState?.previewText ?? '',
-          topInset: _chatTopOverlayInset(context),
-          bottomInset: _controller.inputBarHeight,
-          onCancel: _controller.cancelUserMessageEdit,
-          onSaveOnly: () {
-            unawaited(_controller.saveUserMessageEditOnly());
-          },
-          onPreviewTap: _controller.focusUserMessageEditInput,
+        ListenableBuilder(
+          listenable: _find,
+          builder: (_, _) => UserMessageEditOverlay(
+            visible:
+                editState != null && !_controller.selecting && !_find.opened,
+            previewText: editState?.previewText ?? '',
+            topInset: _chatTopOverlayInset(context),
+            bottomInset: _controller.inputBarHeight,
+            onCancel: _controller.cancelUserMessageEdit,
+            onSaveOnly: () {
+              unawaited(_controller.saveUserMessageEditOnly());
+            },
+            onPreviewTap: _controller.focusUserMessageEditInput,
+          ),
         ),
+        if (PlatformUtils.isDesktop)
+          Positioned(
+            top: _chatTopOverlayInset(context) + 4,
+            left: 8,
+            right: 8,
+            child: ListenableBuilder(
+              listenable: _find,
+              child: _conversationFindBar(desktop: true),
+              builder: (_, bar) => _find.opened
+                  ? Align(
+                      alignment: AlignmentDirectional.topEnd,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: bar,
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ),
       ],
     );
   }
 
   Future<void> _openMiniMap() async {
+    final conversation = _controller.currentConversation?.id;
     final collapsed = await _controller
         .loadAllCollapsedMessagesForCurrentConversation();
-    if (!mounted) return;
-    if (collapsed.isEmpty) return;
+    if (!mounted || _controller.currentConversation?.id != conversation) return;
+    void openFind() {
+      if (mounted && _controller.currentConversation?.id == conversation) {
+        _openConversationFind();
+      }
+    }
 
     String? selectedId;
-    String? selectedSurface;
     if (PlatformUtils.isDesktop) {
       selectedId = await showDesktopMiniMapPopover(
         context,
         anchorKey: _inputBarKey,
         messages: collapsed,
+        onOpenConversationFind: openFind,
       );
     } else {
       selectedId = await showMiniMapSheet(
         context,
         collapsed,
-        onSearch: (query) => _controller.searchMiniMapMatches(query),
-        onSearchHitSelected: (hit) => selectedSurface = hit.matchedSurfaceKey,
+        onOpenConversationFind: openFind,
       );
     }
-    if (!mounted) return;
+    if (!mounted || _controller.currentConversation?.id != conversation) return;
     if (selectedId != null && selectedId.isNotEmpty) {
-      await _controller.scrollToMessageId(
-        selectedId,
-        useRikkaTransition: true,
-        surfaceKey: selectedSurface,
-      );
+      await _controller.scrollToMessageId(selectedId, useRikkaTransition: true);
     }
   }
 
   Widget _wrapMessageJumpTransition(Widget child) {
     return FadeTransition(
       opacity: _controller.messageJumpOpacity,
-      child: child,
+      child: SnapshotWidget(
+        controller: _controller.findViewportSnapshot,
+        mode: SnapshotMode.permissive,
+        child: child,
+      ),
     );
   }
 
@@ -1608,11 +2047,21 @@ class _HomePageState extends State<HomePage>
   Future<void> _openContextUsagePopover() async {
     final conversationId = _controller.currentConversation?.id;
     if (conversationId == null || conversationId.isEmpty) return;
+    final imageTarget = _mediaController.capture();
     await showContextUsagePopover(
       context,
+      onAttachImage: (path) {
+        if (imageTarget.isValid) imageTarget.addImages([path]);
+      },
       anchorKey: _inputBarKey,
       conversationId: conversationId,
-      draftText: _inputController.text,
+      draftText: formatQuotedMessage(
+        _inputController.text,
+        _inputController.quotes,
+        quoteMarker: AppLocalizations.of(context)!.selectionQuoteMarker,
+      ),
+      onOperations: () =>
+          _showContextOperations(targetConversationId: conversationId),
     );
   }
 
@@ -1627,13 +2076,20 @@ class _HomePageState extends State<HomePage>
       return;
     }
     final assistant = context.read<AssistantProvider>().currentAssistant;
+    final conversationId = await ensureConversationId(
+      context,
+      conversationId: _controller.currentConversation?.id,
+      assistantId: assistant?.id,
+    );
+    if (!mounted) return;
     if (PlatformUtils.isDesktop) {
       await showDesktopReasoningLevelPopover(
         context,
-        anchorKey: _inputBarKey,
+        anchorKey: _reasoningButtonKey,
         config: config,
         modelId: modelId,
         assistant: assistant,
+        conversationId: conversationId,
       );
     } else {
       await showReasoningLevelSheet(
@@ -1641,6 +2097,7 @@ class _HomePageState extends State<HomePage>
         config: config,
         modelId: modelId,
         assistant: assistant,
+        conversationId: conversationId,
       );
     }
   }
@@ -1774,6 +2231,8 @@ class _HomePageState extends State<HomePage>
   }
 
   void _showContextManagementSheet() async {
+    final imageTarget = _mediaController.capture();
+    final imageConversationId = _controller.currentConversation?.id;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1785,9 +2244,35 @@ class _HomePageState extends State<HomePage>
         return SafeArea(
           top: false,
           child: ContextManagementSheet(
+            onOperations: imageConversationId == null
+                ? null
+                : () async {
+                    await Navigator.of(ctx).maybePop();
+                    if (mounted) {
+                      await _showContextOperations(
+                        targetConversationId: imageConversationId,
+                      );
+                    }
+                  },
+            onImages: imageConversationId == null
+                ? null
+                : () async {
+                    await Navigator.of(ctx).maybePop();
+                    if (!mounted) return;
+                    await showImageContextPanel(
+                      context,
+                      imageConversationId,
+                      onAttach: (path) {
+                        if (imageTarget.isValid) imageTarget.addImages([path]);
+                      },
+                    );
+                  },
             conversationId: _controller.currentConversation?.id,
-            draftText: _inputController.text,
-            messageCountLabel: _controller.contextMessageCountLabel(),
+            draftText: formatQuotedMessage(
+              _inputController.text,
+              _inputController.quotes,
+              quoteMarker: AppLocalizations.of(context)!.selectionQuoteMarker,
+            ),
             onCompress: () async {
               await Navigator.of(ctx).maybePop();
               if (!mounted) return;
@@ -1807,9 +2292,56 @@ class _HomePageState extends State<HomePage>
     await _showCompressContextOptions();
   }
 
+  Future<void> _showContextOperations({String? targetConversationId}) async {
+    final id = targetConversationId ?? _controller.currentConversation?.id;
+    if (id == null) return;
+    final chat = context.read<ChatService>();
+    final conversation = chat.getConversation(id);
+    if (conversation == null) return;
+    final assistant = context
+        .read<AssistantProvider>()
+        .resolveConversationAssistant(conversation.assistantId);
+    await showContextOperations(
+      context,
+      chat: chat,
+      conversationId: id,
+      messageLimit: assistant?.limitContextMessages == true
+          ? assistant!.contextMessageSize
+          : 0x7fffffff,
+      onOpenOperation: (operation) => showContextOperationDetails(
+        context,
+        chat: chat,
+        conversationId: id,
+        operation: operation,
+        onViewOriginal: (messageId) async {
+          if (_controller.currentConversation?.id == id) {
+            await _controller.scrollToMessageId(messageId);
+          }
+        },
+        onRecompress: () =>
+            _showCompressContextOptions(targetConversationId: id),
+        onOpenConversation: _controller.switchConversationAnimated,
+      ),
+      onRetry: (task) => _controller.compressContext(
+        options: task.options,
+        targetConversationId: id,
+        beforeMessageId: task.protectedMessageId,
+        effectiveMessageIds: task.effectiveMessageIds,
+      ),
+      onAdjust: (task) => _showCompressContextOptions(
+        targetConversationId: id,
+        initialOptions: task.options,
+        initialError: task.error,
+        reviewPending: false,
+      ),
+      onOpenConversation: _controller.switchConversationAnimated,
+    );
+  }
+
   Future<void> _showCompressContextOptions({
     String? targetConversationId,
     CompressContextOptions? initialOptions,
+    String? initialError,
     bool reviewPending = true,
   }) async {
     final chat = context.read<ChatService>();
@@ -1826,6 +2358,7 @@ class _HomePageState extends State<HomePage>
         onRecompress: () => _showCompressContextOptions(
           targetConversationId: conversation.id,
           initialOptions: pending.options,
+          initialError: pending.error,
           reviewPending: false,
         ),
       );
@@ -1837,23 +2370,46 @@ class _HomePageState extends State<HomePage>
     final messageWindow = assistant?.limitContextMessages == true
         ? assistant!.contextMessageSize
         : null;
-    final snapshot = await chat.loadContextSnapshot(conversation.id);
-    if (!mounted) return;
-    final estimator = chat.contextCompression.estimateCandidate;
-    final options = await showDialog<CompressContextOptions>(
+    Future<ConversationContextHistory>? previewHistory;
+    var previewRevision = -1;
+    final options = await showCompressContextOptions(
       context: context,
-      builder: (_) => CompressContextOptionsDialog(
-        messages: snapshot.messages,
-        operations: snapshot.operations,
+      builder: (sheet) => CompressContextOptionsDialog(
+        sheet: sheet,
+        conversationId: conversation.id,
+        loadHistory: () => chat.loadCompressionHistory(conversation.id),
+        historyRevision: chat.compressionHistoryRevisionListenable(
+          conversation.id,
+        ),
+        previewCarried: (options, config) async {
+          return _controller.previewCarriedMessages(
+            conversation.id,
+            options,
+            config,
+          );
+        },
+        previewRequest: (options, config) {
+          final revision = chat.compressionHistoryRevision(conversation.id);
+          if (previewHistory == null || previewRevision != revision) {
+            previewRevision = revision;
+            previewHistory = chat.loadContextHistory(conversation.id);
+          }
+          final history = previewHistory!;
+          return _controller
+              .previewCompressionRequest(
+                conversation.id,
+                options,
+                config,
+                history: history,
+              )
+              .catchError((Object error, StackTrace stack) {
+                if (identical(previewHistory, history)) previewHistory = null;
+                Error.throwWithStackTrace(error, stack);
+              });
+        },
         messageWindow: messageWindow,
         initialOptions: initialOptions,
-        prepareInput: (messages, include) => chat.messagesForCompression(
-          messages,
-          includeAttachmentsAndTools: include,
-        ),
-        estimateContext: estimator == null
-            ? null
-            : (history) => estimator(conversation.id, history),
+        initialError: initialError,
       ),
     );
     if (options == null || !mounted) return;
@@ -1862,13 +2418,21 @@ class _HomePageState extends State<HomePage>
       targetConversationId: conversation.id,
     );
     if (error != null && mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      final target = compressionRecoveryTarget(error, native: options.native);
       showAppSnackBar(
         context,
-        message: _compressContextErrorMessage(
-          AppLocalizations.of(context)!,
-          error,
-        ),
+        message: compressionErrorLabel(l10n, error),
         type: NotificationType.warning,
+        actionLabel: target?.label(l10n) ?? l10n.ttsServicesDialogErrorTitle,
+        onAction: () => target == null
+            ? showCompressionErrorDetails(context, error)
+            : _showCompressContextOptions(
+                targetConversationId: conversation.id,
+                initialOptions: options,
+                initialError: error,
+                reviewPending: false,
+              ),
       );
     }
   }
@@ -1912,54 +2476,6 @@ class _HomePageState extends State<HomePage>
     if (selected != null && mounted) {
       await _controller.handleQuickPhraseSelection(selected);
     }
-  }
-
-  Future<void> _handleDeleteMessage(
-    BuildContext context,
-    ChatMessage message,
-    Map<String, List<ChatMessage>> byGroup, {
-    bool deleteAllVersions = false,
-  }) async {
-    final l10n = AppLocalizations.of(context)!;
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          deleteAllVersions
-              ? l10n.homePageDeleteAllVersions
-              : l10n.homePageDeleteMessage,
-        ),
-        content: Text(
-          deleteAllVersions
-              ? l10n.homePageDeleteAllVersionsConfirm
-              : l10n.homePageDeleteMessageConfirm,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.homePageCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              l10n.homePageDelete,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-
-    if (deleteAllVersions) {
-      await _controller.deleteAllMessageVersions(
-        message: message,
-        byGroup: byGroup,
-      );
-      return;
-    }
-
-    await _controller.deleteMessage(message: message, byGroup: byGroup);
   }
 
   Future<void> _handleDeleteSelectedMessages(

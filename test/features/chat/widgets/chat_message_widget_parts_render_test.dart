@@ -2,11 +2,17 @@ import '../../../support/markdown_render_helpers.dart';
 import '../../../support/business_test_harness.dart';
 import 'package:Kelivo/core/models/chat_message.dart';
 import 'package:Kelivo/core/models/message_part.dart';
+import 'package:Kelivo/core/models/message_part_snapshot.dart';
 import 'package:Kelivo/core/models/token_usage.dart';
 import 'package:Kelivo/core/providers/settings_provider.dart';
 import 'package:Kelivo/core/providers/tts_provider.dart';
 import 'package:Kelivo/features/chat/pages/image_viewer_page.dart';
 import 'package:Kelivo/features/chat/widgets/chat_message_widget.dart';
+import 'package:Kelivo/features/chat/services/conversation_find_service.dart';
+import 'package:Kelivo/shared/markdown/markdown_with_code_highlight.dart';
+import 'package:Kelivo/shared/widgets/app_selection_area.dart';
+import 'package:Kelivo/features/chat/widgets/quote_source_anchor.dart';
+import 'package:markstream/markstream.dart' show MarkstreamSelectionScope;
 import 'package:Kelivo/features/chat/widgets/timeline_projection.dart';
 import 'package:Kelivo/features/chat/widgets/token_display_widget.dart';
 import 'package:Kelivo/features/home/controllers/stream_controller.dart';
@@ -64,6 +70,97 @@ void expectAbove(WidgetTester tester, Object upper, Object lower) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets(
+    'pending tools use bounded status animation and settle on finish',
+    (tester) async {
+      Widget message(bool loading) => _buildHarness(
+        child: ChatMessageWidget(
+          message: ChatMessage(
+            id: 'waiting-tool',
+            role: 'assistant',
+            conversationId: 'c',
+            content: '',
+            isStreaming: loading,
+          ),
+          showModelIcon: false,
+          toolParts: [
+            ToolUIPart(
+              id: 'remote-tool',
+              toolName: 'remote_lookup',
+              arguments: const {'query': 'test'},
+              loading: loading,
+              content: loading ? null : 'Finished',
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(message(true));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(LoadingIndicator), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(tester.binding.transientCallbackCount, 0);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      await tester.pumpWidget(message(false));
+      await tester.pumpAndSettle();
+      expect(find.byType(LoadingIndicator), findsNothing);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.binding.hasScheduledFrame, isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('empty reasoning card follows activity without text changes', (
+    tester,
+  ) async {
+    final parts = MessagePartSnapshotBuilder(
+      arrivalOrdered: true,
+    ).update(const [ReasoningPart('')]);
+    final startedAt = DateTime.now();
+    var loading = true;
+    late StateSetter update;
+    await tester.pumpWidget(
+      _buildHarness(
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            return ChatMessageWidget(
+              message: ChatMessage(
+                id: 'empty-reasoning',
+                role: 'assistant',
+                conversationId: 'c',
+                isStreaming: true,
+                parts: parts,
+              ),
+              showModelIcon: false,
+              reasoningSegments: [
+                ReasoningSegment(
+                  text: '',
+                  expanded: false,
+                  loading: loading,
+                  startAt: startedAt,
+                  finishedAt: loading
+                      ? null
+                      : startedAt.add(const Duration(seconds: 1)),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    final context = tester.element(find.byType(ChatMessageWidget));
+    final label = AppLocalizations.of(context)!.chatMessageWidgetDeepThinking;
+    expect(find.text(label), findsOneWidget);
+    update(() => loading = false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text(label), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
   testWidgets('token footer switches between finish and total usage', (
     tester,
   ) async {
@@ -80,6 +177,7 @@ void main() {
       cacheWriteTokens: 30,
       reasoningTokens: 5,
       durationMs: 5000,
+      firstResponseMs: 100,
       firstTokenMs: 250,
       finishUsage: const TokenUsage(
         promptTokens: 200,
@@ -107,6 +205,7 @@ void main() {
       expect(display.cacheWriteTokens, enabled ? 30 : 0);
       expect(display.reasoningTokens, enabled ? 5 : 0);
       expect(display.durationMs, 5000);
+      expect(display.firstResponseMs, 100);
       expect(display.firstTokenMs, 250);
       expect(display.totalCompletionTokens, 50);
       expect(message.totalTokens, 350);
@@ -369,6 +468,50 @@ void main() {
     expectAbove(tester, 'hello', 'lookup');
     expectAbove(tester, 'lookup', 'done');
   });
+
+  testWidgets(
+    'translation and thinking use the same Markdown document for selection and find',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildHarness(
+          child: ChatMessageWidget(
+            message: ChatMessage(
+              id: 'selectable',
+              role: 'assistant',
+              conversationId: 'c1',
+              parts: const [ReasoningPart('**plan**'), TextPart('answer')],
+              translation: '**translated**',
+            ),
+            showModelIcon: false,
+          ),
+        ),
+      );
+      await tester.tap(find.text('Deep Thinking'));
+      await tester.pumpAndSettle();
+      for (final part in [FindPart.reasoning, FindPart.translation]) {
+        final anchor = find.byWidgetPredicate(
+          (w) => w is QuoteSourceAnchor && w.findPart == part,
+        );
+        final area = find.descendant(
+          of: anchor,
+          matching: find.byType(AppSelectionArea),
+        );
+        final markdown = find.descendant(
+          of: area,
+          matching: find.byType(MarkdownWithCodeHighlight),
+        );
+        expect(area, findsOneWidget);
+        expect(markdown, findsOneWidget);
+        final selection = tester
+            .element(area)
+            .getInheritedWidgetOfExactType<MarkstreamSelectionScope>()!;
+        final document = tester
+            .element(markdown)
+            .getInheritedWidgetOfExactType<MarkstreamSelectionScope>()!;
+        expect(document.controller, same(selection.controller));
+      }
+    },
+  );
 
   testWidgets(
     'empty contentSplits without structured parts keep thinking above body',

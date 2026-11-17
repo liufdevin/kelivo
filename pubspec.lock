@@ -272,6 +272,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.0.4"
+  chinese_codec:
+    dependency: "direct main"
+    description:
+      name: chinese_codec
+      sha256: aba83f46dc922249d30661b5a9eb04b8eba0f2624b6cc433c1e8eefa82b013a9
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.1.2"
   cli_util:
     dependency: transitive
     description:
@@ -777,6 +785,54 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "2.0.35"
+  flutter_secure_storage:
+    dependency: "direct main"
+    description:
+      name: flutter_secure_storage
+      sha256: fe638107c5f69119156ada2db5a57734385fac3f64430bd7252a00d3ead2ca4b
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "10.3.4"
+  flutter_secure_storage_darwin:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_darwin
+      sha256: "82329fa5cdf343773b1b6897dea959105a29f092454259edff92f9f6637e8149"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "0.3.2"
+  flutter_secure_storage_linux:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_linux
+      sha256: caa75bd78f017422912e3a904933113b2428eb79f981ac37acd2dd2a700458ea
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "3.0.3"
+  flutter_secure_storage_platform_interface:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_platform_interface
+      sha256: "64951127f001f546891c86f414972bf49ef2c4c8a4c92c65f5790cc0c9100045"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.1.1"
+  flutter_secure_storage_web:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_web
+      sha256: "073a62b3aeb866ab4ce795f960413948e51e5a42a9b0c8333b6daf5bb3208a1c"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.1.1"
+  flutter_secure_storage_windows:
+    dependency: transitive
+    description:
+      name: flutter_secure_storage_windows
+      sha256: "3b7c8e068875dfd46719ff57c90d8c459c87f2302ed6b00ff006b3c9fcad1613"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "4.1.0"
   flutter_shaders:
     dependency: transitive
     description:
@@ -979,34 +1035,10 @@ packages:
     dependency: "direct main"
     description:
       name: image
-      sha256: "89ed75b2f8231fe676808c5564f9590d728024ded7ac782a7ed8474f1c95b72a"
+      sha256: a1e7f4951e538a568e14b856702afc9ae1d2f4b202daced8d22c1b9cd211ce89
       url: "https://pub.flutter-io.cn"
     source: hosted
-    version: "4.12.0"
-  image_cropper:
-    dependency: "direct main"
-    description:
-      name: image_cropper
-      sha256: "95782c9068ff09b95a5ece6a2b5fb31b18d8e544d79ebfa7bdafc08df39b3440"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "12.2.1"
-  image_cropper_for_web:
-    dependency: transitive
-    description:
-      name: image_cropper_for_web
-      sha256: e09749714bc24c4e3b31fbafa2e5b7229b0ff23e8b14d4ba44bd723b77611a0f
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "7.0.0"
-  image_cropper_platform_interface:
-    dependency: transitive
-    description:
-      name: image_cropper_platform_interface
-      sha256: "886a30ec199362cdcc2fbb053b8e53347fbfb9dbbdaa94f9ff85622609f5e7ff"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "8.0.0"
+    version: "4.10.1"
   image_gallery_saver_plus:
     dependency: "direct main"
     description:
@@ -1064,7 +1096,7 @@ packages:
     source: hosted
     version: "0.2.2+1"
   image_picker_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: image_picker_platform_interface
       sha256: "2dee4b4e3be429db71472c9c559c981498070a61af1ba82e0e4986fc5dadc042"
@@ -1632,7 +1664,7 @@ packages:
     source: path
     version: "0.10.0"
   re_highlight:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: re_highlight
       sha256: "6c4ac3f76f939fb7ca9df013df98526634e17d8f7460e028bd23a035870024f2"
@@ -2039,11 +2071,12 @@ packages:
   sqlite3:
     dependency: "direct main"
     description:
-      name: sqlite3
-      sha256: "5340531ad17f386ae444873f643f281060b6238cc702edeee6b1e90bc4c6874e"
-      url: "https://pub.flutter-io.cn"
-    source: hosted
-    version: "3.8.0"
+      path: sqlite3
+      ref: "8db87537775047cdde00353f09afb1521befbeec"
+      resolved-ref: "8db87537775047cdde00353f09afb1521befbeec"
+      url: "https://github.com/simolus3/sqlite3.dart.git"
+    source: git
+    version: "3.9.1"
   sqlparser:
     dependency: transitive
     description:

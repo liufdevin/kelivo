@@ -1,3 +1,17 @@
+import '../../../core/models/native_compaction.dart';
+import '../../../core/models/provider_oauth.dart';
+import '../../../core/models/carried_original.dart';
+import '../../../core/services/api/providers/openai/responses_request.dart';
+import '../../../core/services/api/request_history_context.dart';
+import '../../../core/services/api/native_compaction_context.dart';
+import 'package:flutter/foundation.dart' show listEquals;
+import '../../../core/models/message_part.dart';
+import 'dart:isolate';
+import '../../../core/services/chat/compression_planner.dart';
+import '../../../core/models/compression_config.dart';
+import '../../../core/models/auto_retry_options.dart';
+import '../../../core/services/chat/compression_templates.dart';
+import '../../../core/models/context_operation.dart';
 import '../../../core/services/scheduled_tasks_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -128,6 +142,13 @@ class HomeViewModel extends ChangeNotifier {
     _chatActions.onLoadingChanged = _onLoadingChanged;
     _chatActions.onContentUpdated = _onContentUpdated;
     _chatActions.onStreamError = _onStreamError;
+    _chatActions.onContextOverflow = (message, error, originalParts) {
+      if (onContextOverflow != null) {
+        onContextOverflow!(message, error, originalParts);
+      } else {
+        onError?.call(error);
+      }
+    };
     _chatActions.onMaybeGenerateTitle = _onMaybeGenerateTitle;
     _chatActions.onMaybeGenerateSummary = _onMaybeGenerateSummary;
     _chatActions.onMaybeGenerateSuggestions = _onMaybeGenerateSuggestions;
@@ -195,8 +216,9 @@ class HomeViewModel extends ChangeNotifier {
 
   Future<CompressionBudget> _estimateCompressedContext(
     String id,
-    List<ChatMessage> history,
-  ) async {
+    List<ChatMessage> history, {
+    bool? fixedContextStart,
+  }) async {
     final settings = _contextProvider.read<SettingsProvider>();
     final conversation = _chatService.getConversation(id);
     if (conversation == null) throw StateError('conversation_not_found');
@@ -232,16 +254,16 @@ class HomeViewModel extends ChangeNotifier {
       modelId: model.modelId!,
       assistantId: conversation.assistantId,
       messagesOverride: messages,
+      fixedContextStart: fixedContextStart,
     );
-    final estimate = estimateContextBuckets(
-      ContextEstimateJob(
-        preview: preview,
-        kind: ProviderConfig.classify(
-          model.providerKey!,
-          explicitType: config.providerType,
-        ),
+    final job = ContextEstimateJob(
+      preview: preview,
+      kind: ProviderConfig.classify(
+        model.providerKey!,
+        explicitType: config.providerType,
       ),
     );
+    final estimate = await Isolate.run(job.call);
     final window = ModelSpecResolver.instance
         .spec(config, model.modelId!)
         .contextWindow;
@@ -254,11 +276,14 @@ class HomeViewModel extends ChangeNotifier {
   void _onCompressionChanged() {
     var queueChanged = false;
     for (final task in _chatService.contextCompression.tasks) {
+      if (task.automatic || task.ownsContinuation) continue;
       final state = '${task.id}:${task.phase.name}';
       if (_compressionStates[task.conversationId] == state) continue;
       _compressionStates[task.conversationId] = state;
       if (task.phase == CompressionPhase.completed &&
           task.resultConversationId == null) {
+        queueChanged =
+            _pausedQueuedInputs.remove(task.conversationId) || queueChanged;
         unawaited(_drainQueuedInputIfReady(task.conversationId));
       } else if ((task.phase == CompressionPhase.review || !task.active) &&
           _queuedInputs.containsKey(task.conversationId)) {
@@ -289,6 +314,12 @@ class HomeViewModel extends ChangeNotifier {
 
   /// Called when an error occurs (UI should show snackbar).
   void Function(String error)? onError;
+  void Function(
+    ChatMessage message,
+    String error,
+    List<MessagePart> originalParts,
+  )?
+  onContextOverflow;
 
   /// Called when a non-blocking background model task fails.
   void Function(BackgroundTaskKind task, Object error)? onBackgroundTaskError;
@@ -392,6 +423,20 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void _onStreamError(String error) {
+    if (error.contains('native_compaction_input_overridden') &&
+        _contextProvider.mounted) {
+      onError?.call(
+        AppLocalizations.of(_contextProvider)!.compressionNativeInputOverride,
+      );
+      return;
+    }
+    if (error.contains('native_compaction_scope_changed') &&
+        _contextProvider.mounted) {
+      onError?.call(
+        AppLocalizations.of(_contextProvider)!.compressionNativeScopeChanged,
+      );
+      return;
+    }
     onError?.call(error);
   }
 
@@ -647,6 +692,7 @@ class HomeViewModel extends ChangeNotifier {
   ChatInputData _cloneInput(ChatInputData input) {
     return ChatInputData(
       text: input.text,
+      quotes: input.quotes,
       imagePaths: List<String>.of(input.imagePaths),
       documents: List<DocumentAttachment>.of(input.documents),
       generateImage: input.generateImage,
@@ -703,6 +749,7 @@ class HomeViewModel extends ChangeNotifier {
     ChatMessage message, {
     bool assistantAsNewReply = false,
     bool allowImagesApiRouting = true,
+    bool omitImages = false,
     String? expectedContextState,
   }) async {
     final conversation = _chatService
@@ -723,6 +770,7 @@ class HomeViewModel extends ChangeNotifier {
 
     final result = await _chatActions.regenerateAtMessage(
       expectedContextState: expectedContextState,
+      omitImages: omitImages,
       message: message,
       conversation: conversation,
       assistantOverride: assistant,
@@ -783,44 +831,6 @@ class HomeViewModel extends ChangeNotifier {
       _chatService.contextCompression.resumeIfReady(id);
       unawaited(_drainQueuedInputIfReady(id));
     }
-  }
-
-  /// Delete a message and adjust version selections.
-  ///
-  /// Returns the list of message IDs to clean up UI state for.
-  /// The UI layer should handle confirmation dialog before calling this.
-  Future<void> deleteMessage({
-    required ChatMessage message,
-    required Map<String, List<ChatMessage>> byGroup,
-    String? expectedContextState,
-  }) async {
-    final gid = (message.groupId ?? message.id);
-    final versBefore = List<ChatMessage>.of(
-      byGroup[gid] ?? const <ChatMessage>[],
-    )..sort((a, b) => a.version.compareTo(b.version));
-    await _deleteMessageVersions(
-      expectedContextState: expectedContextState,
-      gid: gid,
-      versionsBefore: versBefore,
-      deletedMessageIds: <String>{message.id},
-    );
-  }
-
-  Future<void> deleteAllMessageVersions({
-    required ChatMessage message,
-    required Map<String, List<ChatMessage>> byGroup,
-    String? expectedContextState,
-  }) async {
-    final gid = (message.groupId ?? message.id);
-    final versBefore = List<ChatMessage>.of(
-      byGroup[gid] ?? const <ChatMessage>[],
-    )..sort((a, b) => a.version.compareTo(b.version));
-    await _deleteMessageVersions(
-      expectedContextState: expectedContextState,
-      gid: gid,
-      versionsBefore: versBefore,
-      deletedMessageIds: versBefore.map((m) => m.id).toSet(),
-    );
   }
 
   @visibleForTesting
@@ -1017,88 +1027,71 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _deleteMessageVersions({
-    required String gid,
+  /// Applies the exact revisions confirmed for one message group.
+  Future<Set<String>> deleteMessageVersions({
+    required ChatMessage message,
     required List<ChatMessage> versionsBefore,
     required Set<String> deletedMessageIds,
     String? expectedContextState,
   }) async {
-    if (deletedMessageIds.isEmpty) return;
-
-    // The animated delete flow awaits the removal animation before calling
-    // this, so the user may have switched conversations in the meantime.
-    // Deleting against whichever conversation is current would silently
-    // no-op (the ids belong to another conversation), so target the
-    // conversation the revisions belong to and only touch the loaded
-    // timeline while it is still the current one.
-    final targetConversationId = versionsBefore.isNotEmpty
-        ? versionsBefore.first.conversationId
-        : currentConversation?.id;
-    final conversation = targetConversationId == currentConversation?.id
-        ? currentConversation
-        : (targetConversationId == null
-              ? null
-              : _chatService.getConversation(targetConversationId));
-    bool isCurrentConversation() =>
-        conversation != null && conversation.id == currentConversation?.id;
-
-    Map<String, int> selections = const <String, int>{};
-    if (isCurrentConversation()) {
-      selections = versionSelections;
-    } else if (conversation != null) {
-      try {
-        selections = _chatService.getVersionSelections(conversation.id);
-      } catch (_) {}
+    final gid = message.groupId ?? message.id;
+    final conversationId = message.conversationId;
+    bool isCurrentConversation() => currentConversation?.id == conversationId;
+    final keepingCurrent = !deletedMessageIds.contains(message.id);
+    final selections = isCurrentConversation()
+        ? versionSelections
+        : _chatService.getVersionSelections(conversationId);
+    final streamingId = _chatActions.activeStreamingMessageId(conversationId);
+    if (streamingId != null && deletedMessageIds.contains(streamingId)) {
+      if (keepingCurrent &&
+          !await _chatService.canDeleteOtherVersions(
+            conversationId,
+            message.id,
+            deletedMessageIds,
+          )) {
+        return const {};
+      }
+      final active = _chatActions.activeStreamingMessageId(conversationId);
+      if (active != null) {
+        if (active != streamingId) return const {};
+        await _chatActions.cancelStreamingById(conversationId);
+      }
     }
-    final oldSel =
-        selections[gid] ??
-        (versionsBefore.isNotEmpty ? versionsBefore.last.version : 0);
-    final newSel = computeNextVersionSelection(
-      versionsBefore: versionsBefore,
-      deletedMessageIds: deletedMessageIds,
-      oldSelection: oldSel,
+    final removedIds = await _chatService.deleteMessages(
+      conversationId: conversationId,
+      messageIds: deletedMessageIds,
+      versionSelectionChanges: {
+        if (!keepingCurrent)
+          gid: computeNextVersionSelection(
+            versionsBefore: versionsBefore,
+            deletedMessageIds: deletedMessageIds,
+            oldSelection: selections[gid],
+          ),
+      },
+      retainedMessageId: keepingCurrent ? message.id : null,
+      expectedContextState: expectedContextState,
     );
-
-    var removedRevisionIds = deletedMessageIds;
-    if (conversation != null) {
-      // Deleting the row an active generation checkpoints into would make the
-      // next streaming write hit a foreign key on deleted messages; stop the
-      // generation first.
-      final streamingMessageId = _chatActions.activeStreamingMessageId(
-        conversation.id,
-      );
-      if (streamingMessageId != null &&
-          deletedMessageIds.contains(streamingMessageId)) {
-        await _chatActions.cancelStreaming(conversation);
-      }
-      removedRevisionIds = await _chatService.deleteMessages(
-        expectedContextState: expectedContextState,
-        conversationId: conversation.id,
-        messageIds: deletedMessageIds,
-        versionSelectionChanges: {gid: newSel},
-      );
-      if (isCurrentConversation()) {
-        _chatController.updateCurrentConversation(
-          _chatService.getConversation(conversation.id),
-        );
-      }
-    }
-    for (final id in removedRevisionIds) {
+    if (removedIds.isEmpty) return removedIds;
+    for (final id in removedIds) {
       _streamController.clearMessageState(id);
     }
     if (isCurrentConversation()) {
+      _chatController.updateCurrentConversation(
+        _chatService.getConversation(conversationId),
+      );
       _chatController.loadVersionSelections();
       await _chatController.refreshTimelineAfterMutation(
-        removedRevisionIds: removedRevisionIds,
+        removedRevisionIds: removedIds,
         survivingVersionsByGroup: {
           gid: [
             for (final candidate in versionsBefore)
-              if (!removedRevisionIds.contains(candidate.id)) candidate,
+              if (!removedIds.contains(candidate.id)) candidate,
           ],
         },
       );
     }
     notifyListeners();
+    return removedIds;
   }
 
   // ============================================================================
@@ -1121,10 +1114,10 @@ class HomeViewModel extends ChangeNotifier {
 
     if (currentConversation?.id == id) return;
 
-    _chatService.setCurrentConversation(id);
-    _syncContextUsageConversation(id);
-    final convo = _chatService.getConversation(id);
+    final convo = _chatService.getCompleteConversation(id);
     if (convo != null) {
+      _chatService.setCurrentConversation(id);
+      _syncContextUsageConversation(id);
       // Assistant preference persistence runs concurrently with the window
       // load; setCurrentAssistant notifies before its disk write completes.
       final assistantSwitch = _assistantSwitchFor(
@@ -1157,7 +1150,7 @@ class HomeViewModel extends ChangeNotifier {
 
     if (currentConversation?.id == id) return null;
 
-    final convo = _chatService.getConversation(id);
+    final convo = _chatService.getCompleteConversation(id);
     if (convo == null) return null;
 
     // The assistant switch is deferred to commitConversationSwitch: it
@@ -1324,13 +1317,11 @@ class HomeViewModel extends ChangeNotifier {
 
   /// Fork conversation at a specific message.
   Future<void> forkConversation(ChatMessage message) async {
-    final title = getTitleForLocale(_contextProvider);
     final sourceConversation = currentConversation;
     if (sourceConversation == null) return;
     final newConvo = await _chatService.forkConversationAtRevision(
       sourceConversationId: sourceConversation.id,
       sourceRevisionId: message.id,
-      title: title,
       preserveVersions: _contextProvider
           .read<SettingsProvider>()
           .forkKeepMessageVersions,
@@ -1387,67 +1378,326 @@ class HomeViewModel extends ChangeNotifier {
   Future<String?> compressContext({
     required CompressContextOptions options,
     String? targetConversationId,
+    String? beforeMessageId,
+    Set<String>? effectiveMessageIds,
   }) async {
     final convo = targetConversationId == null
         ? currentConversation
         : _chatService.getConversation(targetConversationId);
     if (convo == null) return 'no_conversation';
     final conversationId = convo.id;
-    final settings = _contextProvider.read<SettingsProvider>();
-    final assistant = _contextProvider
-        .read<AssistantProvider>()
-        .resolveConversationAssistant(convo.assistantId);
-    final model = resolveCompressContextModel(
-      compressProvider: settings.compressModelProvider,
-      compressModelId: settings.compressModelId,
-      summaryProvider: settings.summaryModelProvider,
-      summaryModelId: settings.summaryModelId,
-      titleProvider: settings.titleModelProvider,
-      titleModelId: settings.titleModelId,
-      assistantProvider: assistant?.chatModelProvider,
-      assistantModelId: assistant?.chatModelId,
-      currentProvider: settings.currentModelProvider,
-      currentModelId: settings.currentModelId,
-    );
-    final provider = model.providerKey;
-    final modelId = model.modelId;
-    if (provider == null || modelId == null) return 'no_model';
-    final config = settings.getProviderConfig(provider);
-    final reasoning = settings.compressGenerationReasoningFor(assistant);
-    final template = settings.compressPrompt;
-    final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
     try {
-      await _chatService.contextCompression.start(
+      final request = await buildCompressionRequest(
         conversationId,
-        CompressionRequest(
-          options: options,
-          model: modelId,
-          contextWindowTokens: ModelSpecResolver.instance
-              .spec(config, modelId)
-              .contextWindow,
-          generate: (content, requestId) async =>
-              (await ChatApiService.generateMessage(
-                conversationId: conversationId,
-                requestId: requestId,
-                config: config,
-                modelId: modelId,
-                reasoning: reasoning,
-                textOnly: true,
-                messages: [
-                  {
-                    'role': 'user',
-                    'content': template
-                        .replaceAll('{content}', content)
-                        .replaceAll('{locale}', locale),
-                  },
-                ],
-              )).text,
-        ),
+        options: options,
+        beforeMessageId: beforeMessageId,
+        effectiveMessageIds: effectiveMessageIds,
       );
+      await _chatService.contextCompression.start(conversationId, request);
       return null;
     } catch (error) {
       return error.toString();
     }
+  }
+
+  Future<CompressionRequest> buildCompressionRequest(
+    String conversationId, {
+    required CompressContextOptions options,
+    bool automatic = false,
+    bool ownsContinuation = false,
+    String? beforeMessageId,
+    Set<String>? effectiveMessageIds,
+    bool Function()? isCancelled,
+    Future<bool> Function(ContextOperation)? acceptCandidate,
+    CompressionConfig? configOverride,
+    int? carryBudgetTokens,
+    ({String providerKey, String modelId, ProviderConfig config})? nativeModel,
+  }) async {
+    final conversation = _chatService.getConversation(conversationId);
+    if (conversation == null) throw StateError('conversation_not_found');
+    final settings = _contextProvider.read<SettingsProvider>();
+    final locale = Localizations.localeOf(_contextProvider).toLanguageTag();
+    final quoteMarker = AppLocalizations.of(
+      _contextProvider,
+    )!.selectionQuoteMarker;
+    final assistant = _contextProvider
+        .read<AssistantProvider>()
+        .resolveConversationAssistant(conversation.assistantId);
+    final chatModel = _messageGenerationService.getModelConfig(
+      settings,
+      assistant,
+      conversation: conversation,
+    );
+    final preferences =
+        configOverride ??
+        await _chatService.compressionConfig(
+          conversationId,
+          settings.compressionDefaults,
+        );
+    if (options.native) {
+      // A tool loop owns its original connection even if the user selects
+      // another model while that turn is still running.
+      final provider = nativeModel?.providerKey ?? chatModel.providerKey;
+      final model = nativeModel?.modelId ?? chatModel.modelId;
+      if (provider == null || model == null) throw StateError('no_model');
+      final config =
+          nativeModel?.config ?? settings.getProviderConfig(provider);
+      final referenceTime = DateTime.now();
+      Future<ContextAssemblyPreview> prepare(CompressionSelection selection) =>
+          _messageGenerationService.previewContextAssembly(
+            conversationId: conversationId,
+            providerKey: provider,
+            modelId: model,
+            assistantId: conversation.assistantId,
+            messagesOverride: selection.input,
+            // Coverage is recorded from this selection, so never trim it again.
+            applyMessageLimit: false,
+            forceResponses: true,
+            promptTime: referenceTime,
+          );
+      final scope = nativeCompactionScope(config);
+      bool cancelled() =>
+          (isCancelled?.call() ?? false) ||
+          nativeCompactionScope(settings.getProviderConfig(provider)) != scope;
+      return CompressionRequest(
+        options: options,
+        codex: config.oauthProvider == OAuthProvider.chatgpt,
+        carryBudgetTokens: carryBudgetTokens,
+        prepareNative: (selection) async {
+          final prepared = await prepare(selection);
+          final body = await buildOpenAIResponsesBody(
+            nativeResponsesConfig(config),
+            model,
+            RequestHistoryContext.identify(prepared.apiMessages),
+            tools: [...prepared.tools, ...prepared.mcpTools],
+          );
+          return await prepared.imageContext?.project(
+                body,
+                preserveSources: true,
+              ) ??
+              body;
+        },
+        automatic: automatic,
+        ownsContinuation: ownsContinuation,
+        acceptCandidate: acceptCandidate,
+        config: preferences,
+        model: '$provider / $model',
+        quoteMarker: quoteMarker,
+        beforeMessageId: beforeMessageId,
+        effectiveMessageIds: effectiveMessageIds,
+        locale: locale,
+        isCancelled: cancelled,
+        loadReference: (selection) async =>
+            (await prepare(selection)).referenceText,
+        compactNative: (selection, requestId) async {
+          final prepared = await prepare(selection);
+          return ChatApiService.compactHistory(
+            config: config,
+            modelId: model,
+            messages: prepared.apiMessages,
+            tools: [...prepared.tools, ...prepared.mcpTools],
+            imageContext: prepared.imageContext,
+            requestId: requestId,
+            conversationId: conversationId,
+            extraHeaders: _generationController.buildCustomHeaders(assistant),
+            isCancelled: cancelled,
+            requestTimeout: preferences.requestTimeout,
+            retention:
+                (options.carry ?? preferences.nativeCarryOriginals).mode ==
+                    CarryMode.unset
+                ? NativeUserRetention.auto
+                : NativeUserRetention.none,
+          );
+        },
+      );
+    }
+    final model = resolveCompressContextModel(
+      compressProvider: preferences.providerId,
+      compressModelId: preferences.modelId,
+      currentProvider: chatModel.providerKey,
+      currentModelId: chatModel.modelId,
+    );
+    final provider = model.providerKey;
+    final modelId = model.modelId;
+    if (provider == null || modelId == null) throw StateError('no_model');
+    final config = settings.getProviderConfig(provider);
+    if (!config.enabled || config.disabledModels.contains(modelId)) {
+      throw StateError('no_model');
+    }
+    if (preferences.providerId != null &&
+        !settings.providerConfigs.containsKey(provider)) {
+      throw StateError('no_model');
+    }
+    final library = _chatService.chatRepositoryOrNull?.compression;
+    if (preferences.templateId == 'original' && library != null) {
+      await library.importOriginalPrompt(settings.compressPrompt);
+    }
+    final template = library == null
+        ? builtInCompressionTemplatesForLocale(
+            locale,
+          ).firstWhere((t) => t.id == preferences.templateId)
+        : await library.template(preferences.templateId, locale: locale);
+    final reasoning = settings.compressGenerationReasoningFor(assistant);
+    // Revalidate live instructions after generation without treating passage of
+    // time in prompt placeholders as a user edit.
+    final referenceTime = DateTime.now();
+
+    final spec = ModelSpecResolver.instance.spec(config, modelId);
+    return CompressionRequest(
+      options: options,
+      carryBudgetTokens: carryBudgetTokens,
+      carryProviderKind: chatModel.providerKey == null
+          ? ProviderKind.openai
+          : ProviderConfig.classify(
+              chatModel.providerKey!,
+              explicitType: settings
+                  .getProviderConfig(chatModel.providerKey!)
+                  .providerType,
+            ),
+      model: '$provider / $modelId',
+      quoteMarker: quoteMarker,
+      config: preferences,
+      template: template,
+      contextWindowTokens: spec.contextWindow,
+      maxOutputTokens: spec.maxOutput,
+      locale: locale,
+      automatic: automatic,
+      beforeMessageId: beforeMessageId,
+      effectiveMessageIds: effectiveMessageIds,
+      ownsContinuation: ownsContinuation,
+      isCancelled: isCancelled,
+      acceptCandidate: acceptCandidate,
+      loadReference:
+          !preferences.includeReference ||
+              chatModel.providerKey == null ||
+              chatModel.modelId == null
+          ? null
+          : (selection) async =>
+                _messageGenerationService.compressionReferenceText(
+                  promptTime: referenceTime,
+                  conversationId: conversationId,
+                  modelId: chatModel.modelId!,
+                  assistantId: conversation.assistantId,
+                  messages: selection.input,
+                ),
+      generate: (prompt, requestId, maxTokens, onUsage) =>
+          ChatApiService.generateMessage(
+            conversationId: conversationId,
+            requestId: requestId,
+            config: config,
+            modelId: modelId,
+            reasoning: reasoning,
+            textOnly: true,
+            maxTokens: maxTokens,
+            retryOverride: const AutoRetryOptions.defaults(),
+            requestTimeout: preferences.requestTimeout,
+            onUsage: (update) => onUsage(update.usage),
+            messages: [
+              {'role': 'user', 'content': prompt},
+            ],
+          ),
+    );
+  }
+
+  Future<void> compressAndRetryContext(
+    ChatMessage failed, {
+    required List<MessagePart> originalParts,
+  }) async {
+    final id = failed.conversationId;
+    try {
+      if (_isConversationBusy(id) || currentConversation?.id != id) {
+        throw StateError('context_changed');
+      }
+      final snapshot = await _chatService.loadContextSnapshot(id);
+      if (!_contextProvider.mounted) return;
+      if (snapshot.messages.lastOrNull?.id != failed.id ||
+          !listEquals(snapshot.messages.last.parts, failed.parts)) {
+        throw StateError('context_changed');
+      }
+      final user = snapshot.messages.where(isCompressionUserMessage).lastOrNull;
+      if (user == null) throw StateError('no_messages');
+      final settings = _contextProvider.read<SettingsProvider>();
+      final config = await _chatService.compressionConfig(
+        id,
+        settings.compressionDefaults,
+      );
+      final request = await buildCompressionRequest(
+        id,
+        options: CompressContextOptions(
+          mode: CompressContextLimitMode.keepRecent,
+          keepUserMessages: config.keepRecentUserTurns < 1
+              ? 1
+              : config.keepRecentUserTurns,
+        ),
+        beforeMessageId: user.id,
+        ownsContinuation: true,
+      );
+      final task = await _chatService.contextCompression.runAtSafePoint(
+        id,
+        request,
+      );
+      if (task.phase != CompressionPhase.completed) {
+        if (_queuedInputs.containsKey(id) && _pausedQueuedInputs.add(id)) {
+          _chatService.contextCompression.refreshInputStatus();
+        }
+        onError?.call(task.error ?? 'compression_incomplete');
+        return;
+      }
+      final current = await _chatService.loadContextSnapshot(id);
+      if (current.messages.lastOrNull?.id != failed.id ||
+          !listEquals(current.messages.last.parts, failed.parts) ||
+          currentConversation?.id != id) {
+        throw StateError('context_changed');
+      }
+      // The error bubble is presentation, not assistant output. Restore the
+      // captured protocol parts before resuming the same response.
+      await _chatService.updateMessage(failed.id, parts: originalParts);
+      final result = await _chatActions.continueAssistantMessageAfterToolAnswer(
+        message: current.messages.last.copyWith(parts: originalParts),
+        conversation: _chatService.getConversation(id)!,
+      );
+      if (!result.success) {
+        onError?.call(result.errorMessage ?? 'context_changed');
+      }
+    } catch (error) {
+      onError?.call(error.toString());
+    }
+  }
+
+  Future<CompressionRequestPreview> previewCompressionRequest(
+    String conversationId,
+    CompressContextOptions options,
+    CompressionConfig config, {
+    required Future<ConversationContextHistory> history,
+  }) async {
+    final snapshot = await history;
+    final request = await buildCompressionRequest(
+      conversationId,
+      options: options,
+      configOverride: config,
+    );
+    final selection = await _selectPreviewHistory(snapshot, options);
+    if (selection.missingOriginals) {
+      throw StateError('native_compaction_originals_unavailable');
+    }
+    final messages = await _chatService.messagesForCompression(
+      selection.input,
+      includeAttachmentsAndTools: options.includeAttachmentsAndTools,
+      quoteMarker: request.quoteMarker,
+    );
+    final background = await request.loadReference?.call(selection) ?? '';
+    final planner = CompressionPlanner(
+      request: request,
+      materials: [],
+      previousSummary: '',
+      background: background,
+    );
+    return _previewCompressionMaterials(
+      planner,
+      messages,
+      options,
+      request.quoteMarker,
+    );
   }
 
   /// Update current conversation reference.
@@ -1557,34 +1807,6 @@ class HomeViewModel extends ChangeNotifier {
     return _chatController.groupMessagesByGroup();
   }
 
-  /// Messages currently in the conversation context.
-  ///
-  /// [actual] counts the messages after the context boundary, capped by the
-  /// assistant's limit when one is set. [configured] is that limit, or null
-  /// when context messages are unlimited.
-  ({int actual, int? configured}) getContextMessageCount() {
-    final assistant = _contextProvider
-        .read<AssistantProvider>()
-        .currentAssistant;
-    final configured = (assistant?.limitContextMessages ?? false)
-        ? (assistant?.contextMessageSize ?? 0)
-        : 0;
-    // Timeline totals and truncateIndex both use logical message slots.
-    final remaining = computeClearContextRemainingMessageCount(
-      totalMessages: _chatController.totalMessageCount,
-      truncateIndex: currentConversation == null
-          ? -1
-          : _chatService.getContextStartIndex(currentConversation!.id),
-    );
-    if (configured > 0) {
-      return (
-        actual: remaining > configured ? configured : remaining,
-        configured: configured,
-      );
-    }
-    return (actual: remaining, configured: null);
-  }
-
   /// Test entry for [_maybeGenerateSummaryFor].
   @visibleForTesting
   Future<void> debugMaybeGenerateSummaryFor(String conversationId) =>
@@ -1596,18 +1818,6 @@ class HomeViewModel extends ChangeNotifier {
     String conversationId, {
     bool force = false,
   }) => _maybeGenerateTitleFor(conversationId, force: force);
-
-  @visibleForTesting
-  static int computeClearContextRemainingMessageCount({
-    required int totalMessages,
-    required int truncateIndex,
-  }) {
-    final safeTruncateIndex =
-        (truncateIndex < 0 || truncateIndex > totalMessages)
-        ? 0
-        : truncateIndex;
-    return totalMessages - safeTruncateIndex;
-  }
 
   // ============================================================================
   // Title Generation
@@ -1753,39 +1963,13 @@ class HomeViewModel extends ChangeNotifier {
 
     final cfg = settings.getProviderConfig(provKey);
 
-    // Get all messages and filter user messages
-    final msgs = await _chatService.loadMessages(convo.id);
-    final allUserMsgs = msgs
-        .where((m) => m.role == 'user' && m.content.trim().isNotEmpty)
-        .toList();
-
-    if (allUserMsgs.isEmpty) return;
-
-    // Get previous summary (empty string if first time)
     final previousSummary = (convo.summary ?? '').trim();
-
-    // Get only the recent user messages since last summarization
-    // Calculate how many user messages were in the last summarized state
-    final lastSummarizedMsgCount = (convo.lastSummarizedMessageCount < 0)
-        ? 0
-        : convo.lastSummarizedMessageCount;
-    final msgsAtLastSummary = msgs.take(lastSummarizedMsgCount).toList();
-    final userMsgsAtLastSummary = msgsAtLastSummary
-        .where((m) => m.role == 'user' && m.content.trim().isNotEmpty)
-        .length;
-
-    // Get new user messages since last summary
-    final newUserMsgs = allUserMsgs.skip(userMsgsAtLastSummary).toList();
-    if (newUserMsgs.isEmpty) return;
-
-    final recentMessages = newUserMsgs
-        .map((m) => m.content.trim())
-        .join('\n\n');
-
-    // Truncate if too long
-    final content = recentMessages.length > 2000
-        ? recentMessages.substring(0, 2000)
-        : recentMessages;
+    final content = await _chatService.generateSummarySource(
+      convo.id,
+      start: convo.lastSummarizedMessageCount.clamp(0, msgCount),
+      end: msgCount,
+    );
+    if (content.isEmpty) return;
 
     final prompt = settings.summaryPrompt
         .replaceAll('{previous_summary}', previousSummary)
@@ -1925,25 +2109,16 @@ class HomeViewModel extends ChangeNotifier {
         _chatService.getConversation(conversationId) != null &&
         _chatService.getContextStartIndex(conversationId) == truncateIndex;
 
-    Future<List<ChatMessage>> loadSelectedMessages() async {
-      final loaded = await _chatService.loadMessages(conversationId);
-      // A background conversation must use its own selected versions, even
-      // when a different conversation is now displayed by the controller.
-      return _chatController.collapseVersions(
-        loaded,
-        selections: _chatService.getVersionSelections(conversationId),
-      );
-    }
+    Future<({String messageId, String content})?> loadSource() =>
+        ChatSuggestionService.loadSource(
+          _chatService,
+          conversationId,
+          truncateIndex: truncateIndex,
+        );
 
     try {
-      final msgs = await loadSelectedMessages();
-      if (!isCurrent()) return;
-      final content = ChatSuggestionService.buildContent(
-        msgs,
-        truncateIndex: truncateIndex,
-      );
-      if (content.isEmpty) return;
-      final sourceMessageId = msgs.last.id;
+      final source = await loadSource();
+      if (!isCurrent() || source == null) return;
       await _chatService.clearConversationSuggestions(conversationId);
       if (!isCurrent()) return;
       final suggestions = await _suggestionService.generate(
@@ -1951,25 +2126,15 @@ class HomeViewModel extends ChangeNotifier {
         settings: settings,
         providerKey: provKey,
         modelId: mdlId,
-        messages: msgs,
-        truncateIndex: truncateIndex,
+        content: source.content,
         locale: locale,
         reasoning: reasoning,
       );
       // An empty array is a valid decision to offer no suggestions.
       if (suggestions.isEmpty || !isCurrent()) return;
 
-      final latestMessages = await loadSelectedMessages();
-      if (!isCurrent() ||
-          latestMessages.isEmpty ||
-          latestMessages.last.id != sourceMessageId ||
-          ChatSuggestionService.buildContent(
-                latestMessages,
-                truncateIndex: truncateIndex,
-              ) !=
-              content) {
-        return;
-      }
+      final latest = await loadSource();
+      if (!isCurrent() || latest != source) return;
 
       await _chatService.updateConversationSuggestions(
         conversationId,
@@ -2027,3 +2192,30 @@ class HomeViewModel extends ChangeNotifier {
     }
   }
 }
+
+Future<CompressionSelection> _selectPreviewHistory(
+  ConversationContextHistory history,
+  CompressContextOptions options,
+) => Isolate.run(
+  () => selectCompressionHistory(history.messages, history.operations, options),
+);
+
+Future<CompressionRequestPreview> _previewCompressionMaterials(
+  CompressionPlanner planner,
+  List<ChatMessage> messages,
+  CompressContextOptions options,
+  String Function(int) quoteMarker,
+) => Isolate.run(() {
+  planner.materials.addAll(
+    buildCompressRequestContents(
+      messages.where((m) => !ContextOperation.isSummary(m)).toList(),
+      options,
+      quoteMarker: quoteMarker,
+    ),
+  );
+  planner.previousSummary = messages
+      .where(ContextOperation.isSummary)
+      .map((m) => m.content)
+      .join('\n\n');
+  return planner.preview();
+});

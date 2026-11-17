@@ -7,13 +7,16 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/ast/nodes.dart';
+import '../../../core/ast/source_span.dart';
 import '../../../core/serialize/to_markdown.dart';
 import '../../../core/serialize/to_plain_text.dart';
 import '../../extensions/registry.dart';
 import '../../selection/table_selection.dart';
+import '../../selection/selection_controller.dart';
 import '../../theme/markstream_theme.dart';
 import '../block_list.dart';
 import '../chrome.dart';
+import '../prose_direction.dart';
 import '../../performance_limits.dart';
 
 class MarkstreamTableBlock extends StatefulWidget {
@@ -44,16 +47,32 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
   final _boundary = GlobalKey();
   final _scroll = ScrollController();
   int _visibleRows = PerformanceLimits.initialTableRows;
+  int _revealedRows = 0;
   bool _capturing = false;
-  bool _hovered = false, _focused = false;
   @override
   void didUpdateWidget(MarkstreamTableBlock oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.node.span.start != oldWidget.node.span.start ||
         !widget.source.startsWith(oldWidget.source)) {
       _visibleRows = PerformanceLimits.initialTableRows;
+      _revealedRows = 0;
       if (_scroll.hasClients) _scroll.jumpTo(0);
     }
+  }
+
+  bool _prepareRange(SourceSpan range) {
+    final rows = widget.node.children;
+    final index = rows.indexWhere((row) => row.span.contains(range.start));
+    final count = math.max(
+      _revealedRows,
+      widget.streaming ? PerformanceLimits.streamingTableRows : _visibleRows,
+    );
+    if (index < count) return true;
+    setState(() {
+      _revealedRows = index + 1;
+      _visibleRows = math.max(_visibleRows, index + 1);
+    });
+    return false;
   }
 
   @override
@@ -116,6 +135,51 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
       chrome: widget.theme.chrome,
     ),
   );
+
+  Widget _cell(TableRowNode row, int column) {
+    final cell = column < row.children.length ? row.children[column] : null;
+    final alignment = column < widget.node.alignments.length
+        ? widget.node.alignments[column]
+        : TableAlignment.none;
+    return directionalBlock(
+      context,
+      cell == null
+          ? null
+          : widget.extensions.proseDirection.forNodes(cell.children),
+      Padding(
+        padding: widget.theme.table.cellPadding,
+        child: DefaultTextStyle.merge(
+          textAlign: switch (alignment) {
+            TableAlignment.center => TextAlign.center,
+            TableAlignment.right => TextAlign.right,
+            TableAlignment.left => TextAlign.left,
+            TableAlignment.none => TextAlign.start,
+          },
+          child: Align(
+            alignment: switch (alignment) {
+              TableAlignment.center => Alignment.center,
+              TableAlignment.right => Alignment.centerRight,
+              TableAlignment.left => Alignment.centerLeft,
+              TableAlignment.none => AlignmentDirectional.centerStart,
+            },
+            child: cell != null
+                ? Builder(
+                    builder: (context) => widget.buildCell(
+                      context,
+                      cell,
+                      row.header
+                          ? widget.theme.table.heading
+                          : widget.theme.table.body,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ),
+      align: false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme.table;
@@ -128,9 +192,12 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
         ? rows.length
         : math.min(
             rows.length,
-            widget.streaming
-                ? PerformanceLimits.streamingTableRows
-                : _visibleRows,
+            math.max(
+              _revealedRows,
+              widget.streaming
+                  ? PerformanceLimits.streamingTableRows
+                  : _visibleRows,
+            ),
           );
     final content = LayoutBuilder(
       builder: (context, constraints) {
@@ -194,26 +261,7 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
                       table: _selection,
                       row: row,
                       column: column,
-                      child: Padding(
-                        padding: theme.cellPadding,
-                        child: Align(
-                          alignment: switch (column <
-                                  widget.node.alignments.length
-                              ? widget.node.alignments[column]
-                              : TableAlignment.none) {
-                            TableAlignment.center => Alignment.center,
-                            TableAlignment.right => Alignment.centerRight,
-                            _ => Alignment.centerLeft,
-                          },
-                          child: column < rows[row].children.length
-                              ? widget.buildCell(
-                                  context,
-                                  rows[row].children[column],
-                                  rows[row].header ? theme.heading : theme.body,
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ),
+                      child: _cell(rows[row], column),
                     ),
                 ],
               ),
@@ -264,33 +312,44 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
                 )
               : Container(
                   key: const ValueKey('markstream-table-toolbar'),
-                  height: widget.theme.chrome.height,
-                  padding: widget.theme.chrome.padding,
-                  decoration: BoxDecoration(
-                    color: widget.theme.chrome.background,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: widget.theme.chrome.divider,
-                        width: MarkstreamTheme.stroke,
-                      ),
-                    ),
-                  ),
+                  height: mobile
+                      ? widget.theme.chrome.height
+                      : widget.theme.chrome.actionSize,
+                  padding: mobile
+                      ? widget.theme.chrome.padding
+                      : EdgeInsets.zero,
+                  decoration: mobile
+                      ? BoxDecoration(
+                          color: widget.theme.chrome.background,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: widget.theme.chrome.divider,
+                              width: MarkstreamTheme.stroke,
+                            ),
+                          ),
+                        )
+                      : null,
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     primary: false,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        minWidth: math.max(
-                          0,
-                          width -
-                              widget.theme.chrome.padding
-                                  .resolve(Directionality.of(context))
-                                  .horizontal,
-                        ),
-                        minHeight:
-                            widget.theme.chrome.height - MarkstreamTheme.stroke,
+                        minWidth: mobile
+                            ? math.max(
+                                0,
+                                width -
+                                    widget.theme.chrome.padding
+                                        .resolve(Directionality.of(context))
+                                        .horizontal,
+                              )
+                            : 0,
+                        minHeight: mobile
+                            ? widget.theme.chrome.height -
+                                  MarkstreamTheme.stroke
+                            : widget.theme.chrome.actionSize,
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           _action(
@@ -317,30 +376,11 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
                   ),
                 ),
         );
-        final media = MediaQuery.maybeOf(context);
-        final showToolbar =
-            _hovered || _focused || (media?.accessibleNavigation ?? false);
-        final reducedMotion = media?.disableAnimations ?? false;
         Widget result = Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (!widget.exporting)
-              if (mobile)
-                toolbar
-              else
-                IgnorePointer(
-                  ignoring: !showToolbar,
-                  child: AnimatedOpacity(
-                    key: const ValueKey('markstream-table-hover-toolbar'),
-                    opacity: showToolbar ? 1 : 0,
-                    duration: reducedMotion
-                        ? Duration.zero
-                        : const Duration(milliseconds: 160),
-                    curve: Curves.easeOutCubic,
-                    child: toolbar,
-                  ),
-                ),
+            if (!widget.exporting && mobile) toolbar,
             if (scroll)
               SingleChildScrollView(
                 key: const ValueKey('markstream-table-scroll'),
@@ -364,10 +404,10 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
                         MarkstreamActionKind.collapse,
                         widget.labels.collapse,
                         () async {
-                          setState(
-                            () => _visibleRows =
-                                PerformanceLimits.initialTableRows,
-                          );
+                          setState(() {
+                            _visibleRows = PerformanceLimits.initialTableRows;
+                            _revealedRows = 0;
+                          });
                         },
                       ),
                     if (count < rows.length)
@@ -406,13 +446,10 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
             child: result,
           );
         } else if (!widget.exporting) {
-          result = Focus(
-            onFocusChange: (value) => setState(() => _focused = value),
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _hovered = true),
-              onExit: (_) => setState(() => _hovered = false),
-              child: result,
-            ),
+          result = _DesktopTableToolbar(
+            height: widget.theme.chrome.actionSize,
+            toolbar: toolbar,
+            child: result,
           );
         }
         return Padding(
@@ -421,8 +458,148 @@ class _MarkstreamTableBlockState extends State<MarkstreamTableBlock> {
         );
       },
     );
-    return SelectionContainer.maybeOf(context) == null
-        ? content
-        : SelectionContainer(delegate: _selection, child: content);
+    return SourceRangePreparer(
+      span: widget.node.span,
+      prepare: _prepareRange,
+      child: SelectionContainer.maybeOf(context) == null
+          ? content
+          : SelectionContainer(delegate: _selection, child: content),
+    );
+  }
+}
+
+/// Keeps actions outside table layout so hovering cannot move selection targets.
+class _DesktopTableToolbar extends StatefulWidget {
+  const _DesktopTableToolbar({
+    required this.height,
+    required this.toolbar,
+    required this.child,
+  });
+  final double height;
+  final Widget toolbar, child;
+
+  @override
+  State<_DesktopTableToolbar> createState() => _DesktopTableToolbarState();
+}
+
+class _DesktopTableToolbarState extends State<_DesktopTableToolbar> {
+  final _overlay = OverlayPortalController()..show();
+  bool _hovered = false, _toolbarHovered = false, _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final media = MediaQuery.maybeOf(context);
+    final visible =
+        _hovered ||
+        _toolbarHovered ||
+        _focused ||
+        (media?.accessibleNavigation ?? false);
+    final reducedMotion = media?.disableAnimations ?? false;
+    return Focus(
+      onFocusChange: (value) => setState(() => _focused = value),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: OverlayPortal.overlayChildLayoutBuilder(
+          controller: _overlay,
+          overlayChildBuilder: (context, info) {
+            final anchor = MatrixUtils.transformRect(
+              info.childPaintTransform,
+              Offset.zero & info.childSize,
+            );
+            final overlayBounds = Offset.zero & info.overlaySize;
+            var visibleBounds = overlayBounds;
+            // Read the main-tree anchor, not the overlay's rendering ancestors.
+            // Unlike paragraph culling, floating controls need the exact clip.
+            final clip = viewportClips(
+              this.context.findRenderObject()! as RenderBox,
+              paintOverflow: 0,
+            ).paint;
+            if (clip != null) {
+              visibleBounds = visibleBounds.intersect(
+                MatrixUtils.transformRect(info.childPaintTransform, clip),
+              );
+            }
+            final above = anchor.top - widget.height;
+            bool fitsAbove(Rect area) =>
+                above >= area.top && anchor.top <= area.bottom;
+            bool fitsBelow(Rect area) =>
+                anchor.bottom >= area.top &&
+                anchor.bottom + widget.height <= area.bottom;
+            final fullyVisible =
+                anchor.left >= visibleBounds.left &&
+                anchor.right <= visibleBounds.right &&
+                anchor.top >= visibleBounds.top &&
+                anchor.bottom <= visibleBounds.bottom;
+            // Short embedded scroll views can shrink to exactly the content.
+            // Their fully visible tables may borrow outside overlay space.
+            final bounds =
+                fullyVisible &&
+                    !fitsAbove(visibleBounds) &&
+                    !fitsBelow(visibleBounds)
+                ? overlayBounds
+                : visibleBounds;
+            // A table can fill the viewport. Wait for an outside edge to become
+            // visible rather than covering cells and intercepting selection.
+            final canShow =
+                !visibleBounds.isEmpty &&
+                anchor.overlaps(visibleBounds) &&
+                (fitsAbove(bounds) || fitsBelow(bounds));
+            final show = visible && canShow;
+            final width = math.min(anchor.width, math.max(0.0, bounds.width));
+            final top = fitsAbove(bounds) ? above : anchor.bottom;
+            return Positioned(
+              left: anchor.left.clamp(
+                bounds.left,
+                math.max(bounds.left, bounds.right - width),
+              ),
+              top: top.clamp(
+                bounds.top,
+                math.max(bounds.top, bounds.bottom - widget.height),
+              ),
+              width: width,
+              child: IgnorePointer(
+                ignoring: !show,
+                child: Stack(
+                  children: [
+                    // Keep hover across the clear strip without taking clicks.
+                    Positioned.fill(
+                      child: MouseRegion(
+                        opaque: false,
+                        hitTestBehavior: HitTestBehavior.translucent,
+                        onEnter: (_) => setState(() => _toolbarHovered = true),
+                        onExit: (_) => setState(() => _toolbarHovered = false),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => _toolbarHovered = true),
+                        onExit: (_) => setState(() => _toolbarHovered = false),
+                        child: ExcludeFocus(
+                          excluding: !show,
+                          child: AnimatedOpacity(
+                            key: const ValueKey(
+                              'markstream-table-hover-toolbar',
+                            ),
+                            opacity: show ? 1 : 0,
+                            duration: reducedMotion || !canShow
+                                ? Duration.zero
+                                : const Duration(milliseconds: 160),
+                            curve: Curves.easeOutCubic,
+                            child: widget.toolbar,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          child: widget.child,
+        ),
+      ),
+    );
   }
 }

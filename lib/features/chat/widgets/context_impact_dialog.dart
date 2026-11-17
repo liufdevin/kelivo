@@ -20,7 +20,7 @@ class ContextImpactDialog extends StatelessWidget {
     this.after,
     this.sourceLabel,
   });
-  final List<ContextOperation> operations;
+  final List<ContextOperationMetadata> operations;
   final Set<String> affectedIds;
   final ContextImpactKind kind;
   final String? targetId;
@@ -31,11 +31,7 @@ class ContextImpactDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final cs = Theme.of(context).colorScheme;
-    final count =
-        affectedIds.length -
-        (kind == ContextImpactKind.edit && affectedIds.contains(targetId)
-            ? 1
-            : 0);
+    final count = affectedIds.length - (affectedIds.contains(targetId) ? 1 : 0);
     final title = switch (kind) {
       ContextImpactKind.undo => l10n.contextImpactUndoTitle,
       ContextImpactKind.clear => l10n.contextImpactClearTitle,
@@ -127,10 +123,16 @@ class ContextImpactDialog extends StatelessWidget {
                             ),
                           _row(
                             context,
-                            operations[index].isCompression
+                            operations[index].isFixedStart
+                                ? LucideIcons.flag
+                                : operations[index].isCompression
                                 ? LucideIcons.package2
                                 : LucideIcons.eraser,
-                            '${operations[index].isCompression ? l10n.contextDividerCompressed : l10n.homePageClearContext} · '
+                            '${operations[index].isFixedStart
+                                ? l10n.contextFixedStart
+                                : operations[index].isCompression
+                                ? l10n.contextDividerCompressed
+                                : l10n.homePageClearContext} · '
                             '${MaterialLocalizations.of(context).formatTimeOfDay(TimeOfDay.fromDateTime(operations[index].createdAt.toLocal()))}',
                             kind == ContextImpactKind.edit &&
                                     operations[index].id == targetId
@@ -178,25 +180,25 @@ class ContextImpactDialog extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: ContextDialogActionButton(
-                  label: l10n.homePageCancel,
-                  onTap: () => Navigator.of(context).pop(false),
-                ),
+              ContextDialogActionButton(
+                label: kind == ContextImpactKind.edit
+                    ? count == 0
+                          ? l10n.messageEditPageSave
+                          : l10n.contextImpactSaveConfirm(count)
+                    : count == 0
+                    ? l10n.contextImpactUndoOne
+                    : l10n.contextImpactConfirm(count),
+                primary: true,
+                maxLines: null,
+                onTap: () => Navigator.of(context).pop(true),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ContextDialogActionButton(
-                  label: kind == ContextImpactKind.edit
-                      ? count == 0
-                            ? l10n.messageEditPageSave
-                            : l10n.contextImpactSaveConfirm(count)
-                      : l10n.contextImpactConfirm(count),
-                  primary: true,
-                  onTap: () => Navigator.of(context).pop(true),
-                ),
+              const SizedBox(height: 10),
+              ContextDialogActionButton(
+                label: l10n.homePageCancel,
+                onTap: () => Navigator.of(context).pop(false),
               ),
             ],
           ),

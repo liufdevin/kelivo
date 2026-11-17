@@ -1,3 +1,4 @@
+import 'package:Kelivo/core/models/conversation_mcp_settings.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show Tristate;
@@ -7,6 +8,7 @@ import 'package:Kelivo/core/database/business_preferences.dart';
 import 'package:Kelivo/core/database/extension_entity_store.dart';
 import 'package:Kelivo/core/models/assistant.dart';
 import 'package:Kelivo/core/models/conversation.dart';
+import 'package:Kelivo/core/models/image_context.dart';
 import 'package:Kelivo/core/models/workspace_binding.dart';
 import 'package:Kelivo/core/providers/assistant_provider.dart';
 import 'package:Kelivo/core/providers/environment_provider.dart';
@@ -58,13 +60,28 @@ class _FakeChatService extends ChatService {
   _FakeChatService(this.conversation);
 
   Conversation? conversation;
-
   @override
   String? get currentConversationId => conversation?.id;
 
   @override
   Conversation? getConversation(String id) =>
       conversation?.id == id ? conversation : null;
+
+  @override
+  Future<void> setConversationMcpServers(
+    String conversationId,
+    List<String>? ids,
+  ) async {
+    final current = getConversation(conversationId)!;
+    conversation = current.copyWith(
+      mcpServerIds: ids ?? [],
+      extras: ConversationMcpSettings.updateExtras(
+        current.extras,
+        override: ids != null,
+      ),
+    );
+    notifyListeners();
+  }
 
   @override
   Future<void> updateConversationExtras(
@@ -79,6 +96,13 @@ class _FakeChatService extends ChatService {
     );
     notifyListeners();
   }
+}
+
+class _TemporaryImageChat extends _FakeChatService {
+  _TemporaryImageChat(super.conversation);
+
+  @override
+  bool isTemporaryConversation(String? id) => true;
 }
 
 class _FakeMcpProvider extends McpProvider {
@@ -174,6 +198,7 @@ void main() {
     WidgetTester tester, {
     List<McpServerConfig> servers = const [],
     Conversation? conversation,
+    _FakeChatService? chat,
     bool desktop = false,
   }) async {
     mcp.fakeServers = servers;
@@ -188,7 +213,7 @@ void main() {
           ChangeNotifierProvider<SettingsProvider>.value(value: settings),
           ChangeNotifierProvider<WorkspaceProvider>.value(value: workspaces),
           ChangeNotifierProvider<ChatService>.value(
-            value: _FakeChatService(conversation),
+            value: chat ?? _FakeChatService(conversation),
           ),
           ChangeNotifierProvider<WorkspaceRuntimeProvider>(
             create: (_) => WorkspaceRuntimeProvider(),
@@ -217,6 +242,7 @@ void main() {
                               context,
                               anchorKey: anchor,
                               assistantId: assistantId,
+                              conversationId: conversation?.id,
                               supportsModelTools: true,
                             ),
                             child: const Text('Open tools'),
@@ -239,6 +265,78 @@ void main() {
   }
 
   for (final desktop in [false, true]) {
+    testWidgets(
+      'image viewer stays in the local tool group and syncs, desktop=$desktop',
+      (tester) async {
+        final conversation = Conversation(id: 'images', title: 'Images');
+        final chat = _TemporaryImageChat(conversation);
+        await chat.setImageContextSettings(
+          'images',
+          const ImageContextSettings(automatic: false, pinned: {'pinned'}),
+        );
+        addTearDown(chat.dispose);
+        final l10n = await pumpSheet(
+          tester,
+          conversation: conversation,
+          chat: chat,
+          desktop: desktop,
+        );
+        await tester.pumpAndSettle();
+        final row = find.byKey(
+          ValueKey(
+            desktop ? 'desktop-tools-view-image' : 'chat-tools-view-image',
+          ),
+        );
+        if (!desktop) {
+          expect(
+            row,
+            findsNothing,
+            reason: 'image viewing must follow the existing folded local tools',
+          );
+          await tester.tap(find.text(l10n.assistantEditPageLocalToolsTab));
+          await tester.pumpAndSettle();
+          await tester.scrollUntilVisible(
+            row,
+            250,
+            scrollable: find.byType(Scrollable).first,
+          );
+          expect(
+            find.ancestor(
+              of: row,
+              matching: find.byKey(ChatToolsSheet.localGroupKey),
+            ),
+            findsOneWidget,
+          );
+        } else {
+          await tester.scrollUntilVisible(
+            row,
+            250,
+            scrollable: find.byType(Scrollable).first,
+          );
+        }
+        expect(row, findsOneWidget);
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        expect(
+          (await chat.imageContextSettings('images')).allowRecall,
+          isFalse,
+        );
+        expect((await chat.imageContextSettings('images')).automatic, isFalse);
+        expect((await chat.imageContextSettings('images')).pinned, {'pinned'});
+        await chat.setImageContextSettings(
+          'images',
+          const ImageContextSettings(),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        expect(
+          (await chat.imageContextSettings('images')).allowRecall,
+          isFalse,
+        );
+      },
+    );
+
     testWidgets(
       desktop
           ? 'desktop tools popover omits workspace controls'
@@ -357,7 +455,7 @@ void main() {
 
     expect(find.byKey(ChatToolsSheet.localGroupKey), findsOneWidget);
     expect(
-      find.text('0/${availableLocalToolIds().length}'),
+      find.text('1/${availableLocalToolIds().length + 1}'),
       findsOneWidget,
       reason: 'the folded header still reports how many tools are on',
     );
@@ -369,11 +467,11 @@ void main() {
     expect(find.text(l10n.assistantEditPageLocalToolsTab), findsOneWidget);
   });
 
-  testWidgets('unfolding a group swaps its summary for the rows', (
+  testWidgets('unfolding local tools keeps the count alongside the rows', (
     tester,
   ) async {
     final l10n = await pumpSheet(tester);
-    final count = '0/${availableLocalToolIds().length}';
+    final count = '1/${availableLocalToolIds().length + 1}';
     expect(find.text(count), findsOneWidget);
 
     await tester.tap(find.text(l10n.assistantEditPageLocalToolsTab));
@@ -381,8 +479,8 @@ void main() {
 
     expect(
       find.text(count),
-      findsNothing,
-      reason: 'an open group shows its rows instead of a summary',
+      findsOneWidget,
+      reason: 'the enabled count stays visible while choosing tools',
     );
     expect(
       find.byKey(ChatToolsSheet.localToolKey(LocalToolNames.timeInfo)),
@@ -444,10 +542,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The count is the folded header's summary, so fold the group to read it.
+    expect(
+      find.text('2/${availableLocalToolIds().length + 1}'),
+      findsOneWidget,
+      reason: 'the count updates while the local tools remain expanded',
+    );
+
     await tester.tap(find.text(l10n.assistantEditPageLocalToolsTab));
     await tester.pumpAndSettle();
-    expect(find.text('1/${availableLocalToolIds().length}'), findsOneWidget);
+    expect(
+      find.text('2/${availableLocalToolIds().length + 1}'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('hides the MCP group when nothing is connected', (tester) async {
@@ -456,9 +562,14 @@ void main() {
   });
 
   testWidgets('MCP servers toggle the assistant selection', (tester) async {
-    await pumpSheet(tester, servers: [_server('s1', 'Alpha')]);
+    final l10n = await pumpSheet(tester, servers: [_server('s1', 'Alpha')]);
 
-    expect(find.byKey(ChatToolsSheet.mcpGroupKey), findsOneWidget);
+    final header = find.byKey(ChatToolsSheet.mcpGroupKey);
+    expect(header, findsOneWidget);
+    expect(
+      find.descendant(of: header, matching: find.text('0/1')),
+      findsOneWidget,
+    );
     final row = find.byKey(ChatToolsSheet.mcpServerKey('s1'));
     expect(row, findsOneWidget);
     expect(find.text('Alpha'), findsOneWidget);
@@ -475,10 +586,167 @@ void main() {
       () => Future<void>.delayed(const Duration(milliseconds: 100)),
     );
     await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: header, matching: find.text('1/1')),
+      findsOneWidget,
+    );
     await tester.tap(row);
     await tester.pumpAndSettle();
     expect(assistants.getById(assistantId)!.mcpServerIds, isEmpty);
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 100)),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: header, matching: find.text('0/1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text(l10n.mcpAssistantSheetTitle));
+    await tester.pumpAndSettle();
+    expect(row, findsNothing);
+    expect(
+      find.descendant(of: header, matching: find.text('0/1')),
+      findsOneWidget,
+    );
   });
+
+  for (final desktop in [false, true]) {
+    testWidgets(
+      'MCP customization stays in this conversation (desktop: $desktop)',
+      (tester) async {
+        await tester.runAsync(
+          () => assistants.updateAssistant(
+            assistants
+                .getById(assistantId)!
+                .copyWith(mcpServerIds: ['s1'], allowConversationMcp: true),
+          ),
+        );
+        final conversation = Conversation(
+          id: 'custom',
+          title: 'Custom',
+          assistantId: assistantId,
+        );
+        final l10n = await pumpSheet(
+          tester,
+          conversation: conversation,
+          desktop: desktop,
+          servers: [_server('s1', 'Alpha'), _server('s2', 'Beta')],
+        );
+        await tester.pumpAndSettle();
+        final chat =
+            tester.element(find.byType(Scaffold)).read<ChatService>()
+                as _FakeChatService;
+        final inheritKey = ValueKey(
+          desktop ? 'desktop-tools-mcp-inherit' : 'chat-tools-mcp-inherit',
+        );
+        if (desktop) {
+          await tester.scrollUntilVisible(find.byKey(inheritKey), 250);
+          await tester.pumpAndSettle();
+        }
+        expect(find.byKey(inheritKey), desktop ? findsOneWidget : findsNothing);
+        expect(find.textContaining(l10n.mcpSelectionInherited), findsWidgets);
+        if (!desktop) {
+          expect(
+            find.text('${l10n.mcpSelectionInherited} · 1/2'),
+            findsOneWidget,
+          );
+        }
+        final beta = find.byKey(
+          desktop
+              ? const ValueKey('desktop-tools-mcp-s2')
+              : ChatToolsSheet.mcpServerKey('s2'),
+        );
+        await tester.ensureVisible(beta);
+        await tester.tap(beta);
+        await tester.pumpAndSettle();
+        expect(chat.conversation!.mcpServerIds, ['s1', 's2']);
+        expect(ConversationMcpSettings.isOverridden(chat.conversation), isTrue);
+        expect(assistants.getById(assistantId)!.mcpServerIds, ['s1']);
+        expect(find.textContaining(l10n.mcpSelectionCustom), findsWidgets);
+        if (!desktop) {
+          expect(find.text('${l10n.mcpSelectionCustom} · 2/2'), findsOneWidget);
+        }
+
+        await tester.tap(
+          find.byKey(
+            ValueKey(
+              desktop ? 'desktop-tools-mcp-clear' : 'chat-tools-mcp-clear',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(chat.conversation!.mcpServerIds, isEmpty);
+        expect(ConversationMcpSettings.isOverridden(chat.conversation), isTrue);
+        if (!desktop) {
+          expect(find.text('${l10n.mcpSelectionCustom} · 0/2'), findsOneWidget);
+        }
+        if (desktop) {
+          await tester.tap(find.text('Open tools'));
+          await tester.pumpAndSettle();
+        }
+        final custom = chat.conversation!;
+        await tester.runAsync(
+          () => assistants.updateAssistant(
+            assistants
+                .getById(assistantId)!
+                .copyWith(allowConversationMcp: false),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byKey(inheritKey), findsNothing);
+        expect(
+          ConversationMcpSettings.effectiveServerIds(
+            assistants.getById(assistantId),
+            chat.conversation,
+          ),
+          ['s1'],
+        );
+        await tester.runAsync(
+          () => assistants.updateAssistant(
+            assistants
+                .getById(assistantId)!
+                .copyWith(allowConversationMcp: true),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(chat.conversation, same(custom));
+        expect(
+          ConversationMcpSettings.effectiveServerIds(
+            assistants.getById(assistantId),
+            chat.conversation,
+          ),
+          isEmpty,
+        );
+        if (desktop) {
+          await tester.scrollUntilVisible(find.byKey(inheritKey), 250);
+        } else {
+          await tester.ensureVisible(find.byKey(inheritKey));
+        }
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(inheritKey));
+        await tester.pumpAndSettle();
+        expect(
+          ConversationMcpSettings.isOverridden(chat.conversation),
+          isFalse,
+        );
+        expect(
+          ConversationMcpSettings.effectiveServerIds(
+            assistants.getById(assistantId),
+            chat.conversation,
+          ),
+          ['s1'],
+        );
+        expect(assistants.getById(assistantId)!.mcpServerIds, ['s1']);
+        if (!desktop) {
+          expect(
+            find.text('${l10n.mcpSelectionInherited} · 1/2'),
+            findsOneWidget,
+          );
+        }
+      },
+    );
+  }
 
   testWidgets('workspace group hosts the workspace section', (tester) async {
     await pumpSheet(tester);
@@ -488,12 +756,32 @@ void main() {
     expect(find.byKey(WorkspaceSection.bindKey), findsOneWidget);
   });
 
-  testWidgets('folding the workspace group hides its rows', (tester) async {
-    final l10n = await pumpSheet(tester);
+  testWidgets('workspace name appears once when expanded or folded', (
+    tester,
+  ) async {
+    final workspace = (await tester.runAsync(
+      () => workspaces.create(name: 'Test workspace'),
+    ))!;
+    final l10n = await pumpSheet(
+      tester,
+      conversation: Conversation(
+        title: 'Chat',
+        extras: WorkspaceBinding(workspaceId: workspace.id).applyTo({}),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(workspace.name), findsOneWidget);
+    expect(find.byType(WorkspaceSection), findsOneWidget);
 
     await tester.tap(find.text(l10n.workspacesTitle));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(WorkspaceSection.bindKey), findsNothing);
+    expect(find.byType(WorkspaceSection), findsNothing);
+    expect(find.text(workspace.name), findsOneWidget);
+
+    await tester.tap(find.text(l10n.workspacesTitle));
+    await tester.pumpAndSettle();
+    expect(find.byType(WorkspaceSection), findsOneWidget);
+    expect(find.text(workspace.name), findsOneWidget);
   });
 }

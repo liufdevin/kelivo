@@ -16,13 +16,9 @@ import '../tool_image.dart';
 /// URI (including one persisted before this check) is never a local attachment.
 class McpImageSnapshot {
   static const _prefix = 'mcp_img';
-  static final _deduplicatedName = RegExp(r'^mcp_img_[a-f0-9]{64}\.(png|jpg)$');
 
-  static bool isDeduplicatedFile(String path) =>
-      _deduplicatedName.hasMatch(p.basename(path));
-
-  /// Reusing an unreferenced preview starts a new GC grace period before its
-  /// next tool result has been checkpointed into the message asset registry.
+  /// Verify a cached client-owned preview before reuse. Generation ownership
+  /// protects the file until the tool result has been checkpointed.
   static Future<File?> reuseLocalFile(String uri) async {
     final file = await localFile(uri);
     if (file == null) return null;
@@ -183,20 +179,101 @@ class McpImageSnapshot {
     }
   }
 
-  /// Read current snapshots or URL-only results. Historical URLs are fetched
-  /// in memory; only the tool execution that persists a URI saves a new file.
-  static Future<String?> readDataUrl(String uri) async {
+  /// Share URL materialization without sharing a generation's cancellation.
+  /// A surviving reader retries an aborted owner's read through the same slot.
+  static final _urlReads =
+      <String, ({Future<String?> future, ToolCallCancellation? owner})>{};
+
+  static Future<String?> readDataUrl(String uri, {String? cacheKey}) async {
+    if (cacheKey == null ||
+        !(uri.startsWith('http://') || uri.startsWith('https://'))) {
+      return _readDataUrl(uri, cacheKey: cacheKey);
+    }
+    final cancellation = ToolCallCancellation.current;
+    final key = '$cacheKey|$uri';
+    while (true) {
+      cancellation?.throwIfCancelled();
+      final existing = _urlReads[key];
+      if (existing != null) {
+        try {
+          final result = await (cancellation == null
+              ? existing.future
+              : Future.any<String?>([
+                  existing.future,
+                  cancellation.cancelled.then<String?>((_) {
+                    cancellation.throwIfCancelled();
+                    return null;
+                  }),
+                ]));
+          cancellation?.throwIfCancelled();
+          return result;
+        } catch (_) {
+          cancellation?.throwIfCancelled();
+          var ownerCancelled = false;
+          try {
+            existing.owner?.throwIfCancelled();
+          } on StateError {
+            ownerCancelled = true;
+          }
+          if (!ownerCancelled) rethrow;
+          // Another survivor may already have installed the retry. Never
+          // remove that new slot or start an independent competing download.
+          if (identical(_urlReads[key]?.future, existing.future)) {
+            _urlReads.remove(key);
+          }
+          continue;
+        }
+      }
+      final read = _readDataUrl(uri, cacheKey: cacheKey);
+      _urlReads[key] = (future: read, owner: cancellation);
+      try {
+        final result = await read;
+        cancellation?.throwIfCancelled();
+        return result;
+      } finally {
+        if (identical(_urlReads[key]?.future, read)) _urlReads.remove(key);
+      }
+    }
+  }
+
+  static Future<String?> _readDataUrl(String uri, {String? cacheKey}) async {
     final cancellation = ToolCallCancellation.current;
     cancellation?.throwIfCancelled();
     try {
       final parsed = Uri.tryParse(uri);
       if (parsed?.isScheme('http') == true ||
           parsed?.isScheme('https') == true) {
+        final cache = cacheKey == null
+            ? null
+            : File(
+                p.join(
+                  (await AppDirectories.getCacheDirectory()).path,
+                  'image_context',
+                  sha256.convert(utf8.encode('$cacheKey|$uri')).toString(),
+                ),
+              );
+        if (cache != null && await cache.exists()) {
+          return await cache.readAsString();
+        }
         final bytes = await _fetch(uri);
         if (bytes == null) return null;
         final image = await ToolImage.fromBytes(bytes);
         cancellation?.throwIfCancelled();
-        return 'data:${image.mime};base64,${base64Encode(image.bytes)}';
+        final data = 'data:${image.mime};base64,${base64Encode(image.bytes)}';
+        if (cache != null) {
+          await cache.parent.create(recursive: true);
+          final temporary = File('${cache.path}.${const Uuid().v4()}.tmp');
+          try {
+            await temporary.writeAsString(data, flush: true);
+            if (!await cache.exists()) {
+              await temporary.rename(cache.path);
+            }
+          } finally {
+            if (await temporary.exists()) await temporary.delete();
+          }
+          return await cache.readAsString();
+        }
+        return data;
       }
       final file = await localFile(uri);
       if (file == null) return null;

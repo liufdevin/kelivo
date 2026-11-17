@@ -229,10 +229,14 @@ void main() {
       messenger.setMockMethodCallHandler(clipboardChannel, null);
     });
 
-    final settings = SettingsProvider(createBusinessTestPreferences());
+    final settings = (await tester.runAsync(() async {
+      final provider = SettingsProvider(createBusinessTestPreferences());
+      await provider.loaded;
+      return provider;
+    }))!;
     addTearDown(settings.dispose);
-    await settings.loaded;
-    await settings.setLongPasteAsFileThreshold(100);
+
+    await tester.runAsync(() => settings.setLongPasteAsFileThreshold(100));
     final controller = TextEditingController(text: 'before after');
     final focusNode = FocusNode();
     final mediaController = ChatInputBarController();
@@ -688,13 +692,16 @@ void main() {
     expect(mediaController.snapshotInput('').imagePaths, isEmpty);
 
     controller.text = 'send with image';
-    const lateDocument = DocumentAttachment(
-      path: '/tmp/late.pdf',
-      fileName: 'late.pdf',
-      mime: 'application/pdf',
+    final source = File('${userDir.path}/late.txt')
+      ..writeAsStringSync('late attachment');
+    final lateDocument = DocumentAttachment(
+      path: source.path,
+      fileName: 'late.txt',
+      mime: 'text/plain',
     );
-    mediaController.addFiles(const [lateDocument]);
     await tester.runAsync(() async {
+      mediaController.addFiles([lateDocument]);
+      await mediaController.documentCache.read(lateDocument);
       tester
           .state<EditableTextState>(find.byType(EditableText))
           .insertContent(
@@ -914,6 +921,63 @@ void main() {
     expect(submitted?.imagePaths.single, product.path);
     expect(await fileExists(tester, source), isTrue);
 
+    controller.dispose();
+    focusNode.dispose();
+  });
+
+  testWidgets('removing restored history images only changes the draft', (
+    tester,
+  ) async {
+    late List<File> sources;
+    await tester.runAsync(() async {
+      sources = [
+        await writeUserImage('history_first.png'),
+        await writeUserImage('history_second.png'),
+      ];
+    });
+    final controller = TextEditingController(text: 'history caption');
+    final focusNode = FocusNode();
+    final mediaController = ChatInputBarController();
+    var submissions = 0;
+    await tester.pumpWidget(
+      buildHarness(
+        controller: controller,
+        focusNode: focusNode,
+        mediaController: mediaController,
+        onSend: (_) async {
+          submissions++;
+          return ChatInputSubmissionResult.sent;
+        },
+      ),
+    );
+    mediaController.restoreInput(
+      ChatInputData(
+        text: controller.text,
+        imagePaths: sources.map((file) => file.path).toList(),
+      ),
+    );
+    await tester.pump();
+
+    ChatInputData? changedDraft;
+    mediaController.onDraftChanged = () {
+      changedDraft = mediaController.snapshotInput(controller.text);
+    };
+    for (var remaining = 1; remaining >= 0; remaining--) {
+      await tester.tap(find.byKey(const ValueKey('chat-input-image-remove:0')));
+      await tester.pumpAndSettle();
+      expect(
+        changedDraft!.imagePaths,
+        sources.skip(2 - remaining).map((f) => f.path),
+      );
+      expect(controller.text, 'history caption');
+      expect(submissions, 0);
+      expect(tester.takeException(), isNull);
+      for (final source in sources) {
+        expect(await fileExists(tester, source), isTrue);
+      }
+    }
+
+    await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
     focusNode.dispose();
   });

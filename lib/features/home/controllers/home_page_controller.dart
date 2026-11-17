@@ -1,3 +1,10 @@
+import '../../../shared/utils/attachment_read_labels.dart';
+import '../../../core/models/context_compression_task.dart'
+    show CompressionRequestPreview;
+import '../../chat/widgets/context_compression_status.dart';
+import '../../../core/models/compression_config.dart';
+import '../../chat/controllers/quote_editing_controller.dart';
+import '../../side_panel/desktop_side_panel_controller.dart';
 import 'package:Kelivo/features/intelligent_ui/host/ui_search_navigation.dart';
 import '../../intelligent_ui/host/ui_copy_actions.dart';
 import '../../intelligent_ui/host/ui_draft_staging.dart';
@@ -17,7 +24,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/database/chat_database_repository.dart';
 import '../../../core/models/chat_input_data.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/message_part.dart';
@@ -52,6 +58,7 @@ import '../../chat/widgets/context_operation_actions.dart';
 import '../../../core/models/context_operation.dart';
 import '../../chat/widgets/chat_message_widget.dart' show ToolUIPart;
 import '../../chat/widgets/message_edit_sheet.dart';
+import '../../chat/widgets/message_more_sheet.dart';
 import '../../chat/widgets/message_export_sheet.dart';
 import '../../../desktop/message_edit_dialog.dart';
 import '../../../desktop/hotkeys/chat_action_bus.dart';
@@ -69,12 +76,12 @@ import '../services/ask_user_interaction_service.dart';
 import '../services/ocr_service.dart';
 import '../services/translation_service.dart';
 import '../services/file_upload_service.dart';
+import '../services/composer_document_route.dart';
+import '../../../core/services/chat/document_text_extractor.dart';
 import '../utils/chat_layout_constants.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/share_destination_sheet.dart';
 import '../../model/widgets/model_select_sheet.dart';
-
-enum ChatSelectionMode { share, delete }
 
 /// Translation data for UI state (expanded/collapsed).
 class TranslationData {
@@ -90,6 +97,12 @@ class UserMessageEditState {
   final String messageId;
   final String previewText;
 }
+
+typedef RevealMessageMatch =
+    Future<bool> Function(
+      bool Function() isCurrent, {
+      required bool waitForMount,
+    });
 
 /// Controller that manages all state and service wiring for HomePage.
 ///
@@ -187,6 +200,10 @@ class HomePageController extends ChangeNotifier {
   /// Serial of the latest animated conversation transition; superseded
   /// transitions check it to discard their pre-commit work.
   int _switchSerial = 0;
+  int _messageJumpSerial = 0;
+  bool _messageJumpInProgress = false;
+  bool _findingMessage = false;
+  final findViewportSnapshot = SnapshotController();
 
   // Startup warm-up (cache plan measure 14): after the initial restore
   // completes, an idle-time serial prefetch of the most recent conversations.
@@ -223,7 +240,6 @@ class HomePageController extends ChangeNotifier {
 
   // Selection mode
   bool _selecting = false;
-  ChatSelectionMode _selectionMode = ChatSelectionMode.share;
   final Set<String> _selectedItems = <String>{};
 
   /// Selectable projection ids from the last full-history selection load.
@@ -233,8 +249,7 @@ class HomePageController extends ChangeNotifier {
   /// Bumped when selection starts, cancels, completes, or the conversation
   /// switches so in-flight select-all / toggle / invert results are ignored.
   int _selectionEpoch = 0;
-  bool _showThinkingTools = false;
-  bool _showThinkingContent = false;
+  bool _openingSelectionExport = false;
 
   // Desktop drag-and-drop
   bool _isDragHovering = false;
@@ -250,9 +265,9 @@ class HomePageController extends ChangeNotifier {
 
   // Sidebar state (tablet/desktop)
   bool _tabletSidebarOpen = true;
-  bool _rightSidebarOpen = true;
+  bool _compactDesktop = false;
+  bool _compactSidebarOpen = false;
   double _embeddedSidebarWidth = 300;
-  double _rightSidebarWidth = 300;
   bool _desktopUiInited = false;
 
   // Drawer state
@@ -260,6 +275,8 @@ class HomePageController extends ChangeNotifier {
 
   /// Reveal a conversation opened from a notification or scheduled run history.
   VoidCallback? onRevealConversation;
+  ValueChanged<String>? onFindTextChanged;
+  ValueChanged<String>? onFindGenerationFinished;
 
   // Desktop global-search mode
   bool _isGlobalSearchMode = false;
@@ -593,7 +610,8 @@ class HomePageController extends ChangeNotifier {
     final wasApplying = _applyingComposer;
     _applyingComposer = true;
     try {
-      _inputController.value = TextEditingValue(
+      _inputController.value = QuoteEditingValue(
+        quotes: input.quotes,
         text: input.text,
         selection: TextSelection(
           baseOffset: input.selectionBase < 0
@@ -668,16 +686,12 @@ class HomePageController extends ChangeNotifier {
   Set<String> get removingSlotIds => _removingSlotIds;
   ChatController get chatController => _chatController;
   bool get selecting => _selecting;
-  ChatSelectionMode get selectionMode => _selectionMode;
   Set<String> get selectedItems => _selectedItems;
   int get selectedCount => _selectedItems.length;
-  bool get showThinkingTools => _showThinkingTools;
-  bool get showThinkingContent => _showThinkingContent;
   bool get isDragHovering => _isDragHovering;
-  bool get tabletSidebarOpen => _tabletSidebarOpen;
-  bool get rightSidebarOpen => _rightSidebarOpen;
+  bool get tabletSidebarOpen =>
+      _compactDesktop ? _compactSidebarOpen : _tabletSidebarOpen;
   double get embeddedSidebarWidth => _embeddedSidebarWidth;
-  double get rightSidebarWidth => _rightSidebarWidth;
   double get inputBarHeight => _inputBarHeight;
   bool get desktopUiInited => _desktopUiInited;
   bool get isGlobalSearchMode => _isGlobalSearchMode;
@@ -802,6 +816,7 @@ class HomePageController extends ChangeNotifier {
       getSettingsProvider: () => _context.read<SettingsProvider>(),
       getCurrentConversationId: () => currentConversation?.id,
       onStreamTick: _handleStreamTick,
+      onMessagePresented: (id) => onFindTextChanged?.call(id),
     );
   }
 
@@ -848,6 +863,7 @@ class HomePageController extends ChangeNotifier {
       hasWorkspace: () => hasWorkspace,
     );
     _messageBuilderService = MessageBuilderService(
+      documentCache: _mediaController.documentCache,
       chatService: _chatService,
       contextProvider: _context,
       ocrHandler: (imagePaths, {revisionId, session, requestId}) =>
@@ -931,12 +947,40 @@ class HomePageController extends ChangeNotifier {
   }
 
   void _wireViewModelCallbacks() {
-    _viewModel.onError = (error) {
+    _viewModel.onContextOverflow = (message, error, originalParts) {
+      if (!_context.mounted) return;
       final l10n = AppLocalizations.of(_context)!;
       showAppSnackBar(
         _context,
         message: _localizeGenerationError(l10n, error),
-        type: NotificationType.error,
+        type: NotificationType.warning,
+        actionLabel: l10n.compressionOverflowAction,
+        onAction: () => _viewModel.compressAndRetryContext(
+          message,
+          originalParts: originalParts,
+        ),
+      );
+    };
+    _viewModel.onError = (error) {
+      final l10n = AppLocalizations.of(_context)!;
+      final compressionFailure =
+          error != 'compression_near_limit' &&
+          (error.contains('compression_') ||
+              error.contains('native_compaction_'));
+      showAppSnackBar(
+        _context,
+        message: error == 'compression_near_limit'
+            ? l10n.compressionNearLimit
+            : _localizeGenerationError(l10n, error),
+        type: error == 'compression_near_limit'
+            ? NotificationType.info
+            : NotificationType.error,
+        actionLabel: compressionFailure
+            ? l10n.ttsServicesDialogErrorTitle
+            : null,
+        onAction: compressionFailure
+            ? () => showCompressionErrorDetails(_context, error)
+            : null,
       );
     };
     _viewModel.onWarning = (warning) {
@@ -970,10 +1014,13 @@ class HomePageController extends ChangeNotifier {
           );
         };
     _viewModel.onConversationSwitched = () {
+      // Committing the new window already invalidated its predecessor's read.
+      _resetMessageJump();
       _restoreMessageUiState();
       _scrollCtrl.positionAtBottomOnNextLayout();
     };
     _viewModel.onStreamFinished = (conversationId) {
+      onFindGenerationFinished?.call(conversationId);
       // Trigger UI update when streaming finishes
       notifyListeners();
       if (currentConversation?.id == conversationId) {
@@ -1008,6 +1055,12 @@ class HomePageController extends ChangeNotifier {
         return l10n.imageGenerationRequestFailed;
       case 'local_litert_model_too_large':
         return l10n.localLiteRtModelTooLargeForDevice;
+    }
+    final attachment = AttachmentReadError.fromMessage(error);
+    if (attachment != null) return attachment.message(l10n);
+    if (error.contains('compression_') ||
+        error.contains('native_compaction_')) {
+      return compressionErrorLabel(l10n, error);
     }
     if (error.contains('context_changed')) return l10n.contextChanged;
     if (error.contains('context_budget_exceeded')) {
@@ -1089,19 +1142,17 @@ class HomePageController extends ChangeNotifier {
           break;
         case ChatAction.toggleLeftPanelTopics:
         case ChatAction.toggleLeftPanelAssistants:
-          if (settingsProvider.desktopTopicPosition !=
-              DesktopTopicPosition.left) {
+          if (settingsProvider.desktopTopicPosition ==
+                  DesktopTopicPosition.right &&
+              action == ChatAction.toggleLeftPanelTopics) {
+            DesktopSidePanelController.instance.open(
+              kind: SidePanelTabKind.topics,
+            );
             return;
           }
           final wantAssistants =
               (action == ChatAction.toggleLeftPanelAssistants);
-          if (!_tabletSidebarOpen) {
-            _tabletSidebarOpen = true;
-            notifyListeners();
-            try {
-              settingsProvider.setDesktopSidebarOpen(true);
-            } catch (_) {}
-          }
+          if (!tabletSidebarOpen) toggleTabletSidebar();
           if (wantAssistants) {
             DesktopSidebarTabBus.instance.switchToAssistants();
           } else {
@@ -1305,6 +1356,7 @@ class HomePageController extends ChangeNotifier {
 
   void enterGlobalSearchMode({bool preserveQuery = true}) {
     _isGlobalSearchMode = true;
+    if (_compactDesktop) _compactSidebarOpen = true;
     if (!preserveQuery) _globalSearchQuery = '';
     notifyListeners();
   }
@@ -1479,11 +1531,6 @@ class HomePageController extends ChangeNotifier {
           _sidebarMaxWidth,
         );
         _tabletSidebarOpen = sp.desktopSidebarOpen;
-        _rightSidebarOpen = sp.desktopRightSidebarOpen;
-        _rightSidebarWidth = sp.desktopRightSidebarWidth.clamp(
-          _sidebarMinWidth,
-          _sidebarMaxWidth,
-        );
       } catch (_) {}
     }
   }
@@ -1494,9 +1541,11 @@ class HomePageController extends ChangeNotifier {
 
   bool get hasWorkspace {
     final provider = _context.read<WorkspaceProvider?>();
-    return provider != null &&
+    final id = currentConversation?.id;
+    return id != null &&
+        provider != null &&
         WorkspaceBinding.extrasHaveWorkspace(
-          currentConversation?.extras,
+          _chatService.getConversation(id)?.extras,
           (id) => provider.byId(id) != null,
         );
   }
@@ -1508,7 +1557,10 @@ class HomePageController extends ChangeNotifier {
       return _sendComposerMessage(input);
     }
     try {
-      final prepared = await drafts.prepareSubmissionInput(input);
+      final prepared = await drafts.prepareSubmissionInput(
+        input,
+        onDocumentCopied: _mediaController.documentCache.reusePublishedCopy,
+      );
       final result = await _sendComposerMessage(prepared);
       if (result == ChatInputSubmissionResult.queued) return result;
       await _finishComposerSubmission(submission);
@@ -1517,7 +1569,7 @@ class HomePageController extends ChangeNotifier {
       }
       await _recoverComposerSubmission(submission.conversationId);
       return result;
-    } catch (_) {
+    } catch (error) {
       if (await drafts.wasSubmitted(submission.id)) {
         await _finishComposerSubmission(submission);
         return ChatInputSubmissionResult.sent;
@@ -1526,7 +1578,11 @@ class HomePageController extends ChangeNotifier {
       if (_context.mounted) {
         showAppSnackBar(
           _context,
-          message: AppLocalizations.of(_context)!.composerDraftSaveFailed,
+          message:
+              error is StateError &&
+                  error.message == 'composer_attachment_missing'
+              ? AppLocalizations.of(_context)!.composerDraftMissingFile
+              : AppLocalizations.of(_context)!.composerDraftSaveFailed,
           type: NotificationType.error,
         );
       }
@@ -1563,26 +1619,50 @@ class HomePageController extends ChangeNotifier {
     if (input.isEmpty) {
       return ChatInputSubmissionResult.rejected;
     }
-    final submissionConversation = input.draftSubmission == null
-        ? currentConversation
-        : _chatService.getConversation(input.draftSubmission!.conversationId);
-    final workspaceProvider = _context.read<WorkspaceProvider?>();
-    final acceptsWorkspaceFiles =
-        workspaceProvider != null &&
-        WorkspaceBinding.extrasHaveWorkspace(
-          submissionConversation?.extras,
-          (id) => workspaceProvider.byId(id) != null,
+    if (input.documents.isNotEmpty) {
+      final owner =
+          input.draftSubmission?.conversationId ?? currentConversation?.id;
+      final submissionConversation = owner == null
+          ? null
+          : _chatService.getConversation(owner);
+      final serial = _composerSwitch;
+      final settings = _context.read<SettingsProvider>();
+      final assistant = _context
+          .read<AssistantProvider>()
+          .resolveConversationAssistant(submissionConversation?.assistantId);
+      final route = resolveComposerDocumentRoute(
+        _context,
+        conversation: submissionConversation,
+        settings: settings,
+        assistant: assistant,
+        model: _messageGenerationService.getModelConfig(
+          settings,
+          assistant,
+          conversation: submissionConversation,
+        ),
+      );
+      bool stillVisible() =>
+          serial == _composerSwitch &&
+          submissionConversation?.id == currentConversation?.id;
+      try {
+        await route.validate(
+          input.documents,
+          _messageBuilderService.documentCache,
         );
-    if (!acceptsWorkspaceFiles) {
-      for (final file in input.documents) {
-        if (FileUploadService.supportsWithoutWorkspace(file)) continue;
-        showAppSnackBar(
-          _context,
-          message: AppLocalizations.of(
+      } on AttachmentReadError catch (error) {
+        if (_context.mounted && stillVisible()) {
+          showAppSnackBar(
             _context,
-          )!.attachmentRequiresWorkspace(file.fileName),
-          type: NotificationType.warning,
-        );
+            message: error.message(AppLocalizations.of(_context)!),
+            type: NotificationType.warning,
+          );
+        }
+        return ChatInputSubmissionResult.rejected;
+      }
+      // A durable submission already owns its conversation and can finish
+      // after the user navigates. A transient submission has no such target.
+      if (!_context.mounted ||
+          (input.draftSubmission == null && !stillVisible())) {
         return ChatInputSubmissionResult.rejected;
       }
     }
@@ -1734,38 +1814,32 @@ class HomePageController extends ChangeNotifier {
     ChatMessage message, {
     bool assistantAsNewReply = false,
     bool? allowImagesApiRouting,
+    bool omitImages = false,
   }) async {
     if (currentConversation == null) return;
-    final projected = await _chatService.loadSelectedMessageProjections(
-      message.conversationId,
-    );
-    if (!_context.mounted) return;
     final deletingTail = _context
         .read<SettingsProvider>()
         .regenerateDeleteTrailingMessages;
-    final versioning = _messageGenerationService
-        .calculateRegenerationVersioning(
-          message: message,
-          messages: projected,
-          assistantAsNewReply: assistantAsNewReply,
-        );
+    final source = await _chatService.loadRegenerationSourceGroups(
+      message.conversationId,
+      message.id,
+      assistantAsNewReply: assistantAsNewReply,
+      deleteTrailingMessages: deletingTail,
+    );
+    if (!_context.mounted ||
+        currentConversation?.id != message.conversationId) {
+      return;
+    }
     final affectedGroups = {
-      if (versioning.targetGroupId != null) versioning.targetGroupId!,
+      if (source.targetGroupId != null) source.targetGroupId!,
+      ...source.removedGroups,
     };
-    final removedGroups = deletingTail && versioning.lastKeep >= 0
-        ? projected
-              .skip(versioning.lastKeep + 1)
-              .map(ContextHistory.group)
-              .where((group) => group != versioning.targetGroupId)
-              .toSet()
-        : <String>{};
-    affectedGroups.addAll(removedGroups);
     final approved = await confirmContextSourceMutation(
       _context,
       chat: _chatService,
       conversationId: message.conversationId,
       groups: affectedGroups,
-      removedGroups: removedGroups,
+      removedGroups: source.removedGroups,
     );
     if (approved == null) return;
     _warmupSerial++;
@@ -1790,6 +1864,7 @@ class HomePageController extends ChangeNotifier {
 
     final success = await _viewModel.regenerateAtMessage(
       message,
+      omitImages: omitImages,
       assistantAsNewReply: assistantAsNewReply,
       expectedContextState: approved,
       allowImagesApiRouting:
@@ -1863,6 +1938,7 @@ class HomePageController extends ChangeNotifier {
 
   Future<void> switchConversationAnimated(String id) async {
     final serial = ++_switchSerial;
+    _cancelMessageJump();
     _warmupSerial++;
     if (currentConversation?.id == id) {
       // Already on the target: the serial bump above cancels any in-flight
@@ -1915,7 +1991,7 @@ class HomePageController extends ChangeNotifier {
             !identical(_scrollCtrl, activeScrollController)) {
           return;
         }
-        await _convoFadeController.forward();
+        await _convoFadeController.forward().orCancel;
       } catch (_) {}
     } else {
       // Desktop uses the same prepare/commit atomicity as mobile, without
@@ -1944,13 +2020,13 @@ class HomePageController extends ChangeNotifier {
 
   Future<void> _reverseConvoFade() async {
     try {
-      await _convoFadeController.reverse();
+      await _convoFadeController.reverse().orCancel;
     } catch (_) {}
   }
 
   Future<void> _forwardConvoFade() async {
     try {
-      await _convoFadeController.forward();
+      await _convoFadeController.forward().orCancel;
     } catch (_) {}
   }
 
@@ -1965,6 +2041,7 @@ class HomePageController extends ChangeNotifier {
   }) async {
     // Cancel any in-flight conversation switch fetch.
     final serial = ++_switchSerial;
+    _cancelMessageJump();
     final assistantId = _context.read<AssistantProvider>().currentAssistantId;
     _warmupSerial++;
     _selectionEpoch++;
@@ -2039,7 +2116,6 @@ class HomePageController extends ChangeNotifier {
   void _clearSelectionState() {
     _selectionEpoch++;
     _selecting = false;
-    _selectionMode = ChatSelectionMode.share;
     _selectedItems.clear();
     _selectableProjectionIds = null;
   }
@@ -2063,96 +2139,119 @@ class HomePageController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<CarrySelection> previewCarriedMessages(
+    String id,
+    CompressContextOptions options,
+    CompressionConfig config,
+  ) async {
+    final request = await _viewModel.buildCompressionRequest(
+      id,
+      options: options,
+      configOverride: config,
+    );
+    return _chatService.contextCompression.previewCarried(id, request);
+  }
+
+  Future<CompressionRequestPreview> previewCompressionRequest(
+    String id,
+    CompressContextOptions options,
+    CompressionConfig config, {
+    required Future<ConversationContextHistory> history,
+  }) => _viewModel.previewCompressionRequest(
+    id,
+    options,
+    config,
+    history: history,
+  );
+
   Future<String?> compressContext({
     required CompressContextOptions options,
     String? targetConversationId,
+    String? beforeMessageId,
+    Set<String>? effectiveMessageIds,
   }) => _viewModel.compressContext(
     options: options,
     targetConversationId: targetConversationId,
+    beforeMessageId: beforeMessageId,
+    effectiveMessageIds: effectiveMessageIds,
   );
 
   // ============================================================================
   // Public Methods - Message Operations
   // ============================================================================
 
-  Future<void> deleteMessage({
-    required ChatMessage message,
-    required Map<String, List<ChatMessage>> byGroup,
-  }) async {
-    if (!_context.mounted) return;
-    final approved = await confirmContextSourceMutation(
-      _context,
-      deleting: true,
-      chat: _chatService,
-      conversationId: message.conversationId,
-      groups: {ContextHistory.group(message)},
-      removedGroups: (byGroup[ContextHistory.group(message)]?.length ?? 1) <= 1
-          ? {ContextHistory.group(message)}
-          : {},
+  Future<void> deleteMessageVersions(
+    ChatMessage message,
+    MessageVersionDeleteScope scope,
+  ) async {
+    final gid = ContextHistory.group(message);
+    final versions = await _chatService.loadMessageVersionHeaders(
+      message.conversationId,
+      {gid},
     );
-    if (approved == null) return;
-    final keepAtBottom = _scrollCtrl.isNearBottom();
-    final gid = (message.groupId ?? message.id);
-    // Deleting the only version removes the whole slot; deleting one version
-    // of several swaps content in place, which reads better without a
-    // removal animation.
-    final slotDisappears = (byGroup[gid] ?? const <ChatMessage>[]).length <= 1;
-    int? preserveRequest;
-    if (slotDisappears && _shouldAnimateSlotRemoval(message)) {
-      preserveRequest = await _playSlotRemovalAnimation(
-        gid,
-        keepAtBottom: keepAtBottom,
-      );
+    if (!_context.mounted ||
+        currentConversation?.id != message.conversationId ||
+        !versions.any((version) => version.id == message.id)) {
+      return;
     }
-    _translations.remove(message.id);
-    try {
-      await _viewModel.deleteMessage(
-        message: message,
-        byGroup: byGroup,
-        expectedContextState: approved,
-      );
-    } finally {
-      _settleAfterSlotRemoval(
-        gid,
-        conversationId: message.conversationId,
-        keepAtBottom: keepAtBottom,
-        preserveRequest: preserveRequest,
-      );
-    }
-  }
+    final deletedIds = switch (scope) {
+      MessageVersionDeleteScope.current => {message.id},
+      MessageVersionDeleteScope.others => {
+        for (final version in versions)
+          if (version.id != message.id) version.id,
+      },
+      MessageVersionDeleteScope.all =>
+        versions.map((version) => version.id).toSet(),
+    };
+    if (deletedIds.isEmpty) return;
+    final confirmed = await confirmMessageVersionDeletion(
+      _context,
+      scope,
+      deletedIds.length,
+    );
+    if (!confirmed || !_context.mounted) return;
 
-  Future<void> deleteAllMessageVersions({
-    required ChatMessage message,
-    required Map<String, List<ChatMessage>> byGroup,
-  }) async {
-    if (!_context.mounted) return;
-    final approved = await confirmContextSourceMutation(
-      _context,
-      deleting: true,
-      chat: _chatService,
-      conversationId: message.conversationId,
-      groups: {ContextHistory.group(message)},
-      removedGroups: {ContextHistory.group(message)},
-    );
-    if (approved == null) return;
+    final removesGroup = deletedIds.length == versions.length;
+    String? approved;
+    if (scope != MessageVersionDeleteScope.others) {
+      approved = await confirmContextSourceMutation(
+        _context,
+        deleting: true,
+        chat: _chatService,
+        conversationId: message.conversationId,
+        groups: {gid},
+        removedGroups: removesGroup ? {gid} : {},
+      );
+      if (approved == null) return;
+    }
     final keepAtBottom = _scrollCtrl.isNearBottom();
-    final gid = (message.groupId ?? message.id);
     int? preserveRequest;
-    if (_shouldAnimateSlotRemoval(message)) {
+    if (removesGroup && _shouldAnimateSlotRemoval(message)) {
       preserveRequest = await _playSlotRemovalAnimation(
         gid,
         keepAtBottom: keepAtBottom,
       );
     }
-    for (final version in byGroup[gid] ?? const <ChatMessage>[]) {
-      _translations.remove(version.id);
-    }
     try {
-      await _viewModel.deleteAllMessageVersions(
+      final removedIds = await _viewModel.deleteMessageVersions(
         message: message,
-        byGroup: byGroup,
+        versionsBefore: versions,
+        deletedMessageIds: deletedIds,
         expectedContextState: approved,
       );
+      if (scope == MessageVersionDeleteScope.others &&
+          removedIds.isEmpty &&
+          _context.mounted &&
+          currentConversation?.id == message.conversationId) {
+        showAppSnackBar(
+          _context,
+          message: AppLocalizations.of(_context)!.contextChanged,
+          type: NotificationType.warning,
+        );
+      }
+      for (final id in removedIds) {
+        _translations.remove(id);
+      }
     } finally {
       _settleAfterSlotRemoval(
         gid,
@@ -2684,6 +2783,7 @@ class HomePageController extends ChangeNotifier {
       expectedContextState: approved,
       messageId: editState.messageId,
       parts: parts,
+      quotes: input.quotes,
       draftSubmission: input.draftSubmission,
       uiContext: input.uiContext == null
           ? null
@@ -2740,6 +2840,7 @@ class HomePageController extends ChangeNotifier {
         // collapsed/grouped views reflect updates immediately.
         _chatController.invalidateCache();
         _translations[message.id] = TranslationData();
+        onFindTextChanged?.call(message.id);
         notifyListeners();
       },
       onTranslationUpdate: (translation) {
@@ -2749,6 +2850,7 @@ class HomePageController extends ChangeNotifier {
           messages[index] = updatingMessage;
         }
         _chatController.invalidateCache();
+        onFindTextChanged?.call(message.id);
         notifyListeners();
       },
       onTranslationCleared: () {
@@ -2759,10 +2861,12 @@ class HomePageController extends ChangeNotifier {
         }
         _chatController.invalidateCache();
         _translations.remove(message.id);
+        onFindTextChanged?.call(message.id);
         notifyListeners();
       },
     );
 
+    onFindGenerationFinished?.call(message.conversationId);
     if (result.isCancelled) return;
     if (!ctx.mounted) return;
 
@@ -2848,27 +2952,15 @@ class HomePageController extends ChangeNotifier {
     );
   }
 
-  void shareMessage(int messageIndex, List<ChatMessage> messageList) {
-    startMessageSelection(
-      messageIndex: messageIndex,
-      messageList: messageList,
-      mode: ChatSelectionMode.share,
-    );
-  }
-
   void startMessageSelection({
     required int messageIndex,
     required List<ChatMessage> messageList,
-    required ChatSelectionMode mode,
   }) {
     dismissKeyboard();
     _selectionEpoch++;
     _selecting = true;
-    _selectionMode = mode;
     _selectedItems.clear();
     _selectableProjectionIds = null;
-    _showThinkingTools = false;
-    _showThinkingContent = false;
 
     if (messageIndex < 0 || messageIndex >= messageList.length) {
       notifyListeners();
@@ -3076,26 +3168,16 @@ class HomePageController extends ChangeNotifier {
         currentConversation?.id == conversationId;
   }
 
-  void toggleThinkingTools() {
-    _showThinkingTools = !_showThinkingTools;
-    if (!_showThinkingTools) _showThinkingContent = false;
-    notifyListeners();
-  }
-
-  void toggleThinkingContent() {
-    if (!_showThinkingTools) return;
-    _showThinkingContent = !_showThinkingContent;
-    notifyListeners();
-  }
-
-  Future<List<ChatMessage>> _selectedCollapsedMessages() async {
+  Future<List<ChatMessage>> _selectedCollapsedMessages(
+    Set<String> selectedIds,
+  ) async {
     final convo = currentConversation;
     if (convo == null) return const <ChatMessage>[];
     final projections = await _chatController
         .loadAllCollapsedMessagesForCurrentConversation();
     final ids = [
       for (final message in projections)
-        if (_selectedItems.contains(message.id)) message.id,
+        if (selectedIds.contains(message.id)) message.id,
     ];
     final storedMessages = await _chatService.loadMessagesByIds(ids);
     final storedById = {
@@ -3107,125 +3189,42 @@ class HomePageController extends ChangeNotifier {
     ];
   }
 
-  Future<void> exportSelectedAsMarkdown() async {
+  Future<void> exportSelectedMessages() async {
     final convo = currentConversation;
-    if (convo == null) return;
+    if (convo == null || !_selecting || _openingSelectionExport) return;
     final context = _context;
-
-    final selected = await _selectedCollapsedMessages();
-    if (!context.mounted) return;
-    if (selected.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      showAppSnackBar(
+    final epoch = _selectionEpoch;
+    final selectedIds = Set<String>.of(_selectedItems);
+    _openingSelectionExport = true;
+    try {
+      final selected = await _selectedCollapsedMessages(selectedIds);
+      if (!context.mounted || !_selectionWriteStillValid(epoch, convo.id)) {
+        return;
+      }
+      if (selected.isEmpty) {
+        final l10n = AppLocalizations.of(context)!;
+        showAppSnackBar(
+          context,
+          message: l10n.homePageSelectMessagesToShare,
+          type: NotificationType.info,
+        );
+        return;
+      }
+      // Keep the selection while choosing a format, cancelling a picker, or
+      // returning from an image preview so another action can use the same ids.
+      await showChatExportSheet(
         context,
-        message: l10n.homePageSelectMessagesToShare,
-        type: NotificationType.info,
+        conversation: convo,
+        selectedMessages: selected,
       );
-      return;
+    } finally {
+      _openingSelectionExport = false;
     }
-
-    final showThinkingTools = _showThinkingTools;
-    final showThinkingContent = _showThinkingContent;
-    cancelSelection();
-    await exportChatMessagesMarkdown(
-      context,
-      conversation: convo,
-      messages: selected,
-      showThinkingAndToolCards: showThinkingTools,
-      expandThinkingContent: showThinkingContent,
-    );
-  }
-
-  Future<void> exportSelectedAsTxt() async {
-    final convo = currentConversation;
-    if (convo == null) return;
-    final context = _context;
-
-    final selected = await _selectedCollapsedMessages();
-    if (!context.mounted) return;
-    if (selected.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      showAppSnackBar(
-        context,
-        message: l10n.homePageSelectMessagesToShare,
-        type: NotificationType.info,
-      );
-      return;
-    }
-
-    final showThinkingTools = _showThinkingTools;
-    final showThinkingContent = _showThinkingContent;
-    cancelSelection();
-    await exportChatMessagesTxt(
-      context,
-      conversation: convo,
-      messages: selected,
-      showThinkingAndToolCards: showThinkingTools,
-      expandThinkingContent: showThinkingContent,
-    );
-  }
-
-  Future<void> exportSelectedAsImage() async {
-    final convo = currentConversation;
-    if (convo == null) return;
-    final context = _context;
-
-    final selected = await _selectedCollapsedMessages();
-    if (!context.mounted) return;
-    if (selected.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      showAppSnackBar(
-        context,
-        message: l10n.homePageSelectMessagesToShare,
-        type: NotificationType.info,
-      );
-      return;
-    }
-
-    final showThinkingTools = _showThinkingTools;
-    final showThinkingContent = _showThinkingContent;
-    cancelSelection();
-    await exportChatMessagesImage(
-      context,
-      conversation: convo,
-      messages: selected,
-      showThinkingAndToolCards: showThinkingTools,
-      expandThinkingContent: showThinkingContent,
-    );
-  }
-
-  Future<void> confirmSelection() async {
-    final convo = currentConversation;
-    if (convo == null) return;
-    final context = _context;
-    final selected = await _selectedCollapsedMessages();
-    if (!context.mounted) return;
-    if (selected.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
-      showAppSnackBar(
-        context,
-        message: l10n.homePageSelectMessagesToShare,
-        type: NotificationType.info,
-      );
-      return;
-    }
-    _selectionEpoch++;
-    _selecting = false;
-    notifyListeners();
-    await showChatExportSheet(
-      context,
-      conversation: convo,
-      selectedMessages: selected,
-    );
-    _selectedItems.clear();
-    _selectableProjectionIds = null;
-    notifyListeners();
   }
 
   void cancelSelection() {
     _selectionEpoch++;
     _selecting = false;
-    _selectionMode = ChatSelectionMode.share;
     _selectedItems.clear();
     _selectableProjectionIds = null;
     notifyListeners();
@@ -3281,6 +3280,54 @@ class HomePageController extends ChangeNotifier {
   // Public Methods - UI State
   // ============================================================================
 
+  /// Read the same published snapshot as the streaming bubble, including
+  /// reasoning steps and text split positions that may precede the DB checkpoint.
+  ChatMessage conversationFindStreamSnapshot(ChatMessage message) {
+    final id = message.id;
+    final data = streamingContentNotifier.getNotifier(id).value;
+    final splits = contentSplits[id];
+    final segments = reasoningSegments[id];
+    return message.copyWith(
+      parts: data.parts,
+      content: data.parts == null && data.content.isNotEmpty
+          ? data.content
+          : null,
+      reasoningText: data.reasoningText,
+      reasoningSegmentsJson:
+          segments == null && data.contentSplitOffsets == null && splits == null
+          ? null
+          : _streamController.serializeReasoningSegmentsWithSplits(
+              segments ?? [],
+              contentSplitOffsets: data.contentSplitOffsets ?? splits?.offsets,
+              reasoningCountAtSplit:
+                  data.reasoningCountAtSplit ?? splits?.reasoningCounts,
+              toolCountAtSplit: data.toolCountAtSplit ?? splits?.toolCounts,
+            ),
+    );
+  }
+
+  void ensureReasoningExpanded(String messageId) {
+    if (reasoning[messageId]?.expanded == false) toggleReasoning(messageId);
+  }
+
+  void ensureReasoningSegmentExpanded(String messageId, int index) {
+    final segments = reasoningSegments[messageId];
+    if (segments != null &&
+        index >= 0 &&
+        index < segments.length &&
+        !segments[index].expanded) {
+      toggleReasoningSegment(messageId, index);
+    }
+  }
+
+  void ensureTranslationExpanded(String messageId) {
+    final state = _translations[messageId];
+    if (state != null && !state.expanded) {
+      state.expanded = true;
+      notifyListeners();
+    }
+  }
+
   void toggleReasoning(String messageId) {
     final r = reasoning[messageId];
     if (r != null) {
@@ -3333,7 +3380,26 @@ class HomePageController extends ChangeNotifier {
   // Public Methods - Sidebar Management
   // ============================================================================
 
+  // Called by the page while building; changing width does not overwrite the
+  // user's wide-window sidebar preference or notify during a build.
+  void setCompactDesktopLayout(bool compact) {
+    if (_compactDesktop == compact) return;
+    _compactDesktop = compact;
+    _compactSidebarOpen = compact && _isGlobalSearchMode;
+  }
+
+  void closeCompactSidebar() {
+    if (!_compactDesktop || !_compactSidebarOpen) return;
+    _compactSidebarOpen = false;
+    notifyListeners();
+  }
+
   void toggleTabletSidebar() {
+    if (_compactDesktop) {
+      _compactSidebarOpen = !_compactSidebarOpen;
+      notifyListeners();
+      return;
+    }
     dismissKeyboard();
     try {
       if (_context.read<SettingsProvider>().hapticsOnDrawer) {
@@ -3345,22 +3411,6 @@ class HomePageController extends ChangeNotifier {
     try {
       _context.read<SettingsProvider>().setDesktopSidebarOpen(
         _tabletSidebarOpen,
-      );
-    } catch (_) {}
-  }
-
-  void toggleRightSidebar() {
-    dismissKeyboard();
-    try {
-      if (_context.read<SettingsProvider>().hapticsOnDrawer) {
-        Haptics.drawerPulse();
-      }
-    } catch (_) {}
-    _rightSidebarOpen = !_rightSidebarOpen;
-    notifyListeners();
-    try {
-      _context.read<SettingsProvider>().setDesktopRightSidebarOpen(
-        _rightSidebarOpen,
       );
     } catch (_) {}
   }
@@ -3377,22 +3427,6 @@ class HomePageController extends ChangeNotifier {
     try {
       _context.read<SettingsProvider>().setDesktopSidebarWidth(
         _embeddedSidebarWidth,
-      );
-    } catch (_) {}
-  }
-
-  void updateRightSidebarWidth(double dx) {
-    _rightSidebarWidth = (_rightSidebarWidth - dx).clamp(
-      _sidebarMinWidth,
-      _sidebarMaxWidth,
-    );
-    notifyListeners();
-  }
-
-  void saveRightSidebarWidth() {
-    try {
-      _context.read<SettingsProvider>().setDesktopRightSidebarWidth(
-        _rightSidebarWidth,
       );
     } catch (_) {}
   }
@@ -3876,56 +3910,131 @@ class HomePageController extends ChangeNotifier {
   Future<List<ChatMessage>> loadAllCollapsedMessagesForCurrentConversation() =>
       _chatController.loadAllCollapsedMessagesForCurrentConversation();
 
-  Future<List<MiniMapSearchHit>> searchMiniMapMatches(String query) =>
-      _chatController.searchMiniMapMatches(query);
+  void _cancelMessageJump() {
+    if (_messageJumpInProgress) _chatController.cancelPendingWindowLoad();
+    _resetMessageJump();
+  }
 
-  // Issue 7 audit: jumps via collapsed-index + loadUntilMessageVisible only.
-  // Does not call ChatService.getMessageIndex, so an absent message-order
-  // skeleton during loadTimelinePage backfill does not require a guard here.
+  void cancelFindJump() {
+    if (!_findingMessage) return;
+    uiSearchNavigation.clear();
+    _cancelMessageJump();
+  }
+
+  int _beginMessageJump({bool finding = false}) {
+    if (_messageJumpInProgress) _chatController.cancelPendingWindowLoad();
+    _findingMessage = finding;
+    if (!finding) findViewportSnapshot.allowSnapshotting = false;
+    _messageJumpInProgress = true;
+    return ++_messageJumpSerial;
+  }
+
+  void _resetMessageJump() {
+    _messageJumpSerial++;
+    _messageJumpInProgress = false;
+    _findingMessage = false;
+    findViewportSnapshot.allowSnapshotting = false;
+    // This opacity wraps every conversation. An old page read must not keep
+    // a newly selected conversation invisible until that read completes.
+    _messageJumpTransitionController.value = 1.0;
+  }
+
+  bool _ownsMessageJump(int serial) =>
+      !_composerDisposed && serial == _messageJumpSerial;
+
+  bool _isMessageJumpCurrent(int serial, String? conversationId) =>
+      _ownsMessageJump(serial) && currentConversation?.id == conversationId;
+
+  // Jumps use the collapsed index and bounded window reads, without relying
+  // on a cached full message-order skeleton.
   Future<void> scrollToMessageId(
     String targetId, {
     bool useRikkaTransition = false,
     String? surfaceKey,
+    bool Function()? stillCurrent,
+    VoidCallback? beforeScroll,
+    RevealMessageMatch? revealMatch,
   }) async {
     _warmupSerial++;
     uiSearchNavigation.clear();
+    final serial = _beginMessageJump(finding: revealMatch != null);
     final conversationId = currentConversation?.id;
-    if (useRikkaTransition) {
-      try {
-        await _messageJumpTransitionController.reverse();
-      } catch (_) {}
-    }
 
+    bool current() =>
+        _isMessageJumpCurrent(serial, conversationId) &&
+        (stillCurrent?.call() ?? true);
     try {
-      if (_chatController.indexOfCollapsedMessageId(targetId) < 0) {
+      if (useRikkaTransition) {
+        await _messageJumpTransitionController.reverse().orCancel;
+      } else {
+        _messageJumpTransitionController.value = 1.0;
+      }
+      if (!current()) return;
+      final needsWindow =
+          _chatController.indexOfCollapsedMessageId(targetId) < 0;
+      if (revealMatch != null) {
+        _scrollCtrl.beginSourceNavigation();
+        if (!needsWindow) {
+          beforeScroll?.call();
+          if (await revealMatch(current, waitForMount: false) || !current()) {
+            return;
+          }
+        }
+        // Mounting a distant message can take several layouts. Keep displaying
+        // the previous viewport until the glyph (or fallback row) is in place.
+        findViewportSnapshot.allowSnapshotting = true;
+        await WidgetsBinding.instance.endOfFrame;
+        if (!current()) return;
+      }
+      if (needsWindow) {
         final loaded = await _viewModel.loadUntilMessageVisible(targetId);
-        if (!loaded) return;
+        if (!loaded || !current()) return;
         try {
           await WidgetsBinding.instance.endOfFrame;
         } catch (_) {}
       }
+      if (!current()) return;
       final index = _chatController.indexOfCollapsedMessageId(targetId);
       if (index < 0) return;
+      if (beforeScroll != null && (needsWindow || revealMatch == null)) {
+        beforeScroll();
+        await WidgetsBinding.instance.endOfFrame;
+        if (!current()) return;
+      }
       await _scrollCtrl.scrollToMessageId(
         targetId: targetId,
         targetIndex: index,
+        isCurrent: current,
       );
-      if (surfaceKey != null &&
-          conversationId != null &&
-          currentConversation?.id == conversationId) {
+      if (!current()) return;
+      if (revealMatch != null) {
+        await revealMatch(current, waitForMount: true);
+      } else if (surfaceKey != null && conversationId != null) {
         uiSearchNavigation.reveal(conversationId, targetId, surfaceKey);
       }
+    } on TickerCanceled {
+      // A newer navigation owns the animation and its visibility.
     } finally {
-      if (useRikkaTransition) {
+      if (useRikkaTransition && _ownsMessageJump(serial)) {
         try {
-          await _messageJumpTransitionController.forward();
-        } catch (_) {}
+          await _messageJumpTransitionController.forward().orCancel;
+        } on TickerCanceled {
+          // Superseded while revealing the list.
+        }
+      }
+      if (_ownsMessageJump(serial)) {
+        _messageJumpInProgress = false;
+        _findingMessage = false;
+        findViewportSnapshot.allowSnapshotting = false;
       }
     }
   }
 
   Future<void> jumpToPreviousQuestion() =>
       _jumpToAdjacentMessage(previous: true);
+
+  void scrollToSourceRect(Rect rect) =>
+      _scrollCtrl.scrollToSourceRect(rect, bottomInset: inputBarHeight);
 
   Future<void> jumpToNextQuestion() => _jumpToAdjacentMessage(previous: false);
 
@@ -3999,16 +4108,20 @@ class HomePageController extends ChangeNotifier {
   }
 
   Future<void> forceScrollToBottom({bool animate = true}) async {
+    final serial = _beginMessageJump();
+    final conversationId = currentConversation?.id;
     final useJumpTransition = animate && _chatController.hasMoreAfter;
-    if (useJumpTransition) {
-      try {
-        await _messageJumpTransitionController.reverse();
-      } catch (_) {}
-    }
 
     try {
+      if (useJumpTransition) {
+        await _messageJumpTransitionController.reverse().orCancel;
+      } else {
+        _messageJumpTransitionController.value = 1.0;
+      }
+      if (!_isMessageJumpCurrent(serial, conversationId)) return;
       if (_chatController.hasMoreAfter) {
         final loaded = await _chatController.loadEndWindow();
+        if (!_isMessageJumpCurrent(serial, conversationId)) return;
         if (loaded) {
           _viewModel.restoreMessageUiState();
         }
@@ -4017,16 +4130,22 @@ class HomePageController extends ChangeNotifier {
         try {
           await WidgetsBinding.instance.endOfFrame;
         } catch (_) {}
+        if (!_isMessageJumpCurrent(serial, conversationId)) return;
         await _scrollCtrl.settleAtBottomBeforeReveal();
       } else {
         _scrollCtrl.forceScrollToBottom(animate: animate);
       }
+    } on TickerCanceled {
+      // A newer navigation owns the animation and its visibility.
     } finally {
-      if (useJumpTransition) {
+      if (useJumpTransition && _ownsMessageJump(serial)) {
         try {
-          await _messageJumpTransitionController.forward();
-        } catch (_) {}
+          await _messageJumpTransitionController.forward().orCancel;
+        } on TickerCanceled {
+          // Superseded while revealing the list.
+        }
       }
+      if (serial == _messageJumpSerial) _messageJumpInProgress = false;
     }
   }
 
@@ -4049,18 +4168,6 @@ class HomePageController extends ChangeNotifier {
   // ============================================================================
   // Public Methods - Helpers
   // ============================================================================
-
-  String titleForLocale() => _titleForLocale(_context);
-
-  /// Trailing label for the context management sheet, e.g. "12 messages".
-  String contextMessageCountLabel() {
-    final l10n = AppLocalizations.of(_context)!;
-    final count = _viewModel.getContextMessageCount();
-    final configured = count.configured;
-    return configured == null
-        ? l10n.contextMessageCount(count.actual)
-        : l10n.contextMessageCountLimited(count.actual, configured);
-  }
 
   String? currentStreamingMessageId() {
     for (int i = messages.length - 1; i >= 0; i--) {
@@ -4319,6 +4426,7 @@ class HomePageController extends ChangeNotifier {
     _ocrService.onError = null;
     _convoFadeController.dispose();
     _messageJumpTransitionController.dispose();
+    findViewportSnapshot.dispose();
     _mcpProvider?.removeListener(_onMcpChanged);
     _scrollCtrl.dispose();
     try {

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../icons/lucide_adapter.dart';
@@ -16,6 +17,7 @@ class DesktopContextMenuItem {
   final VoidCallback? onTap;
   final bool danger;
   final bool checked;
+  final bool startsGroup;
 
   const DesktopContextMenuItem({
     this.icon,
@@ -25,6 +27,7 @@ class DesktopContextMenuItem {
     this.onTap,
     this.danger = false,
     this.checked = false,
+    this.startsGroup = false,
   });
 }
 
@@ -34,6 +37,7 @@ Future<void> showDesktopContextMenuAt(
   required Offset globalPosition,
   required List<DesktopContextMenuItem> items,
   Color? backgroundColor,
+  bool compact = false,
 }) async {
   // Match the navigator used by showGeneralDialog, including nested panes.
   final overlay = Navigator.of(context, rootNavigator: true).overlay;
@@ -41,38 +45,8 @@ Future<void> showDesktopContextMenuAt(
   final overlayBox = overlay.context.findRenderObject() as RenderBox?;
   if (overlayBox == null) return;
 
-  const double minMenuWidth = 160;
-  const double maxMenuWidth = 360;
-  final double menuWidth = _estimateMenuWidth(
-    context,
-    items,
-    minMenuWidth,
-    maxMenuWidth,
-  );
-  final screen = overlayBox.size;
-  final double menuMaxHeight = screen.height * 0.5; // scroll if exceeds
-  final double estMenuHeight = items
-      .fold<double>(0, (sum, item) => sum + (item.subtitle == null ? 44 : 60))
-      .clamp(44.0, menuMaxHeight);
-  const double gap = 8; // offset from cursor
   final cs = Theme.of(context).colorScheme;
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  final padding = MediaQuery.of(overlay.context).padding;
-  final minX = padding.left + 8;
-  final maxX = screen.width - padding.right - menuWidth - 8;
-  final minY = padding.top + 8;
-  final maxY = screen.height - padding.bottom - estMenuHeight - 8;
-
   final local = overlayBox.globalToLocal(globalPosition);
-  double x = (local.dx + gap).clamp(minX, maxX);
-  // Decide above/below based on available space
-  final availableBelow = screen.height - padding.bottom - local.dy - 8;
-  final availableAbove = local.dy - padding.top - 8;
-  final placeAbove =
-      availableBelow < estMenuHeight && availableAbove > availableBelow;
-  double y = placeAbove
-      ? (local.dy - gap - estMenuHeight).clamp(minY, maxY)
-      : (local.dy + gap).clamp(minY, maxY);
 
   await showGeneralDialog<void>(
     context: context,
@@ -81,6 +55,52 @@ Future<void> showDesktopContextMenuAt(
     barrierDismissible: true,
     barrierColor: cs.scrim.withValues(alpha: 0.06),
     pageBuilder: (ctx, _, __) {
+      const double minMenuWidth = 160;
+      const double maxMenuWidth = 360;
+      final double estimatedWidth = _estimateMenuWidth(
+        ctx,
+        items,
+        minMenuWidth,
+        maxMenuWidth,
+      );
+      final screen = MediaQuery.sizeOf(ctx);
+      final padding = MediaQuery.paddingOf(ctx);
+      final menuWidth = math.min(
+        estimatedWidth,
+        math.max(0.0, screen.width - padding.horizontal - 16),
+      );
+      final double menuMaxHeight = screen.height * 0.5; // scroll if exceeds
+      final double estMenuHeight = items
+          .fold<double>(
+            0,
+            (sum, item) =>
+                sum +
+                _menuItemHeight(
+                  ctx,
+                  subtitle: item.subtitle,
+                  compact: compact,
+                ) +
+                (item.startsGroup ? 9 : 0),
+          )
+          .clamp(44.0, menuMaxHeight);
+      const double gap = 8; // offset from cursor
+      final cs = Theme.of(ctx).colorScheme;
+      final isDark = Theme.of(ctx).brightness == Brightness.dark;
+      final minX = padding.left + 8;
+      final maxX = screen.width - padding.right - menuWidth - 8;
+      final minY = padding.top + 8;
+      final maxY = screen.height - padding.bottom - estMenuHeight - 8;
+
+      double x = (local.dx + gap).clamp(minX, maxX);
+      // Decide above/below based on available space
+      final availableBelow = screen.height - padding.bottom - local.dy - 8;
+      final availableAbove = local.dy - padding.top - 8;
+      final placeAbove =
+          availableBelow < estMenuHeight && availableAbove > availableBelow;
+      double y = placeAbove
+          ? (local.dy - gap - estMenuHeight).clamp(minY, maxY)
+          : (local.dy + gap).clamp(minY, maxY);
+
       return Material(
         type: MaterialType.transparency,
         child: Stack(
@@ -125,8 +145,22 @@ Future<void> showDesktopContextMenuAt(
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    for (final it in items)
+                                    for (final it in items) ...[
+                                      if (it.startsGroup)
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                          ),
+                                          child: Divider(
+                                            height: 9,
+                                            thickness: 0.5,
+                                            color: cs.outlineVariant.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                          ),
+                                        ),
                                       _GlassMenuItem(
+                                        compact: compact,
                                         icon: it.icon,
                                         svgAsset: it.svgAsset,
                                         label: it.label,
@@ -140,6 +174,7 @@ Future<void> showDesktopContextMenuAt(
                                                 it.onTap!();
                                               },
                                       ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -157,6 +192,16 @@ Future<void> showDesktopContextMenuAt(
       );
     },
   );
+}
+
+double _menuItemHeight(
+  BuildContext context, {
+  String? subtitle,
+  required bool compact,
+}) {
+  if (subtitle != null) return 60;
+  if (!compact) return 44;
+  return math.max(36, MediaQuery.textScalerOf(context).scale(20) + 12);
 }
 
 double _estimateMenuWidth(
@@ -270,6 +315,7 @@ class _GlassMenuItem extends StatefulWidget {
     this.onTap,
     this.danger = false,
     this.checked = false,
+    this.compact = false,
   });
   final IconData? icon;
   final String? svgAsset;
@@ -278,6 +324,7 @@ class _GlassMenuItem extends StatefulWidget {
   final VoidCallback? onTap;
   final bool danger;
   final bool checked;
+  final bool compact;
 
   @override
   State<_GlassMenuItem> createState() => _GlassMenuItemState();
@@ -317,7 +364,11 @@ class _GlassMenuItemState extends State<_GlassMenuItem> {
                 widget.onTap?.call();
               },
         child: Container(
-          height: widget.subtitle == null ? 44 : 60,
+          height: _menuItemHeight(
+            context,
+            subtitle: widget.subtitle,
+            compact: widget.compact,
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           alignment: Alignment.centerLeft,
           decoration: BoxDecoration(color: bg),

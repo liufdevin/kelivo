@@ -1,3 +1,4 @@
+import '../models/carried_original.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,6 +7,17 @@ import '../../utils/sandbox_path_resolver.dart';
 
 const String multimodalInternalMediaPathsKey = '_kelivo_media_paths';
 const String multimodalInternalRevisionIdKey = '_kelivo_revision_id';
+const String multimodalInternalImageReferencesKey = '_kelivo_image_references';
+Map<String, String> internalImageReferences(Map<String, dynamic> message) {
+  final value = message[multimodalInternalImageReferencesKey];
+  return value is Map
+      ? {
+          for (final entry in value.entries)
+            if (entry.key is String && entry.value is String)
+              entry.key as String: entry.value as String,
+        }
+      : const {};
+}
 
 /// A separately persisted plain-text part that must bypass Markdown media
 /// extraction. Set from structured message parts, never inferred from markers
@@ -13,7 +25,9 @@ const String multimodalInternalRevisionIdKey = '_kelivo_revision_id';
 const String multimodalInternalLiteralTextKey = '_kelivo_literal_text';
 String? internalLiteralText(Map<String, dynamic> message) {
   final value = message[multimodalInternalLiteralTextKey];
-  return value is String && value.isNotEmpty && value.length <= 4096
+  return value is String &&
+          value.isNotEmpty &&
+          (value.length <= 4096 || message[carriedTextOnlyKey] == true)
       ? value
       : null;
 }
@@ -182,6 +196,7 @@ String resolveDocumentAttachmentMime(DocumentAttachment attachment) {
   }
   final name = attachment.fileName.toLowerCase();
   if (name.endsWith('.pdf')) return 'application/pdf';
+  if (name.endsWith('.doc')) return 'application/msword';
   if (name.endsWith('.docx')) {
     return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   }

@@ -27,6 +27,15 @@ class FakeBrowserEngine extends BrowserEngine {
   Completer<Object?>? evaluation;
   Completer<void>? loading;
   Completer<void>? navigating;
+  Completer<void>? settingsUpdate;
+  VoidCallback? onSettingsUpdate;
+  Object? settingsError;
+  bool healthResponsive = true;
+  bool recoverOnStop = false;
+  int stopCalls = 0;
+  int healthChecks = 0;
+  Completer<Object?>? healthCheck;
+  VoidCallback? onHealthCheck;
   @override
   Widget buildView() {
     viewBuilds++;
@@ -40,6 +49,7 @@ class FakeBrowserEngine extends BrowserEngine {
   Future<void> navigate(String url) async {
     navigations.add(url);
     await navigating?.future;
+    onChanged(BrowserPageState(url: url));
   }
 
   @override
@@ -54,7 +64,11 @@ class FakeBrowserEngine extends BrowserEngine {
   @override
   Future<void> reload() async {}
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    stopCalls++;
+    if (recoverOnStop) healthResponsive = true;
+  }
+
   @override
   Future<void> waitForLoad(
     Duration timeout, {
@@ -65,6 +79,13 @@ class FakeBrowserEngine extends BrowserEngine {
 
   @override
   Future<Object?> evaluate(String source, {bool awaitPromise = false}) async {
+    if (source.contains('kelivo_health')) {
+      healthChecks++;
+      onHealthCheck?.call();
+      if (healthCheck != null) return healthCheck!.future;
+      if (!healthResponsive) throw StateError('Renderer unresponsive');
+      return '{"kelivo_health":true,"url":"https://example.com","ready_state":"complete"}';
+    }
     scripts.add(source);
     return evaluation == null ? 'complete' : evaluation!.future;
   }
@@ -72,7 +93,12 @@ class FakeBrowserEngine extends BrowserEngine {
   @override
   Future<Uint8List?> screenshot() async => Uint8List.fromList([1, 2, 3]);
   @override
-  Future<void> updateSettings(BrowserSettings settings) async {}
+  Future<void> updateSettings(BrowserSettings settings) async {
+    onSettingsUpdate?.call();
+    await settingsUpdate?.future;
+    if (settingsError case final error?) throw error;
+  }
+
   @override
   Future<void> find(String text) async {}
   @override
@@ -135,32 +161,36 @@ void main() {
   Completer<void>? popupCreating;
   Completer<void>? popupReady;
 
-  BrowserService createService({BrowserStore? store}) => BrowserService(
-    store: store ?? BrowserStore(directory: directory),
-    supported: true,
-    engineFactory:
-        ({
-          required tab,
-          required settings,
-          required onChanged,
-          required onDownload,
-          required onNewWindow,
-          required isAgentActive,
-        }) async {
-          final engine = FakeBrowserEngine(
-            tab,
-            onChanged,
-            onDisposed: () => disposedIds.add(tab.id),
-          );
-          engines[tab.id] = engine;
-          popupCallbacks[tab.id] = Zone.current.bindBinaryCallback(onNewWindow);
-          if (tab.windowId != null && popupReady != null) {
-            popupCreating!.complete();
-            await popupReady!.future;
-          }
-          return engine;
-        },
-  );
+  BrowserService createService({BrowserStore? store, int? liveViewLimit}) =>
+      BrowserService(
+        store: store ?? BrowserStore(directory: directory),
+        supported: true,
+        liveViewLimit: liveViewLimit,
+        engineFactory:
+            ({
+              required tab,
+              required settings,
+              required onChanged,
+              required onDownload,
+              required onNewWindow,
+              required isAgentActive,
+            }) async {
+              final engine = FakeBrowserEngine(
+                tab,
+                onChanged,
+                onDisposed: () => disposedIds.add(tab.id),
+              );
+              engines[tab.id] = engine;
+              popupCallbacks[tab.id] = Zone.current.bindBinaryCallback(
+                onNewWindow,
+              );
+              if (tab.windowId != null && popupReady != null) {
+                popupCreating!.complete();
+                await popupReady!.future;
+              }
+              return engine;
+            },
+      );
 
   setUp(() async {
     directory = await Directory.systemTemp.createTemp('kelivo-browser-core-');
@@ -177,6 +207,51 @@ void main() {
     service.dispose();
     await directory.delete(recursive: true);
   });
+
+  test(
+    'six-view pool evicts least recently viewed, not recently scripted',
+    () async {
+      service.dispose();
+      service = createService(liveViewLimit: 6);
+      final ids = <String>[];
+      for (var i = 0; i < 6; i++) {
+        final tab = await service.createTab(
+          url: 'https://$i.example',
+          ownerSessionId: 'a',
+        );
+        ids.add(tab.id);
+        await service.evaluateJavascript('ready', tabId: tab.id);
+      }
+      engines[ids[1]]!.onChanged(
+        const BrowserPageState(
+          canGoBack: true,
+          canGoForward: true,
+          isLoading: true,
+          progress: .5,
+        ),
+      );
+      await service.selectTab(ids.first);
+      await service.evaluateJavascript('background work', tabId: ids[1]);
+      final seventh = await service.createTab(
+        url: 'https://7.example',
+        ownerSessionId: 'b',
+      );
+      await service.evaluateJavascript('ready', tabId: seventh.id);
+      expect(service.liveViewCount, 6);
+      expect(service.hasLiveEngine(ids[1]), isFalse);
+      expect(service.hasLiveEngine(ids.first), isTrue);
+      expect(service.requireTab(ids[1]).url, 'https://1.example');
+      expect(service.requireTab(ids[1]).canGoBack, isFalse);
+      expect(service.requireTab(ids[1]).canGoForward, isFalse);
+      expect(service.requireTab(ids[1]).isLoading, isFalse);
+      await service.selectTab(ids[1]);
+      expect(service.hasLiveEngine(ids[1]), isFalse);
+      expect(service.liveViewCount, 6);
+      await service.reload(tabId: ids[1]);
+      expect(service.hasLiveEngine(ids[1]), isTrue);
+      expect(service.liveViewCount, 6);
+    },
+  );
 
   test(
     'appearance settings preserve agent work; a UA reload hands control over',
@@ -208,11 +283,109 @@ void main() {
         service.settings.copyWith(customUserAgent: 'Browser test UA'),
       );
       expect(service.agentPaused, isTrue);
-      expect(service.pausedAgentSessionId, 'chat-a');
+      expect(service.agentPauseFor('chat-a'), isNotNull);
       pending.complete();
       expect(await outcome, isA<StateError>());
     },
   );
+
+  test(
+    'global UA updates invalidate other sessions and exclude new page commands',
+    () async {
+      final a = await service.createTab(
+        url: 'https://a.example',
+        ownerSessionId: 'a',
+      );
+      final b = await service.createTab(
+        url: 'https://b.example',
+        ownerSessionId: 'b',
+      );
+      await service.evaluateJavascript('prepare', tabId: a.id);
+      await service.evaluateJavascript('prepare', tabId: b.id);
+      final engine = engines[a.id]!;
+      final pending = engine.evaluation = Completer<Object?>();
+      final running = service.runAgentAction(
+        sessionId: 'a',
+        label: 'click',
+        tabId: a.id,
+        action: () => service.evaluateJavascript('click', tabId: a.id),
+      );
+      final cancelled = expectLater(running, throwsStateError);
+      await Future<void>.delayed(Duration.zero);
+      final queued = service.runAgentAction(
+        sessionId: 'b',
+        label: 'click',
+        tabId: b.id,
+        action: () => service.evaluateJavascript('queued-submit', tabId: b.id),
+      );
+      final rejected = expectLater(queued, throwsStateError);
+      final updating = Completer<void>();
+      final settingsGate = engine.settingsUpdate = Completer<void>();
+      engine.onSettingsUpdate = updating.complete;
+      final applying = service.updateSettings(
+        service.settings.copyWith(customUserAgent: 'Changed UA'),
+      );
+      await updating.future;
+      try {
+        await cancelled;
+        pending.complete('late click');
+        await rejected;
+        expect(engines[b.id]!.scripts, ['prepare']);
+        await expectLater(
+          service.runAgentAction(
+            sessionId: 'b',
+            label: 'click',
+            tabId: b.id,
+            action: () => service.evaluateJavascript('new-submit', tabId: b.id),
+          ),
+          throwsA(
+            isA<StateError>().having(
+              (e) => e.message,
+              'message',
+              'browser_settings_updating',
+            ),
+          ),
+        );
+        expect((await service.listAgentTabs('b')).single.id, b.id);
+      } finally {
+        if (!pending.isCompleted) pending.complete();
+        settingsGate.complete();
+        await applying;
+      }
+      expect(
+        await service.runAgentAction(
+          sessionId: 'b',
+          label: 'read',
+          tabId: b.id,
+          action: () => service.evaluateJavascript('after-update', tabId: b.id),
+        ),
+        'complete',
+      );
+      expect(service.agentPauseFor('a')?.reason, BrowserAgentPauseReason.user);
+      expect(service.agentPauseFor('b'), isNull);
+    },
+  );
+
+  test('failed UA updates release the page-command gate', () async {
+    final tab = await service.createTab(ownerSessionId: 'a');
+    await service.evaluateJavascript('prepare', tabId: tab.id);
+    engines[tab.id]!.settingsError = StateError('Native settings failure');
+    await expectLater(
+      service.updateSettings(
+        service.settings.copyWith(customUserAgent: 'Changed UA'),
+      ),
+      throwsStateError,
+    );
+    expect(
+      await service.runAgentAction(
+        sessionId: 'a',
+        label: 'read',
+        tabId: tab.id,
+        action: () => service.evaluateJavascript('after-update', tabId: tab.id),
+      ),
+      'complete',
+    );
+  });
 
   test(
     'initial content mode follows the host OS and retains explicit choice',
@@ -430,6 +603,7 @@ void main() {
         service.settings.copyWith(
           searchEngine: BrowserSearchEngine.google,
           desktopMode: true,
+          operationTimeoutSeconds: 90,
         ),
       );
       await service.flush();
@@ -442,6 +616,7 @@ void main() {
       expect(service.bookmarks.single.title, 'Saved');
       expect(service.history.single.title, 'One updated');
       expect(service.settings.searchEngine, BrowserSearchEngine.google);
+      expect(service.settings.operationTimeoutSeconds, 90);
       expect(service.settings.desktopMode, isTrue);
       expect(service.liveViewCount, 0);
     },
@@ -491,6 +666,32 @@ void main() {
       expect(service.tabs.single.id, b.id);
     },
   );
+
+  test('entering a conversation updates the viewed LRU order', () async {
+    final ids = <String>[];
+    for (final owner in ['a', 'b', 'c']) {
+      final tab = await service.createTab(
+        url: 'https://$owner.example',
+        ownerSessionId: owner,
+      );
+      ids.add(tab.id);
+      await service.evaluateJavascript('ready', tabId: tab.id);
+    }
+    await service.selectSession('a');
+    final fourth = await service.createTab(url: 'https://d.example');
+    await service.evaluateJavascript('ready', tabId: fourth.id);
+    expect(service.hasLiveEngine(ids[0]), isTrue);
+    expect(service.hasLiveEngine(ids[1]), isFalse);
+    expect(service.hasLiveEngine(ids[2]), isTrue);
+  });
+
+  test('clearing find highlights never recreates an unloaded page', () async {
+    final saved = await service.createTab(url: 'https://saved.example');
+    await service.clearFind(tabId: saved.id);
+    expect(service.liveViewCount, 0);
+    expect(engines, isEmpty);
+    expect(service.requireTab(saved.id).url, 'https://saved.example');
+  });
 
   test('agent quota is per conversation and does not cap user tabs', () async {
     Future<BrowserTab> agentTab(String owner) => service.runAgentAction(
@@ -715,7 +916,7 @@ void main() {
         );
         await service.evaluateJavascript('ready', tabId: tab.id);
       }
-      expect(service.liveViewCount, BrowserService.maxLiveViews);
+      expect(service.liveViewCount, service.liveViewLimit);
       expect(engines[a.id]!.disposed, isFalse);
       expect(service.requireTab(a.id).ownerSessionId, 'a');
       expect(service.agentSessionId, 'a');
@@ -765,7 +966,7 @@ void main() {
         );
         await service.evaluateJavascript('ready', tabId: other.id);
       }
-      expect(service.liveViewCount, BrowserService.maxLiveViews);
+      expect(service.liveViewCount, service.liveViewLimit);
       expect(engines[tab.id]!.disposed, isFalse);
       await expectLater(
         service.moveTabToSession(tab.id, 'b'),
@@ -880,7 +1081,7 @@ void main() {
       for (final tab in tabs) {
         await service.evaluateJavascript('document.title', tabId: tab.id);
       }
-      expect(service.liveViewCount, BrowserService.maxLiveViews);
+      expect(service.liveViewCount, service.liveViewLimit);
       expect(engines[tabs.first.id]!.disposed, isTrue);
       expect(service.tabs, hasLength(4));
       expect(service.requireTab(tabs.first.id).url, 'https://0.example');
@@ -1046,6 +1247,49 @@ void main() {
   );
 
   test(
+    'taking over another session leaves the running action and queue intact',
+    () async {
+      final a = await service.createTab(ownerSessionId: 'a');
+      final b = await service.createTab(ownerSessionId: 'b');
+      final started = Completer<void>();
+      final finish = Completer<void>();
+      final running = service.runAgentAction<void>(
+        sessionId: 'b',
+        label: 'evaluate',
+        tabId: b.id,
+        action: () {
+          started.complete();
+          return finish.future;
+        },
+      );
+      await started.future;
+      final queued = service.runAgentAction(
+        sessionId: 'b',
+        label: 'snapshot',
+        tabId: b.id,
+        action: () => service.evaluateJavascript('queued', tabId: b.id),
+      );
+      try {
+        service.takeOver(sessionId: 'a', tabId: a.id);
+        expect(
+          service.agentActivityFor(sessionId: 'a'),
+          BrowserAgentActivity.paused,
+        );
+        expect(
+          service.agentActivityFor(sessionId: 'b'),
+          BrowserAgentActivity.running,
+        );
+      } finally {
+        finish.complete();
+      }
+      await running;
+      expect(await queued, 'complete');
+      expect(service.agentPauseFor('a'), isNotNull);
+      expect(service.agentPauseFor('b'), isNull);
+    },
+  );
+
+  test(
     'takeover rejects queued calls and keeps serialization until native settlement',
     () async {
       final tab = await service.createTab(ownerSessionId: 'a');
@@ -1087,6 +1331,35 @@ void main() {
     },
   );
 
+  test(
+    'operation timeout defaults and malformed persisted values are validated',
+    () async {
+      expect(const BrowserSettings().operationTimeoutSeconds, 30);
+      for (final value in [null, 0, -1, 121, '60', 60.0]) {
+        expect(
+          BrowserSettings.fromJson({
+            'operationTimeoutSeconds': value,
+          }).operationTimeoutSeconds,
+          30,
+        );
+      }
+      for (final seconds in BrowserSettings.operationTimeoutOptions) {
+        final settings = BrowserSettings(operationTimeoutSeconds: seconds);
+        expect(
+          BrowserSettings.fromJson(settings.toJson()).operationTimeoutSeconds,
+          seconds,
+        );
+      }
+      await expectLater(
+        service.updateSettings(
+          service.settings.copyWith(operationTimeoutSeconds: 0),
+        ),
+        throwsFormatException,
+      );
+      expect(service.settings.operationTimeoutSeconds, 30);
+    },
+  );
+
   for (final timeout in [15, 60]) {
     test(
       'load deadline ($timeout seconds) preserves queued AI actions',
@@ -1125,7 +1398,7 @@ void main() {
           clock.flushMicrotasks();
           expect(failure, isNull);
           expect(next, isNull);
-          clock.elapse(Duration(seconds: timeout > 30 ? 30 : timeout));
+          clock.elapse(Duration(seconds: timeout));
           expect(
             failure,
             isA<BrowserFailure>().having(
@@ -1137,7 +1410,7 @@ void main() {
           expect(next, 'complete');
           expect(service.controlEpoch, epoch);
           expect(service.agentPaused, isFalse);
-          expect(service.agentPauseReason, isNull);
+          expect(service.agentPauseFor('a')?.reason, isNull);
           expect(engine.scripts, ['prepare', 'next']);
           engine.loading!.complete();
           clock.flushMicrotasks();
@@ -1146,72 +1419,206 @@ void main() {
     );
   }
 
-  for (final action in ['navigate', 'evaluate']) {
-    test('$action native deadline pauses before late settlement', () async {
+  for (final seconds in [30, 60, 90, 120]) {
+    test(
+      'native deadline uses $seconds seconds and leaves observations available',
+      () async {
+        service.dispose();
+        service = createService(store: _RetryStore()..failRead = false);
+        await service.updateSettings(
+          service.settings.copyWith(operationTimeoutSeconds: seconds),
+        );
+        final tab = await service.createTab(ownerSessionId: 'a');
+        final other = await service.createTab(ownerSessionId: 'b');
+        await service.evaluateJavascript('prepare', tabId: tab.id);
+        await service.evaluateJavascript('prepare', tabId: other.id);
+        final engine = engines[tab.id]!;
+        final original = engine.evaluation = Completer<Object?>();
+        fakeAsync((clock) {
+          Object? failure;
+          Object? otherResult;
+          service
+              .runAgentAction(
+                sessionId: 'a',
+                label: 'click',
+                action: () =>
+                    service.evaluateJavascript('click', tabId: tab.id),
+              )
+              .then<void>((_) {}, onError: (Object error) => failure = error);
+          clock.flushMicrotasks();
+          service
+              .runAgentAction(
+                sessionId: 'b',
+                label: 'snapshot',
+                tabId: other.id,
+                action: () => service.evaluateJavascript(
+                  'other',
+                  tabId: other.id,
+                  readOnly: true,
+                ),
+              )
+              .then<void>((value) => otherResult = value);
+          clock.elapse(Duration(seconds: seconds - 1));
+          expect(failure, isNull);
+          expect(otherResult, isNull);
+          clock.elapse(const Duration(seconds: 1));
+          final error = failure as BrowserFailure;
+          expect(error.code, 'browser_action_timeout_outcome_unknown');
+          expect(error.recoverable, isTrue);
+          expect(error.outcomeUnknown, isTrue);
+          expect(error.details, containsPair('timeout_ms', seconds * 1000));
+          expect(error.details, containsPair('page_responsive', true));
+          expect(error.details, containsPair('execution_stopped', false));
+          expect(error.details, containsPair('may_have_late_effects', true));
+          expect(error.details!['operation_id'], isNotEmpty);
+          expect(engine.stopCalls, 0);
+          expect(engine.scripts, ['prepare', 'click']);
+          expect(otherResult, 'complete');
+          expect(service.agentPaused, isFalse);
+          expect(original.isCompleted, isFalse);
+          engine.evaluation = null;
+          Object? observed;
+          service
+              .runAgentAction(
+                sessionId: 'a',
+                label: 'snapshot',
+                action: () => service.evaluateJavascript(
+                  'observe',
+                  tabId: tab.id,
+                  readOnly: true,
+                ),
+              )
+              .then<void>((value) => observed = value);
+          clock.flushMicrotasks();
+          expect(observed, 'complete');
+          original.complete('late result');
+          clock.flushMicrotasks();
+          expect(service.agentPaused, isFalse);
+          expect(engine.scripts, ['prepare', 'click', 'observe']);
+        });
+      },
+    );
+  }
+
+  test(
+    'read timeout health check is bounded and does not stop the page',
+    () async {
       service.dispose();
       service = createService(store: _RetryStore()..failRead = false);
       final tab = await service.createTab(ownerSessionId: 'a');
       await service.evaluateJavascript('prepare', tabId: tab.id);
       final engine = engines[tab.id]!;
-      if (action == 'navigate') {
-        engine.navigating = Completer<void>();
-      } else {
-        engine.evaluation = Completer<Object?>();
-      }
+      engine.evaluation = Completer<Object?>();
+      engine.healthCheck = Completer<Object?>();
       fakeAsync((clock) {
-        Object? failure;
-        Object? queued;
-        service
-            .runAgentAction<void>(
-              sessionId: 'a',
-              label: action == 'navigate' ? 'open' : 'click',
-              action: () async {
-                if (action == 'navigate') {
-                  await service.navigate(
-                    'https://example.com/next',
-                    tabId: tab.id,
-                  );
-                } else {
-                  await service.evaluateJavascript('click', tabId: tab.id);
-                }
-              },
-            )
-            .then<void>((_) {}, onError: (Object error) => failure = error);
-        clock.flushMicrotasks();
+        BrowserFailure? failure;
         service
             .runAgentAction(
               sessionId: 'a',
               label: 'snapshot',
-              action: () => service.evaluateJavascript('queued', tabId: tab.id),
+              action: () => service.evaluateJavascript(
+                'snapshot',
+                tabId: tab.id,
+                readOnly: true,
+              ),
             )
             .then<void>(
-              (value) => queued = value,
-              onError: (Object error) => queued = error,
+              (_) {},
+              onError: (Object error) => failure = error as BrowserFailure,
             );
-        clock.flushMicrotasks();
-        clock.elapse(const Duration(seconds: 29));
+        clock.elapse(const Duration(seconds: 30));
         expect(failure, isNull);
-        expect(queued, isNull);
-        expect(service.agentPaused, isFalse);
         clock.elapse(const Duration(seconds: 1));
+        expect(failure!.code, 'browser_read_timeout');
+        expect(failure!.outcomeUnknown, isFalse);
+        expect(failure!.details, containsPair('page_responsive', false));
+        expect(failure!.details, containsPair('may_have_late_effects', false));
+        expect(engine.stopCalls, 0);
+        expect(service.agentPaused, isFalse);
+        engine.evaluation!.complete('late observation');
+        engine.healthCheck!.complete(null);
+        clock.flushMicrotasks();
+      });
+    },
+  );
+
+  test(
+    'unresponsive navigation is stopped and probed without pausing control',
+    () async {
+      service.dispose();
+      service = createService(store: _RetryStore()..failRead = false);
+      final tab = await service.createTab(ownerSessionId: 'a');
+      await service.evaluateJavascript('prepare', tabId: tab.id);
+      final engine = engines[tab.id]!
+        ..navigating = Completer<void>()
+        ..healthResponsive = false
+        ..recoverOnStop = true;
+      fakeAsync((clock) {
+        BrowserFailure? failure;
+        service
+            .runAgentAction(
+              sessionId: 'a',
+              label: 'open',
+              action: () =>
+                  service.navigate('https://example.com/next', tabId: tab.id),
+            )
+            .then<void>(
+              (_) {},
+              onError: (Object error) => failure = error as BrowserFailure,
+            );
+        clock.elapse(const Duration(seconds: 30));
+        expect(failure!.outcomeUnknown, isTrue);
+        expect(failure!.details, containsPair('page_responsive', true));
+        expect(failure!.details, containsPair('loading_stopped', true));
+        expect(failure!.details, containsPair('execution_stopped', false));
+        expect(engine.healthChecks, 2);
+        expect(engine.stopCalls, 1);
+        expect(service.agentPaused, isFalse);
+        engine.navigating!.complete();
+        clock.flushMicrotasks();
+        expect(engine.navigations, ['https://example.com/next']);
+      });
+    },
+  );
+
+  test(
+    'takeover during timeout recovery prevents navigation cleanup',
+    () async {
+      service.dispose();
+      service = createService(store: _RetryStore()..failRead = false);
+      final tab = await service.createTab(ownerSessionId: 'a');
+      await service.evaluateJavascript('prepare', tabId: tab.id);
+      final engine = engines[tab.id]!
+        ..navigating = Completer<void>()
+        ..healthResponsive = false;
+      engine.onHealthCheck = () =>
+          service.takeOver(sessionId: 'a', tabId: tab.id);
+      fakeAsync((clock) {
+        Object? failure;
+        service
+            .runAgentAction(
+              sessionId: 'a',
+              label: 'open',
+              action: () =>
+                  service.navigate('https://example.com/next', tabId: tab.id),
+            )
+            .then<void>((_) {}, onError: (Object error) => failure = error);
+        clock.elapse(const Duration(seconds: 30));
         expect(
           failure.toString(),
-          contains('browser_action_timeout_outcome_unknown'),
+          contains('browser_action_cancelled_outcome_unknown'),
         );
-        expect(service.agentPaused, isTrue);
-        expect(service.agentPauseReason, BrowserAgentPauseReason.timeout);
         expect(
-          queued.toString(),
-          contains('browser_action_timeout_outcome_unknown'),
+          service.agentPauseFor('a')!.reason,
+          BrowserAgentPauseReason.user,
         );
-        expect(engine.scripts, isNot(contains('queued')));
-        engine.navigating?.complete();
-        engine.evaluation?.complete('late result');
+        expect(engine.healthChecks, 1);
+        expect(engine.stopCalls, 1); // Only the user's takeover stops loading.
+        engine.navigating!.complete();
         clock.flushMicrotasks();
-        expect(service.agentPaused, isTrue);
       });
-    });
-  }
+    },
+  );
 
   for (final resume in [false, true]) {
     test(
@@ -1239,7 +1646,7 @@ void main() {
         expect(service.controlEpoch, epoch);
         expect(service.agentPaused, !resume);
         expect(
-          service.agentPauseReason,
+          service.agentPauseFor('a')?.reason,
           resume ? null : BrowserAgentPauseReason.user,
         );
         if (resume) {
@@ -1299,12 +1706,12 @@ void main() {
       final third = service.tabs.last;
       expect(service.activeTab!.ownerSessionId, 'other-7');
       expect(third.ownerSessionId, 'chat');
-      expect(service.liveViewCount, BrowserService.maxLiveViews);
+      expect(service.liveViewCount, service.liveViewLimit);
       expect(
         await popupCallbacks[parent.id]!('https://overflow.example', 44),
         isFalse,
       );
-      expect(service.liveViewCount, BrowserService.maxLiveViews);
+      expect(service.liveViewCount, service.liveViewLimit);
       await service.closeTab(third.id);
       await service.selectTab(child.id);
       engines[child.id]!.onChanged(
@@ -1510,7 +1917,10 @@ void main() {
       debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
       try {
         service.dispose();
-        service = createService(store: _RetryStore()..failRead = false);
+        service = createService(
+          store: _RetryStore()..failRead = false,
+          liveViewLimit: 3,
+        );
         await service.initialize();
         final first = await service.createTab(url: 'https://first.example');
         await tester.pumpWidget(
@@ -1558,7 +1968,7 @@ void main() {
         await tester.pumpAndSettle();
         await service.createTab(url: 'https://fourth.example');
         await tester.pumpAndSettle();
-        expect(service.liveViewCount, BrowserService.maxLiveViews);
+        expect(service.liveViewCount, service.liveViewLimit);
         expect(engines[first.id]!.disposed, isTrue);
         expect(
           find.byKey(ValueKey('${first.id}:0'), skipOffstage: false),
@@ -1673,10 +2083,7 @@ void main() {
         replacement.tab.runtimeVersion,
         service.requireTab(first.id).runtimeVersion,
       );
-      expect(
-        service.liveViewCount,
-        lessThanOrEqualTo(BrowserService.maxLiveViews),
-      );
+      expect(service.liveViewCount, lessThanOrEqualTo(service.liveViewLimit));
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
       service.dispose();

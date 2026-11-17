@@ -150,7 +150,10 @@ class _GatedDraftStore extends ComposerDraftStore {
   final releasePreparation = Completer<void>();
 
   @override
-  Future<ChatInputData> prepareSubmissionInput(ChatInputData input) async {
+  Future<ChatInputData> prepareSubmissionInput(
+    ChatInputData input, {
+    DocumentCopyObserver? onDocumentCopied,
+  }) async {
     preparationStarted.complete();
     await releasePreparation.future;
     return input; // Text-only submission has no attachment transformations.
@@ -669,7 +672,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     await native.commit('X');
     await tester.pump(const Duration(milliseconds: 600));
-    state.controller.shareMessage(-1, const []);
+    state.controller.startMessageSelection(
+      messageIndex: -1,
+      messageList: const [],
+    );
     await tester.pumpAndSettle();
     expect(state.media.isAttached, isFalse);
     await native.deliver(
@@ -1107,7 +1113,10 @@ void main() {
       ),
     );
     await finish(tester, store.flush());
-    state.controller.shareMessage(-1, const []);
+    state.controller.startMessageSelection(
+      messageIndex: -1,
+      messageList: const [],
+    );
     await tester.pumpAndSettle();
     expect(state.media.isAttached, isFalse);
     state.controller.onAppLifecycleStateChanged(AppLifecycleState.inactive);
@@ -1147,7 +1156,10 @@ void main() {
       await go(tester, state, 'a');
       final target = state.media.capture();
       state.text.text = 'keep text';
-      state.controller.shareMessage(-1, const []);
+      state.controller.startMessageSelection(
+        messageIndex: -1,
+        messageList: const [],
+      );
       await tester.pumpAndSettle();
       target.addFiles([
         const DocumentAttachment(

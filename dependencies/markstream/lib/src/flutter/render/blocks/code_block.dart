@@ -9,6 +9,7 @@ import '../../extensions/registry.dart';
 import '../../interfaces/renderers.dart';
 import '../../theme/markstream_theme.dart';
 import '../chrome.dart';
+import '../../selection/selection_controller.dart';
 import 'code_content.dart';
 
 class MarkstreamCodeBlock extends StatefulWidget {
@@ -68,7 +69,7 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
   @override
   Widget build(BuildContext context) {
     final theme = widget.theme.code;
-    final chrome = widget.theme.chrome;
+    final chrome = theme.chrome;
     final lines = codeLineCount(toPlainText(widget.node));
     final expanded =
         widget.exporting ||
@@ -96,6 +97,7 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
       wrap: widget.exporting || !mobile || widget.options.mobileWrap,
       highlight: widget.options.highlight,
       maxLines: expanded ? null : widget.options.collapsedLines,
+      literalSpanBuilder: widget.extensions.literalSpanBuilder,
     );
     if (!expanded &&
         lines > widget.options.collapsedLines &&
@@ -127,11 +129,8 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
         child: content,
       );
     }
-    final body = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: content,
-    );
-    return Container(
+    final body = Padding(padding: theme.bodyPadding, child: content);
+    final contentBlock = Container(
       key: const ValueKey('markstream-code-surface'),
       margin: theme.margin,
       decoration: BoxDecoration(
@@ -153,12 +152,14 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
               height: chrome.height,
               decoration: BoxDecoration(
                 color: chrome.background,
-                border: Border(
-                  bottom: BorderSide(
-                    color: chrome.divider,
-                    width: MarkstreamTheme.stroke,
-                  ),
-                ),
+                border: chrome.divider.a == 0
+                    ? null
+                    : Border(
+                        bottom: BorderSide(
+                          color: chrome.divider,
+                          width: MarkstreamTheme.stroke,
+                        ),
+                      ),
               ),
               child: Padding(
                 padding: chrome.padding,
@@ -179,14 +180,12 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
                             onPressed: widget.exporting ? null : toggle,
                             style:
                                 TextButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                  ),
+                                  padding: theme.titlePadding,
                                   minimumSize: Size(0, chrome.actionSize),
                                   tapTargetSize:
                                       MaterialTapTargetSize.shrinkWrap,
                                   alignment: Alignment.centerLeft,
-                                  foregroundColor: theme.label.color,
+                                  foregroundColor: chrome.label.color,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
                                       chrome.actionRadius,
@@ -208,7 +207,7 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
                                     _language.isEmpty
                                         ? widget.labels.unnamedCode
                                         : _language,
-                                    style: theme.label,
+                                    style: chrome.label,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -239,6 +238,7 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
                             primary: false,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
+                              spacing: theme.actionSpacing,
                               children: [
                                 ...?widget.extensions.codeExtraActions?.call(
                                   context,
@@ -281,6 +281,15 @@ class _MarkstreamCodeBlockState extends State<MarkstreamCodeBlock> {
             ),
         ],
       ),
+    );
+    return SourceRangePreparer(
+      span: widget.node.span,
+      prepare: (range) {
+        if (expanded) return true;
+        toggle();
+        return false;
+      },
+      child: contentBlock,
     );
   }
 }

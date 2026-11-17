@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../features/mcp/widgets/mcp_server_avatar.dart';
+import '../features/mcp/widgets/mcp_tool_connection_status.dart';
 import '../features/mcp/utils/mcp_tool_groups.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +10,11 @@ import '../icons/lucide_adapter.dart';
 import '../l10n/app_localizations.dart';
 import '../core/providers/mcp_provider.dart';
 import '../core/providers/assistant_provider.dart';
+import '../core/models/conversation.dart';
+import '../core/models/conversation_mcp_settings.dart';
+import '../core/services/chat/chat_service.dart';
+import '../features/chat/utils/ensure_conversation.dart';
+import '../features/chat/widgets/image_recall_control.dart';
 import '../features/home/services/local_tool_labels.dart';
 import '../features/home/services/local_tool_toggle.dart';
 import 'package:Kelivo/theme/app_font_weights.dart';
@@ -18,8 +25,21 @@ Future<void> showDesktopToolsPopover(
   BuildContext context, {
   required GlobalKey anchorKey,
   required String assistantId,
+  String? conversationId,
   required bool supportsModelTools,
 }) async {
+  if (context
+          .read<AssistantProvider>()
+          .getById(assistantId)
+          ?.allowConversationMcp ==
+      true) {
+    conversationId = await ensureConversationId(
+      context,
+      conversationId: conversationId,
+      assistantId: assistantId,
+    );
+    if (conversationId == null || !context.mounted) return;
+  }
   final overlay = Overlay.maybeOf(context);
   if (overlay == null) return;
   final keyContext = anchorKey.currentContext;
@@ -42,6 +62,7 @@ Future<void> showDesktopToolsPopover(
       anchorRect: anchorRect,
       anchorWidth: size.width,
       assistantId: assistantId,
+      conversationId: conversationId,
       supportsModelTools: supportsModelTools,
       onClose: () {
         try {
@@ -58,6 +79,7 @@ class _ToolsPopover extends StatefulWidget {
     required this.anchorRect,
     required this.anchorWidth,
     required this.assistantId,
+    required this.conversationId,
     required this.supportsModelTools,
     required this.onClose,
   });
@@ -65,6 +87,7 @@ class _ToolsPopover extends StatefulWidget {
   final Rect anchorRect;
   final double anchorWidth;
   final String assistantId;
+  final String? conversationId;
   final bool supportsModelTools;
   final VoidCallback onClose;
 
@@ -115,7 +138,10 @@ class _ToolsPopoverState extends State<_ToolsPopover>
   @override
   Widget build(BuildContext context) {
     final screen = MediaQuery.of(context).size;
-    final width = (widget.anchorWidth - 16).clamp(260.0, 720.0);
+    final width = math.min(
+      (widget.anchorWidth - 16).clamp(260.0, 720.0),
+      math.max(0.0, screen.width - 16),
+    );
     final left =
         (widget.anchorRect.left + (widget.anchorRect.width - width) / 2).clamp(
           8.0,
@@ -155,6 +181,7 @@ class _ToolsPopoverState extends State<_ToolsPopover>
                         ),
                         child: _ToolsContent(
                           assistantId: widget.assistantId,
+                          conversationId: widget.conversationId,
                           supportsModelTools: widget.supportsModelTools,
                           onDone: _close,
                         ),
@@ -214,10 +241,12 @@ class _GlassPanel extends StatelessWidget {
 class _ToolsContent extends StatelessWidget {
   const _ToolsContent({
     required this.assistantId,
+    required this.conversationId,
     required this.supportsModelTools,
     required this.onDone,
   });
   final String assistantId;
+  final String? conversationId;
   final bool supportsModelTools;
   final VoidCallback onDone;
 
@@ -229,7 +258,27 @@ class _ToolsContent extends StatelessWidget {
     final ap = context.watch<AssistantProvider>();
     final a = ap.getById(assistantId);
     if (a == null) return const SizedBox.shrink();
-    final selected = a.mcpServerIds.toSet();
+    final conversationScoped = a.allowConversationMcp && conversationId != null;
+    final conversation = conversationScoped
+        ? context.select<ChatService, Conversation?>(
+            (chat) => chat.getConversation(conversationId!),
+          )
+        : null;
+    final inherited = !ConversationMcpSettings.isOverridden(conversation);
+    final selected = ConversationMcpSettings.effectiveServerIds(
+      a,
+      conversation,
+    ).toSet();
+    Future<void> setIds(List<String>? ids) {
+      if (conversationScoped) {
+        return context.read<ChatService>().setConversationMcpServers(
+          conversationId!,
+          ids,
+        );
+      }
+      return ap.updateAssistant(a.copyWith(mcpServerIds: ids!));
+    }
+
     final groups = [if (supportsModelTools) ...mcpToolGroups(mcp)];
 
     final localToolIds = supportsModelTools
@@ -265,18 +314,51 @@ class _ToolsContent extends StatelessWidget {
           ),
         );
       }
+      rows.add(
+        (context) => ImageRecallControl(
+          assistantId: assistantId,
+          conversationId: conversationId,
+          builder: (enabled, onChanged) => _RowItem(
+            key: const ValueKey('desktop-tools-view-image'),
+            leading: Icon(
+              Lucide.Image,
+              size: 16,
+              color: enabled ? cs.primary : cs.onSurface,
+            ),
+            label: l10n.workspaceToolTitleViewImage,
+            selected: enabled,
+            onTap: onChanged == null ? null : () => onChanged(!enabled),
+          ),
+        ),
+      );
     }
 
-    if (groups.isNotEmpty) {
-      rows.add((context) => _SectionLabel(text: l10n.mcpAssistantSheetTitle));
+    if (groups.isNotEmpty || (supportsModelTools && conversationScoped)) {
+      rows.add(
+        (context) => _SectionLabel(
+          text: conversationScoped
+              ? '${l10n.mcpAssistantSheetTitle} · ${inherited ? l10n.mcpSelectionInherited : l10n.mcpSelectionCustom}'
+              : l10n.mcpAssistantSheetTitle,
+        ),
+      );
+      if (conversationScoped) {
+        rows.add(
+          (context) => _RowItem(
+            key: const ValueKey('desktop-tools-mcp-inherit'),
+            leading: Icon(Lucide.RotateCcw, size: 16, color: cs.onSurface),
+            label: l10n.mcpInheritAssistant,
+            selected: inherited,
+            onTap: () => setIds(null),
+          ),
+        );
+      }
       rows.add(
         (context) => _RowItem(
+          key: const ValueKey('desktop-tools-mcp-clear'),
           leading: Icon(Lucide.CircleX, size: 16, color: cs.onSurface),
           label: l10n.mcpAssistantSheetClearAll,
           onTap: () async {
-            await context.read<AssistantProvider>().updateAssistant(
-              a.copyWith(mcpServerIds: const <String>[]),
-            );
+            await setIds(const <String>[]);
             onDone();
           },
         ),
@@ -302,25 +384,31 @@ class _ToolsContent extends StatelessWidget {
               size: 16,
               radius: 7,
               showBackground: false,
+              status: mcp.statusFor(s.id) == McpStatus.connected
+                  ? null
+                  : mcp.statusFor(s.id),
             ),
             detail:
                 '${s.tools.where((t) => t.enabled).length}/${s.tools.length}',
             label: s.name,
             selected: isSelected,
             onTap: () async {
-              final set = a.mcpServerIds.toSet();
+              final set = selected.toSet();
               if (isSelected) {
                 set.remove(s.id);
               } else {
                 set.add(s.id);
               }
-              await context.read<AssistantProvider>().updateAssistant(
-                a.copyWith(mcpServerIds: set.toList()),
-              );
+              await setIds(set.toList());
               // Do not close; allow multi-select
             },
           ),
         );
+        if (mcp.statusFor(s.id) != McpStatus.connected) {
+          rows.add(
+            (context) => McpToolConnectionStatus(serverId: s.id, desktop: true),
+          );
+        }
       }
     }
 
@@ -382,7 +470,7 @@ class _RowItem extends StatefulWidget {
   final String? detail;
   final String label;
   final bool? selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   State<_RowItem> createState() => _RowItemState();
@@ -402,12 +490,16 @@ class _RowItemState extends State<_RowItem> {
     final hoverBg = cs.onSurface.withValues(alpha: isDark ? 0.12 : 0.10);
     return Semantics(
       button: true,
+      enabled: widget.onTap != null,
       toggled: widget.selected,
       child: MouseRegion(
-        cursor: SystemMouseCursors.click,
+        cursor: widget.onTap == null
+            ? MouseCursor.defer
+            : SystemMouseCursors.click,
         onEnter: (_) => setState(() => _hovered = true),
         onExit: (_) => setState(() => _hovered = false),
         child: FocusableActionDetector(
+          enabled: widget.onTap != null,
           onShowFocusHighlight: (value) => setState(() => _focused = value),
           shortcuts: const {
             SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
@@ -416,7 +508,7 @@ class _RowItemState extends State<_RowItem> {
           actions: {
             ActivateIntent: CallbackAction<ActivateIntent>(
               onInvoke: (_) {
-                widget.onTap();
+                widget.onTap?.call();
                 return null;
               },
             ),

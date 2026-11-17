@@ -96,7 +96,10 @@ class _Generation extends Fake implements GenerationController {
   @override
   Map<String, dynamic>? buildCustomBody(Assistant? assistant) => null;
   @override
-  McpToolRouteSnapshot captureMcpToolRoutes(Assistant? assistant) => _Routes();
+  McpToolRouteSnapshot captureMcpToolRoutes(
+    Assistant? assistant, {
+    String? conversationId,
+  }) => _Routes();
   @override
   List<Map<String, dynamic>> buildToolDefinitions(
     SettingsProvider settings,
@@ -289,6 +292,101 @@ void main() {
       });
     },
   );
+
+  for (final position in [
+    WorldBookInjectionPosition.topOfChat,
+    WorldBookInjectionPosition.bottomOfChat,
+    WorldBookInjectionPosition.atDepth,
+  ]) {
+    for (final role in [
+      WorldBookInjectionRole.user,
+      WorldBookInjectionRole.assistant,
+    ]) {
+      for (final fixedStart in [false, true]) {
+        testWidgets(
+          'history limit precedes lore: $position $role fixed=$fixedStart',
+          (tester) async {
+            await mount(tester);
+            await tester.runAsync(() async {
+              await books.addBook(
+                WorldBook(
+                  id: 'limited',
+                  entries: [
+                    WorldBookEntry(
+                      id: 'always',
+                      content: 'ACTIVE_LORE',
+                      constantActive: true,
+                      position: position,
+                      role: role,
+                      injectDepth: 0,
+                    ),
+                    const WorldBookEntry(
+                      id: 'old',
+                      content: 'OLD_TRIGGER_LORE',
+                      keywords: ['OLD_QUESTION'],
+                      scanDepth: 200,
+                    ),
+                  ],
+                ),
+              );
+              await books.setActiveBookIds([
+                'limited',
+              ], assistantId: 'assistant');
+              final generation = MessageGenerationService(
+                chatService: chat,
+                messageBuilderService: builder,
+                generationController: _Generation(),
+                streamController: _Stream(),
+                contextProvider: context,
+              );
+              final packed = await generation.assembleUnprocessedRequestContext(
+                fixedContextStart: fixedStart,
+                messages: [
+                  for (final entry in [
+                    ('old-user', 'user', 'OLD_QUESTION'),
+                    ('old-assistant', 'assistant', 'OLD_ANSWER'),
+                    ('current-user', 'user', 'CURRENT_QUESTION'),
+                  ])
+                    ChatMessage(
+                      id: entry.$1,
+                      role: entry.$2,
+                      content: entry.$3,
+                      conversationId: 'one',
+                    ),
+                ],
+                versionSelections: {},
+                currentConversation: null,
+                settings: settings,
+                assistant: const Assistant(
+                  id: 'assistant',
+                  name: 'A',
+                  limitContextMessages: true,
+                  contextMessageSize: 1,
+                ),
+                assistantId: 'assistant',
+                providerKey: 'test',
+                modelId: 'model',
+                persistWorldBookActivation: false,
+              );
+              final contents = packed.apiMessages
+                  .map((m) => m['content'])
+                  .join('\n');
+              expect(contents, contains('CURRENT_QUESTION'));
+              expect(contents, contains('ACTIVE_LORE'));
+              expect(contents.contains('OLD_QUESTION'), fixedStart);
+              expect(contents.contains('OLD_ANSWER'), fixedStart);
+              expect(contents.contains('OLD_TRIGGER_LORE'), fixedStart);
+              final realUsers = packed.apiMessages.where(
+                (m) =>
+                    m.containsKey(MessageBuilderService.internalRevisionIdKey),
+              );
+              expect(realUsers.last['content'], 'CURRENT_QUESTION');
+            });
+          },
+        );
+      }
+    }
+  }
 
   testWidgets(
     'context previews inject timed lore without persisting activation',

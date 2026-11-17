@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:super_sliver_list/super_sliver_list.dart';
 
 import '../../../support/business_test_harness.dart';
 import 'package:Kelivo/core/database/composer_draft_store.dart';
@@ -21,6 +22,7 @@ import 'package:Kelivo/features/home/controllers/stream_controller.dart'
     show ReasoningData, ReasoningSegmentData;
 import 'package:Kelivo/features/home/widgets/chat_input_bar.dart';
 import 'package:Kelivo/l10n/app_localizations.dart';
+import 'package:Kelivo/shared/widgets/source_rect_scroll.dart';
 
 class _PageRequest {
   _PageRequest({required this.conversationId, required this.completer});
@@ -70,6 +72,7 @@ class _ControlledChatService extends ChatService {
     _PageRequest request,
     List<ChatMessage> messages, {
     required int startIndex,
+    int? totalSlotCount,
   }) {
     final timestamp = DateTime(2026, 7, 11);
     request.completer.complete(
@@ -96,7 +99,7 @@ class _ControlledChatService extends ChatService {
         ],
         hasMoreBefore: startIndex > 0,
         hasMoreAfter: false,
-        totalSlotCount: startIndex + messages.length,
+        totalSlotCount: totalSlotCount ?? startIndex + messages.length,
       ),
     );
   }
@@ -236,8 +239,11 @@ void main() {
   /// Runs [body] with the platform overridden to Android so the mobile
   /// (animated) switching pipeline is exercised. The override must be reset
   /// before the test body ends, so it cannot live in setUp/tearDown.
-  Future<void> runAsMobile(Future<void> Function() body) async {
-    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  Future<void> runAsMobile(
+    Future<void> Function() body, {
+    TargetPlatform platform = TargetPlatform.android,
+  }) async {
+    debugDefaultTargetPlatformOverride = platform;
     try {
       await body();
     } finally {
@@ -258,8 +264,9 @@ void main() {
 
   Future<HomePageController> pumpHarness(
     WidgetTester tester,
-    _ControlledChatService service,
-  ) async {
+    _ControlledChatService service, {
+    Widget Function(HomePageController)? timeline,
+  }) async {
     HomePageController? controller;
     await tester.pumpWidget(
       MultiProvider(
@@ -276,7 +283,10 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: _ControllerHarness(onCreated: (value) => controller = value),
+          home: _ControllerHarness(
+            onCreated: (value) => controller = value,
+            timeline: timeline,
+          ),
         ),
       ),
     );
@@ -328,6 +338,404 @@ void main() {
     );
     await pumpUntilDone(tester, [future]);
   }
+
+  for (final action in ['same conversation', 'return to bottom']) {
+    testWidgets('$action preserves a pending initial window', (tester) async {
+      await runAsMobile(() async {
+        final service = _ControlledChatService({
+          'conv-a': [_message('conv-a', 0)],
+        });
+        final controller = await pumpHarness(tester, service);
+        final initial = controller.chatController.setCurrentConversationAndLoad(
+          service.getConversation('conv-a')!,
+        );
+        expect(controller.currentConversation?.id, 'conv-a');
+        expect(controller.messages, isEmpty);
+        expect(controller.isLoadingWindow, isTrue);
+        if (action == 'same conversation') {
+          await controller.switchConversationAnimated('conv-a');
+        } else {
+          await controller.forceScrollToBottom();
+        }
+        service.completePage(
+          service.pageRequests.single,
+          service.messagesOf('conv-a'),
+          startIndex: 0,
+        );
+        await initial;
+        expect(controller.messages.map((message) => message.id), [
+          'conv-a-message-0',
+        ]);
+      }, platform: TargetPlatform.iOS);
+    });
+  }
+
+  for (final returnToBottom in [false, true]) {
+    testWidgets(
+      'deleting the active chat reveals a pending jump (bottom=$returnToBottom)',
+      (tester) async {
+        await runAsMobile(() async {
+          final conversations = {
+            'conv-a': [_message('conv-a', 0)],
+          };
+          final service = _ControlledChatService(conversations);
+          final controller = await pumpHarness(tester, service);
+          final open = controller.switchConversationAnimated('conv-a');
+          service.completePage(
+            service.pageRequests.single,
+            service.messagesOf('conv-a'),
+            startIndex: 0,
+            totalSlotCount: 3,
+          );
+          await pumpUntilDone(tester, [open]);
+          final jump = returnToBottom
+              ? controller.forceScrollToBottom()
+              : controller.scrollToMessageId(
+                  'conv-a-message-10',
+                  useRikkaTransition: true,
+                );
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 200));
+          expect(controller.messageJumpOpacity.value, 0.0);
+          final pendingPage = service.pageRequests.last;
+          // History-page deletion notifies after removing the service cache row.
+          conversations.remove('conv-a');
+          service.notifyListeners();
+          expect(controller.currentConversation, isNull);
+          pendingPage.completer.complete(null);
+          await pumpUntilDone(tester, [jump]);
+          await controller.debugViewModel.createNewConversation();
+          expect(controller.currentConversation, isNotNull);
+          expect(controller.messageJumpOpacity.value, 1.0);
+        }, platform: TargetPlatform.iOS);
+      },
+    );
+  }
+
+  testWidgets('switching conversations reveals a pending message jump', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+        'conv-b': [_message('conv-b', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+
+      final jump = controller.scrollToMessageId(
+        'conv-a-older-message',
+        useRikkaTransition: true,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(service.pageRequests, hasLength(2));
+      final pendingPage = service.pageRequests.last;
+      try {
+        await switchAndSettle(tester, controller, service, 'conv-b');
+        expect(controller.currentConversation?.id, 'conv-b');
+        expect(controller.messages.single.conversationId, 'conv-b');
+        expect(controller.messageJumpOpacity.value, 1.0);
+      } finally {
+        pendingPage.completer.complete(null);
+        await pumpUntilDone(tester, [jump]);
+      }
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets(
+    'find jumps between laid-out lines without visiting the message header',
+    (tester) async {
+      final message = _message('conv-a', 0);
+      final service = _ControlledChatService({
+        'conv-a': [message],
+      });
+      final first = GlobalKey();
+      final last = GlobalKey();
+      final controller = await pumpHarness(
+        tester,
+        service,
+        timeline: (c) => SuperListView.builder(
+          controller: c.scrollController,
+          listController: c.scrollCtrl.messageListController,
+          itemCount: c.messages.length,
+          itemBuilder: (_, _) => Column(
+            children: [
+              const SizedBox(height: 1400),
+              Text('first occurrence', key: first),
+              const SizedBox(height: 2300),
+              Text('last occurrence', key: last),
+              const SizedBox(height: 800),
+            ],
+          ),
+        ),
+      );
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      Future<void> jump(GlobalKey key) => controller.scrollToMessageId(
+        message.id,
+        revealMatch: (current, {required waitForMount}) =>
+            scrollToSourceGeometry(
+              locate: () {
+                final box =
+                    key.currentContext!.findRenderObject()! as RenderBox;
+                return box.localToGlobal(Offset.zero) & box.size;
+              },
+              scrollToRect: controller.scrollToSourceRect,
+              isCurrent: current,
+              waitForMount: waitForMount,
+            ),
+      );
+      await pumpUntilDone(tester, [jump(first)]);
+      final firstOffset = controller.scrollController.offset;
+      expect(firstOffset, greaterThan(900));
+      final offsets = <double>[];
+      void record() => offsets.add(controller.scrollController.offset);
+      controller.scrollController.addListener(record);
+      await pumpUntilDone(tester, [jump(last)]);
+      final lastOffset = controller.scrollController.offset;
+      expect(lastOffset, greaterThan(firstOffset + 2200));
+      expect(offsets, everyElement(greaterThanOrEqualTo(firstOffset)));
+      offsets.clear();
+      await pumpUntilDone(tester, [jump(first)]);
+      expect(controller.scrollController.offset, closeTo(firstOffset, 0.5));
+      expect(
+        offsets,
+        everyElement(inInclusiveRange(firstOffset - .5, lastOffset + .5)),
+      );
+      controller.scrollController.removeListener(record);
+    },
+  );
+
+  testWidgets(
+    'find presents a distant window only after its target is positioned',
+    (tester) async {
+      final recent = _message('conv-a', 84);
+      final older = _message('conv-a', 9);
+      final service = _ControlledChatService({
+        'conv-a': [recent],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      final positioned = Completer<bool>();
+      var locatingOlder = false;
+      final jump = controller.scrollToMessageId(
+        older.id,
+        revealMatch: (valid, {required waitForMount}) {
+          locatingOlder = valid() && waitForMount;
+          return positioned.future;
+        },
+      );
+      await tester.pump();
+      expect(controller.findViewportSnapshot.allowSnapshotting, isTrue);
+      service.completePage(service.pageRequests.last, [older], startIndex: 9);
+      for (var i = 0; i < 8; i++) {
+        await tester.pump();
+      }
+      expect(controller.messages.single.id, older.id);
+      expect(locatingOlder, isTrue);
+      expect(controller.findViewportSnapshot.allowSnapshotting, isTrue);
+      positioned.complete(true);
+      await pumpUntilDone(tester, [jump]);
+      expect(controller.findViewportSnapshot.allowSnapshotting, isFalse);
+
+      final cancelled = controller.scrollToMessageId(
+        recent.id,
+        revealMatch: (_, {required waitForMount}) =>
+            throw StateError('stale hit'),
+      );
+      await tester.pump();
+      expect(controller.findViewportSnapshot.allowSnapshotting, isTrue);
+      controller.cancelFindJump();
+      expect(controller.findViewportSnapshot.allowSnapshotting, isFalse);
+      service.completePage(service.pageRequests.last, [recent], startIndex: 84);
+      await pumpUntilDone(tester, [cancelled]);
+      expect(controller.messages.single.id, older.id);
+    },
+  );
+
+  testWidgets('superseded conversation fade completes its switch future', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+        'conv-b': [_message('conv-b', 0)],
+        'conv-c': [_message('conv-c', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      var firstFinished = false;
+      final first = controller.switchConversationAnimated('conv-b').then((_) {
+        firstFinished = true;
+      });
+      service.completePage(
+        service.pageRequests.last,
+        service.messagesOf('conv-b'),
+        startIndex: 0,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      await switchAndSettle(tester, controller, service, 'conv-c');
+
+      expect(controller.currentConversation?.id, 'conv-c');
+      expect(controller.convoFade.value, 1.0);
+      expect(firstFinished, isTrue);
+      await first;
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets('old message jump cannot replace a reopened conversation', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+        'conv-b': [_message('conv-b', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      final older = _message('conv-a', 10);
+      final jump = controller.scrollToMessageId(
+        older.id,
+        useRikkaTransition: true,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final pendingPage = service.pageRequests.last;
+      await switchAndSettle(tester, controller, service, 'conv-b');
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      service.completePage(pendingPage, [older], startIndex: 10);
+      await pumpUntilDone(tester, [jump]);
+
+      expect(controller.messages.single.id, 'conv-a-message-0');
+      expect(controller.messageJumpOpacity.value, 1.0);
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets('older page completion cannot reveal a newer message jump', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      final first = controller.scrollToMessageId(
+        'conv-a-message-10',
+        useRikkaTransition: true,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final firstPage = service.pageRequests.last;
+      final second = controller.scrollToMessageId(
+        'conv-a-message-20',
+        useRikkaTransition: true,
+      );
+      await tester.pump();
+      final secondPage = service.pageRequests.last;
+      expect(service.pageRequests, hasLength(3));
+      service.completePage(firstPage, [_message('conv-a', 10)], startIndex: 10);
+      await pumpUntilDone(tester, [first]);
+      try {
+        expect(controller.messages.single.id, 'conv-a-message-0');
+        expect(controller.messageJumpOpacity.value, 0.0);
+      } finally {
+        service.completePage(secondPage, [
+          _message('conv-a', 20),
+        ], startIndex: 20);
+        await pumpUntilDone(tester, [second]);
+      }
+      expect(controller.messages.single.id, 'conv-a-message-20');
+      expect(controller.messageJumpOpacity.value, 1.0);
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets('same conversation tap cancels an unfinished jump fade', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      var jumpFinished = false;
+      final jump = controller
+          .scrollToMessageId('conv-a-message-10', useRikkaTransition: true)
+          .then((_) => jumpFinished = true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+      await controller.switchConversationAnimated('conv-a');
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(jumpFinished, isTrue);
+      expect(service.pageRequests, hasLength(1));
+      expect(controller.messageJumpOpacity.value, 1.0);
+      await jump;
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets('same conversation tap discards a pending jump page', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      await switchAndSettle(tester, controller, service, 'conv-a');
+      final jump = controller.scrollToMessageId(
+        'conv-a-message-10',
+        useRikkaTransition: true,
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final pendingPage = service.pageRequests.last;
+      await controller.switchConversationAnimated('conv-a');
+      expect(controller.messageJumpOpacity.value, 1.0);
+      service.completePage(pendingPage, [
+        _message('conv-a', 10),
+      ], startIndex: 10);
+      await pumpUntilDone(tester, [jump]);
+      expect(controller.messages.single.id, 'conv-a-message-0');
+    }, platform: TargetPlatform.iOS);
+  });
+
+  testWidgets('switching conversations cancels a pending return to bottom', (
+    tester,
+  ) async {
+    await runAsMobile(() async {
+      final service = _ControlledChatService({
+        'conv-a': [_message('conv-a', 0)],
+        'conv-b': [_message('conv-b', 0)],
+      });
+      final controller = await pumpHarness(tester, service);
+      final open = controller.switchConversationAnimated('conv-a');
+      service.completePage(
+        service.pageRequests.last,
+        service.messagesOf('conv-a'),
+        startIndex: 0,
+        totalSlotCount: 3,
+      );
+      await pumpUntilDone(tester, [open]);
+      final jump = controller.forceScrollToBottom();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      final pendingPage = service.pageRequests.last;
+      expect(service.pageRequests, hasLength(2));
+      try {
+        await switchAndSettle(tester, controller, service, 'conv-b');
+        expect(controller.messageJumpOpacity.value, 1.0);
+      } finally {
+        service.completePage(pendingPage, [
+          _message('conv-a', 2),
+        ], startIndex: 2);
+        await pumpUntilDone(tester, [jump]);
+      }
+      expect(controller.messages.single.id, 'conv-b-message-0');
+    }, platform: TargetPlatform.iOS);
+  });
 
   for (final platform in [TargetPlatform.windows, TargetPlatform.android]) {
     for (final temporary in [false, true]) {
@@ -849,14 +1257,9 @@ void main() {
     void enterSelection(HomePageController controller) {
       final messages = controller.messages.toList();
       expect(messages, isNotEmpty);
-      controller.startMessageSelection(
-        messageIndex: 0,
-        messageList: messages,
-        mode: ChatSelectionMode.delete,
-      );
+      controller.startMessageSelection(messageIndex: 0, messageList: messages);
       expect(controller.selecting, isTrue);
       expect(controller.selectedItems, isNotEmpty);
-      expect(controller.selectionMode, ChatSelectionMode.delete);
     }
 
     testWidgets('successful switch clears selection UI and old ids', (
@@ -877,7 +1280,6 @@ void main() {
         expect(controller.currentConversation?.id, 'conv-b');
         expect(controller.selecting, isFalse);
         expect(controller.selectedItems, isEmpty);
-        expect(controller.selectionMode, ChatSelectionMode.share);
         expect(
           previousSelected.intersection(controller.selectedItems),
           isEmpty,
@@ -906,7 +1308,6 @@ void main() {
         expect(controller.currentConversation?.id, 'conv-a');
         expect(controller.selecting, isTrue);
         expect(controller.selectedItems, selectedBefore);
-        expect(controller.selectionMode, ChatSelectionMode.delete);
       });
     });
 
@@ -926,7 +1327,6 @@ void main() {
         expect(controller.currentConversation?.id, 'conv-a');
         expect(controller.selecting, isTrue);
         expect(controller.selectedItems, selectedBefore);
-        expect(controller.selectionMode, ChatSelectionMode.delete);
       });
     });
 
@@ -945,7 +1345,6 @@ void main() {
         expect(controller.currentConversation?.id, isNot('conv-a'));
         expect(controller.selecting, isFalse);
         expect(controller.selectedItems, isEmpty);
-        expect(controller.selectionMode, ChatSelectionMode.share);
       });
     });
   });
@@ -954,14 +1353,9 @@ void main() {
     void enterSelection(HomePageController controller) {
       final messages = controller.messages.toList();
       expect(messages, isNotEmpty);
-      controller.startMessageSelection(
-        messageIndex: 0,
-        messageList: messages,
-        mode: ChatSelectionMode.delete,
-      );
+      controller.startMessageSelection(messageIndex: 0, messageList: messages);
       expect(controller.selecting, isTrue);
       expect(controller.selectedItems, isNotEmpty);
-      expect(controller.selectionMode, ChatSelectionMode.delete);
     }
 
     testWidgets('successful switch clears selection', (tester) async {
@@ -981,7 +1375,6 @@ void main() {
         expect(service.currentConversationId, 'conv-b');
         expect(controller.selecting, isFalse);
         expect(controller.selectedItems, isEmpty);
-        expect(controller.selectionMode, ChatSelectionMode.share);
         expect(
           previousSelected.intersection(controller.selectedItems),
           isEmpty,
@@ -1027,7 +1420,6 @@ void main() {
           expect(controller.messages.map((m) => m.id), messagesBefore);
           expect(controller.selecting, isTrue);
           expect(controller.selectedItems, selectedBefore);
-          expect(controller.selectionMode, ChatSelectionMode.delete);
         });
       },
     );
@@ -1116,9 +1508,10 @@ void main() {
 }
 
 class _ControllerHarness extends StatefulWidget {
-  const _ControllerHarness({required this.onCreated});
+  const _ControllerHarness({required this.onCreated, this.timeline});
 
   final ValueChanged<HomePageController> onCreated;
+  final Widget Function(HomePageController)? timeline;
 
   @override
   State<_ControllerHarness> createState() => _ControllerHarnessState();
@@ -1160,5 +1553,13 @@ class _ControllerHarnessState extends State<_ControllerHarness>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(key: _scaffoldKey);
+  Widget build(BuildContext context) => Scaffold(
+    key: _scaffoldKey,
+    body: widget.timeline == null
+        ? null
+        : ListenableBuilder(
+            listenable: _controller,
+            builder: (_, _) => widget.timeline!(_controller),
+          ),
+  );
 }

@@ -148,6 +148,36 @@ void main() {
     },
   );
 
+  test('legacy inline code style is searchable on every settings surface', () {
+    for (final platform in TargetPlatform.values) {
+      final candidate = SettingsSearchIndex(en, platform: platform);
+      for (final query in ['legacy inline code', '旧版行内代码', '舊版行內程式碼']) {
+        final result = candidate.search(query).first;
+        expect(result.id, 'displaySettingsPageUseLegacyInlineCodeStyleTitle');
+        expect(result.destination, SettingsSearchDestination.rendering);
+        expect(
+          result.targetLabel,
+          en.displaySettingsPageUseLegacyInlineCodeStyleTitle,
+        );
+      }
+    }
+  });
+
+  test('legacy code block style is searchable on every settings surface', () {
+    for (final platform in TargetPlatform.values) {
+      final candidate = SettingsSearchIndex(en, platform: platform);
+      for (final query in ['legacy code block', '旧版代码块', '舊版程式碼區塊']) {
+        final result = candidate.search(query).first;
+        expect(result.id, 'displaySettingsPageUseLegacyCodeBlockStyleTitle');
+        expect(result.destination, SettingsSearchDestination.rendering);
+        expect(
+          result.targetLabel,
+          en.displaySettingsPageUseLegacyCodeBlockStyleTitle,
+        );
+      }
+    }
+  });
+
   test(
     'entries have stable unique ids, paths and localized destination labels',
     () {

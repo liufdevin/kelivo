@@ -1,11 +1,15 @@
 import 'package:uuid/uuid.dart';
 
+import '../network/deepseek_endpoint.dart';
+
 enum AsrServiceKind {
   sherpaOnnx('sherpa_onnx'),
   system('system'),
   openAiRealtime('openai_realtime'),
+  deepseek('deepseek'),
   groq('groq'),
   mistral('mistral'),
+  elevenLabs('elevenlabs'),
   dashScope('dashscope'),
   qwenAudio('qwen_audio'),
   volcengine('volcengine'),
@@ -28,8 +32,12 @@ enum AsrServiceKind {
         return AsrServiceKind.openAiRealtime;
       case 'groq':
         return AsrServiceKind.groq;
+      case 'deepseek':
+        return AsrServiceKind.deepseek;
       case 'mistral':
         return AsrServiceKind.mistral;
+      case 'elevenlabs':
+        return AsrServiceKind.elevenLabs;
       case 'dashscope':
       case 'dashScope':
         return AsrServiceKind.dashScope;
@@ -97,8 +105,10 @@ abstract class AsrServiceOptions {
           prefixPaddingMs: _nonNegativeInt(json['prefixPaddingMs'], 300),
           silenceDurationMs: _nonNegativeInt(json['silenceDurationMs'], 500),
         );
+      case AsrServiceKind.deepseek:
       case AsrServiceKind.groq:
       case AsrServiceKind.mistral:
+      case AsrServiceKind.elevenLabs:
         return AudioTranscriptionAsrOptions(
           id: id,
           kind: kind,
@@ -147,9 +157,15 @@ abstract class AsrServiceOptions {
           apiKey: _string(json['apiKey']),
           workspaceId: _string(json['workspaceId']),
           region: _string(json['region'], 'cn-beijing'),
-          model: _string(json['model'], 'qwen-audio-3.0-asr-flash-streaming'),
+          mode: QwenAudioAsrMode.values.byName(
+            _string(json['mode'], 'realtime'),
+          ),
+          endpoint: _string(json['endpoint']),
+          model: json['model'] as String?,
+          language: _string(json['language']),
           sampleRate: _positiveInt(json['sampleRate'], 16000),
           format: _string(json['format'], 'pcm'),
+          segmentDurationSec: _nonNegativeInt(json['segmentDurationSec'], 30),
         );
       case AsrServiceKind.mimo:
         return MimoAsrOptions(
@@ -316,8 +332,18 @@ class OpenAiRealtimeAsrOptions extends AsrServiceOptions {
   };
 }
 
-/// File transcription settings shared by Groq Whisper and Mistral Voxtral.
+/// Settings for cloud services that transcribe WAV files uploaded over HTTP.
 class AudioTranscriptionAsrOptions extends AsrServiceOptions {
+  static const _deepSeekSampleRates = {
+    8000,
+    16000,
+    22050,
+    24000,
+    32000,
+    44100,
+    48000,
+  };
+
   factory AudioTranscriptionAsrOptions({
     String? id,
     required AsrServiceKind kind,
@@ -330,6 +356,11 @@ class AudioTranscriptionAsrOptions extends AsrServiceOptions {
     int segmentDurationSec = 30,
   }) {
     final defaults = switch (kind) {
+      AsrServiceKind.deepseek => (
+        name: 'DeepSeek',
+        baseUrl: deepSeekApiBaseUrl,
+        model: '',
+      ),
       AsrServiceKind.groq => (
         name: 'Groq',
         baseUrl: 'https://api.groq.com/openai/v1',
@@ -340,21 +371,29 @@ class AudioTranscriptionAsrOptions extends AsrServiceOptions {
         baseUrl: 'https://api.mistral.ai/v1',
         model: 'voxtral-mini-latest',
       ),
+      AsrServiceKind.elevenLabs => (
+        name: 'ElevenLabs',
+        baseUrl: 'https://api.elevenlabs.io/v1',
+        model: 'scribe_v2',
+      ),
       _ => throw ArgumentError.value(
         kind,
         'kind',
         'Unsupported transcription provider',
       ),
     };
+    final isDeepSeek = kind == AsrServiceKind.deepseek;
     return AudioTranscriptionAsrOptions._(
       id: id,
       kind: kind,
       name: name ?? defaults.name,
       apiKey: apiKey,
       baseUrl: baseUrl ?? defaults.baseUrl,
-      model: model ?? defaults.model,
-      language: language,
-      sampleRate: sampleRate,
+      model: isDeepSeek ? '' : model ?? defaults.model,
+      language: isDeepSeek ? '' : language,
+      sampleRate: isDeepSeek && !_deepSeekSampleRates.contains(sampleRate)
+          ? 16000
+          : sampleRate,
       segmentDurationSec: segmentDurationSec,
     );
   }
@@ -382,7 +421,7 @@ class AudioTranscriptionAsrOptions extends AsrServiceOptions {
   bool get isConfigured =>
       apiKey.trim().isNotEmpty &&
       baseUrl.trim().isNotEmpty &&
-      model.trim().isNotEmpty &&
+      (kind == AsrServiceKind.deepseek || model.trim().isNotEmpty) &&
       sampleRate > 0;
 
   AudioTranscriptionAsrOptions copyWith({
@@ -411,8 +450,10 @@ class AudioTranscriptionAsrOptions extends AsrServiceOptions {
     ...baseJson(),
     'apiKey': apiKey,
     'baseUrl': baseUrl,
-    'model': model,
-    'language': language,
+    if (kind != AsrServiceKind.deepseek) ...{
+      'model': model,
+      'language': language,
+    },
     'sampleRate': sampleRate,
     'segmentDurationSec': segmentDurationSec,
   };
@@ -592,6 +633,14 @@ class MimoAsrOptions extends AsrServiceOptions {
   };
 }
 
+enum QwenAudioAsrMode {
+  realtime('qwen-audio-3.0-asr-flash-streaming'),
+  transcription('qwen-audio-3.0-asr-flash');
+
+  const QwenAudioAsrMode(this.defaultModel);
+  final String defaultModel;
+}
+
 class QwenAudioAsrOptions extends AsrServiceOptions {
   QwenAudioAsrOptions({
     super.id,
@@ -599,29 +648,70 @@ class QwenAudioAsrOptions extends AsrServiceOptions {
     this.apiKey = '',
     this.workspaceId = '',
     this.region = 'cn-beijing',
-    this.model = 'qwen-audio-3.0-asr-flash-streaming',
+    this.mode = QwenAudioAsrMode.realtime,
+    this.endpoint = '',
+    String? model,
+    this.language = '',
     this.sampleRate = 16000,
     this.format = 'pcm',
-  }) : super(kind: AsrServiceKind.qwenAudio);
+    this.segmentDurationSec = 30,
+  }) : model = model ?? mode.defaultModel,
+       super(kind: AsrServiceKind.qwenAudio);
 
   final String apiKey;
   final String workspaceId;
   final String region;
+  final QwenAudioAsrMode mode;
+
+  /// Optional complete URL, including the request path.
+  final String endpoint;
   final String model;
+  final String language;
   final int sampleRate;
   final String format;
+  final int segmentDurationSec;
 
-  String get websocketUrl {
+  String get defaultEndpoint {
     final ws = workspaceId.trim();
     final reg = region.trim().isEmpty ? 'cn-beijing' : region.trim();
-    if (ws.isEmpty) {
-      return 'wss://dashscope.aliyuncs.com/api-ws/v1/inference';
-    }
-    return 'wss://$ws.$reg.maas.aliyuncs.com/api-ws/v1/inference';
+    final host = ws.isNotEmpty
+        ? '$ws.$reg.maas.aliyuncs.com'
+        : reg == 'ap-southeast-1'
+        ? 'dashscope-intl.aliyuncs.com'
+        : 'dashscope.aliyuncs.com';
+    return mode == QwenAudioAsrMode.realtime
+        ? 'wss://$host/api-ws/v1/inference'
+        : 'https://$host/api/v1/services/aigc/multimodal-generation/generation';
   }
 
+  String get endpointUrl =>
+      endpoint.trim().isEmpty ? defaultEndpoint : endpoint.trim();
+
+  bool get hasValidEndpoint {
+    final uri = Uri.tryParse(endpointUrl);
+    final schemes = mode == QwenAudioAsrMode.realtime
+        ? const ['ws', 'wss']
+        : const ['http', 'https'];
+    return uri != null &&
+        schemes.contains(uri.scheme) &&
+        uri.host.isNotEmpty &&
+        uri.userInfo.isEmpty &&
+        !uri.hasFragment;
+  }
+
+  bool get hasValidWorkspaceId =>
+      workspaceId.trim().isEmpty ||
+      RegExp(
+        r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$',
+      ).hasMatch(workspaceId.trim());
+
   @override
-  bool get isConfigured => apiKey.trim().isNotEmpty && model.trim().isNotEmpty;
+  bool get isConfigured =>
+      apiKey.trim().isNotEmpty &&
+      model.trim().isNotEmpty &&
+      sampleRate > 0 &&
+      hasValidWorkspaceId &&
+      hasValidEndpoint;
 
   QwenAudioAsrOptions copyWith({
     String? id,
@@ -629,18 +719,26 @@ class QwenAudioAsrOptions extends AsrServiceOptions {
     String? apiKey,
     String? workspaceId,
     String? region,
+    QwenAudioAsrMode? mode,
+    String? endpoint,
     String? model,
+    String? language,
     int? sampleRate,
     String? format,
+    int? segmentDurationSec,
   }) => QwenAudioAsrOptions(
     id: id ?? this.id,
     name: name ?? this.name,
     apiKey: apiKey ?? this.apiKey,
     workspaceId: workspaceId ?? this.workspaceId,
     region: region ?? this.region,
+    mode: mode ?? this.mode,
+    endpoint: endpoint ?? this.endpoint,
     model: model ?? this.model,
+    language: language ?? this.language,
     sampleRate: sampleRate ?? this.sampleRate,
     format: format ?? this.format,
+    segmentDurationSec: segmentDurationSec ?? this.segmentDurationSec,
   );
 
   @override
@@ -649,9 +747,13 @@ class QwenAudioAsrOptions extends AsrServiceOptions {
     'apiKey': apiKey,
     'workspaceId': workspaceId,
     'region': region,
+    'mode': mode.name,
+    'endpoint': endpoint,
     'model': model,
+    'language': language,
     'sampleRate': sampleRate,
     'format': format,
+    'segmentDurationSec': segmentDurationSec,
   };
 }
 

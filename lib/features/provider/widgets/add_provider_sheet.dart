@@ -1,3 +1,6 @@
+import '../utils/provider_url_editor.dart';
+import 'provider_base_url_field.dart';
+import 'provider_input_row.dart';
 import 'oauth_login_panel.dart';
 import '../pages/oauth_provider_detail_page.dart';
 import 'dart:convert';
@@ -56,26 +59,86 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
   void dispose() {
     _tab.removeListener(_onTabChanged);
     _tab.dispose();
-    _openaiName.dispose();
-    _openaiKey.dispose();
-    _openaiBase.dispose();
-    _openaiPath.dispose();
-    _googleName.dispose();
-    _googleKey.dispose();
-    _googleBase.dispose();
-    _googleLocation.dispose();
-    _googleProject.dispose();
-    _googleSaJson.dispose();
-    _claudeName.dispose();
-    _claudeKey.dispose();
-    _claudeBase.dispose();
-    _localName.dispose();
-    _localModelPath.dispose();
-    _localModel.dispose();
-    _localOpenAIKey.dispose();
-    _localOpenAIBase.dispose();
-    _localOpenAIModel.dispose();
+    for (final editor in _urlEditors.values) {
+      editor.dispose();
+    }
+    for (final controller in [
+      _openaiName,
+      _openaiKey,
+      _openaiBase,
+      _openaiPath,
+      _googleName,
+      _googleKey,
+      _googleBase,
+      _googleLocation,
+      _googleProject,
+      _googleSaJson,
+      _claudeName,
+      _claudeKey,
+      _claudeBase,
+      _localName,
+      _localModelPath,
+      _localModel,
+      _localOpenAIKey,
+      _localOpenAIBase,
+      _localOpenAIModel,
+    ]) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  String? _createdProviderKey;
+  ProviderKind? _createdProviderKind;
+  late final Map<ProviderKind, ProviderUrlEditor> _urlEditors = {
+    ProviderKind.openai: ProviderUrlEditor(_openaiBase),
+    ProviderKind.google: ProviderUrlEditor(_googleBase),
+    ProviderKind.claude: ProviderUrlEditor(_claudeBase),
+  };
+  final _urlFields = {
+    for (final kind in ProviderKind.values)
+      kind: GlobalKey<ProviderBaseUrlFieldState>(),
+  };
+
+  Widget _baseUrlField(ProviderKind kind) {
+    final settings = context.read<SettingsProvider>();
+    final defaults = ProviderConfig.defaultsFor(switch (kind) {
+      ProviderKind.openai => 'OpenAI',
+      ProviderKind.google => 'Gemini',
+      ProviderKind.claude => 'Claude',
+      ProviderKind.dify => 'Dify',
+    });
+    return ProviderBaseUrlField(
+      key: _urlFields[kind],
+      editor: _urlEditors[kind]!,
+      desktop: false,
+      enabled: !(kind == ProviderKind.google && _googleVertex),
+      defaultBaseUrl: defaults.baseUrl,
+      config: defaults.copyWith(
+        providerType: kind,
+        chatPath: _openaiPath.text,
+        useResponseApi: _openaiUseResponse,
+        vertexAI: _googleVertex,
+        location: _googleLocation.text,
+        projectId: _googleProject.text,
+      ),
+      onDetachedUndo: (bare, replaced) {
+        if (mounted) {
+          if (_urlEditors[kind]!.controller.text != replaced) return;
+          _urlEditors[kind]!.undoAutoVersion(kind);
+          setState(() {});
+        } else if (_createdProviderKey != null &&
+            _createdProviderKind == kind) {
+          undoSavedProviderUrl(settings, _createdProviderKey!, bare, replaced);
+        }
+      },
+      onCommit: (result) {
+        if (kind == ProviderKind.openai && result.movedPath != null) {
+          _openaiPath.text = result.movedPath!;
+        }
+        if (mounted) setState(() {});
+      },
+    );
   }
 
   // OpenAI
@@ -155,53 +218,18 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     required TextEditingController controller,
     String? hint,
     bool obscure = false,
+    bool enableSuggestions = true,
     bool enabled = true,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: cs.onSurface.withValues(alpha: 0.8),
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          obscureText: obscure,
-          enabled: enabled,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: context.appColors.surfaceCard,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: cs.outlineVariant.withValues(alpha: 0.4),
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: cs.outlineVariant.withValues(alpha: 0.4),
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: cs.primary.withValues(alpha: 0.5)),
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 12,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+  }) => ProviderInputRow(
+    key: ValueKey(controller),
+    label: label,
+    controller: controller,
+    hint: hint,
+    obscure: obscure,
+    enableSuggestions: enableSuggestions,
+    enabled: enabled,
+    onChanged: (_) => setState(() {}),
+  );
 
   Widget _switchRow({
     required String label,
@@ -250,12 +278,11 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         _inputRow(
           label: l10n.addProviderSheetApiKeyLabel,
           controller: _openaiKey,
+          enableSuggestions: false,
+          hint: l10n.providerDetailPageApiKeyExample,
         ),
         const SizedBox(height: 10),
-        _inputRow(
-          label: l10n.addProviderSheetBaseUrlLabel,
-          controller: _openaiBase,
-        ),
+        _baseUrlField(ProviderKind.openai),
         const SizedBox(height: 10),
         if (!_openaiUseResponse)
           _inputRow(
@@ -297,12 +324,11 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
           _inputRow(
             label: l10n.addProviderSheetApiKeyLabel,
             controller: _googleKey,
+            enableSuggestions: false,
+            hint: l10n.providerDetailPageApiKeyExample,
           ),
           const SizedBox(height: 10),
-          _inputRow(
-            label: l10n.addProviderSheetBaseUrlLabel,
-            controller: _googleBase,
-          ),
+          _baseUrlField(ProviderKind.google),
           const SizedBox(height: 10),
         ],
         if (_googleVertex) ...[
@@ -358,12 +384,11 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         _inputRow(
           label: l10n.addProviderSheetApiKeyLabel,
           controller: _claudeKey,
+          enableSuggestions: false,
+          hint: l10n.providerDetailPageApiKeyExample,
         ),
         const SizedBox(height: 10),
-        _inputRow(
-          label: l10n.addProviderSheetBaseUrlLabel,
-          controller: _claudeBase,
-        ),
+        _baseUrlField(ProviderKind.claude),
       ],
     );
   }
@@ -719,14 +744,21 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
     }
 
     final idx = _tab.index;
+    if (idx > 3) return;
+    final kind = idx < 3
+        ? [ProviderKind.openai, ProviderKind.google, ProviderKind.claude][idx]
+        : null;
+    if (kind != null &&
+        !(kind == ProviderKind.google && _googleVertex) &&
+        _urlFields[kind]!.currentState?.commit() == false) {
+      return;
+    }
     String createdKey = '';
     if (idx == 0) {
       final rawName = _openaiName.text.trim();
       final display = rawName.isEmpty ? 'OpenAI' : rawName;
       final keyName = uniqueKey('OpenAI', display);
-      final base = _openaiBase.text.trim().isEmpty
-          ? 'https://api.openai.com/v1'
-          : _openaiBase.text.trim();
+      final base = _openaiBase.text;
       final promo = base.toLowerCase().contains('aihubmix.com');
       final cfg = ProviderConfig(
         id: keyName,
@@ -734,6 +766,8 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _openaiKey.text.trim(),
         baseUrl: base,
+        autoVersionDisabled:
+            _urlEditors[ProviderKind.openai]!.autoVersionDisabled,
         providerType: ProviderKind.openai, // Explicitly set as OpenAI type
         chatPath: _openaiUseResponse
             ? null
@@ -752,15 +786,15 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
       );
       await settings.setProviderConfig(keyName, cfg);
       createdKey = keyName;
+      _createdProviderKey = keyName;
+      _createdProviderKind = kind;
     } else if (idx == 1) {
       final rawName = _googleName.text.trim();
       final display = rawName.isEmpty ? 'Google' : rawName;
       final keyName = uniqueKey('Google', display);
       final base = _googleVertex
           ? 'https://aiplatform.googleapis.com'
-          : (_googleBase.text.trim().isEmpty
-                ? 'https://generativelanguage.googleapis.com/v1beta'
-                : _googleBase.text.trim());
+          : _googleBase.text;
       final promo = base.toLowerCase().contains('aihubmix.com');
       final cfg = ProviderConfig(
         id: keyName,
@@ -768,6 +802,8 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _googleVertex ? '' : _googleKey.text.trim(),
         baseUrl: base,
+        autoVersionDisabled:
+            _urlEditors[ProviderKind.google]!.autoVersionDisabled,
         providerType: ProviderKind.google, // Explicitly set as Google type
         vertexAI: _googleVertex,
         location: _googleVertex
@@ -788,13 +824,13 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
       );
       await settings.setProviderConfig(keyName, cfg);
       createdKey = keyName;
+      _createdProviderKey = keyName;
+      _createdProviderKind = kind;
     } else if (idx == 2) {
       final rawName = _claudeName.text.trim();
       final display = rawName.isEmpty ? 'Claude' : rawName;
       final keyName = uniqueKey('Claude', display);
-      final base = _claudeBase.text.trim().isEmpty
-          ? 'https://api.anthropic.com/v1'
-          : _claudeBase.text.trim();
+      final base = _claudeBase.text;
       final promo = base.toLowerCase().contains('aihubmix.com');
       final cfg = ProviderConfig(
         id: keyName,
@@ -802,6 +838,8 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
         name: display,
         apiKey: _claudeKey.text.trim(),
         baseUrl: base,
+        autoVersionDisabled:
+            _urlEditors[ProviderKind.claude]!.autoVersionDisabled,
         providerType: ProviderKind.claude, // Explicitly set as Claude type
         models: const [],
         modelOverrides: const {},
@@ -814,6 +852,8 @@ class _AddProviderSheetState extends State<_AddProviderSheet>
       );
       await settings.setProviderConfig(keyName, cfg);
       createdKey = keyName;
+      _createdProviderKey = keyName;
+      _createdProviderKind = kind;
     } else {
       final l10n = AppLocalizations.of(context)!;
       final rawName = _localName.text.trim();

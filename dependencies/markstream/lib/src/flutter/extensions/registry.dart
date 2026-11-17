@@ -7,6 +7,7 @@ import '../../core/text_index/text_index.dart';
 import '../../core/parser/syntax/block_syntax.dart';
 import '../../core/parser/syntax/inline_syntax.dart';
 import '../theme/markstream_theme.dart';
+import '../prose_direction_resolver.dart';
 import '../render/chrome.dart';
 
 /// Rendering callbacks use the same document, style and selection owner as
@@ -26,11 +27,12 @@ final class MarkstreamRenderContext {
   final InlineSpan Function(InlineNode, TextStyle) buildInline;
 }
 
-typedef BlockNodeBuilder = Widget Function(
-  BuildContext context,
-  BlockNode node,
-  MarkstreamRenderContext rendering,
-);
+typedef BlockNodeBuilder =
+    Widget Function(
+      BuildContext context,
+      BlockNode node,
+      MarkstreamRenderContext rendering,
+    );
 
 /// The selectable projection is explicit: WidgetSpan's object replacement
 /// character is not the source text of a citation or other custom inline atom.
@@ -41,16 +43,18 @@ class RenderedInline {
   final List<TextSegment> segments;
 }
 
-typedef InlineNodeBuilder = RenderedInline Function(
-  BuildContext context,
-  InlineNode node,
-  MarkstreamRenderContext rendering,
-);
-typedef CodeBlockBuilder = Widget Function(
-  BuildContext context,
-  CodeBlockNode node,
-  MarkstreamRenderContext rendering,
-);
+typedef InlineNodeBuilder =
+    RenderedInline Function(
+      BuildContext context,
+      InlineNode node,
+      MarkstreamRenderContext rendering,
+    );
+typedef CodeBlockBuilder =
+    Widget Function(
+      BuildContext context,
+      CodeBlockNode node,
+      MarkstreamRenderContext rendering,
+    );
 
 final class NodeBuilderRegistry {
   const NodeBuilderRegistry.empty() : blocks = const {}, inlines = const {};
@@ -86,19 +90,26 @@ final class CodeActionContext {
   final bool streaming;
 }
 
-typedef TableExtraActions = List<Widget> Function(
-  BuildContext,
-  TableActionContext,
-);
-typedef CodeExtraActions = List<Widget> Function(
-  BuildContext,
-  CodeActionContext,
-);
+typedef TableExtraActions =
+    List<Widget> Function(BuildContext, TableActionContext);
+typedef CodeExtraActions =
+    List<Widget> Function(BuildContext, CodeActionContext);
+
+/// Decorates literal code without changing its UTF-16 selectable projection.
+/// Widget spans must each represent one source character and provide a
+/// selectable adapter when their surrounding code is not already an atom.
+typedef LiteralSpanBuilder =
+    TextSpan Function(
+      BuildContext context,
+      TextSpan span,
+      List<TextSegment> source,
+    );
 
 /// Immutable registration snapshot. Keep its identity across streaming updates.
 final class MarkstreamExtensions {
   const MarkstreamExtensions.empty()
-    : blockSyntaxes = const [],
+    : proseDirection = const ProseDirectionResolver(),
+      blockSyntaxes = const [],
       inlineSyntaxes = const [],
       nodeBuilders = const NodeBuilderRegistry.empty(),
       codeBlockBuilders = const {},
@@ -107,9 +118,11 @@ final class MarkstreamExtensions {
       tableExtraActions = null,
       mobileTableToolbarBuilder = null,
       codeExtraActions = null,
-      actionButtonBuilder = null;
+      actionButtonBuilder = null,
+      literalSpanBuilder = null;
 
   MarkstreamExtensions({
+    this.proseDirection = const ProseDirectionResolver(),
     List<BlockSyntax> blockSyntaxes = const [],
     List<InlineSyntax> inlineSyntaxes = const [],
     this.nodeBuilders = const NodeBuilderRegistry.empty(),
@@ -120,12 +133,14 @@ final class MarkstreamExtensions {
     this.mobileTableToolbarBuilder,
     this.codeExtraActions,
     this.actionButtonBuilder,
+    this.literalSpanBuilder,
   }) : blockSyntaxes = List.unmodifiable(blockSyntaxes),
        inlineSyntaxes = List.unmodifiable(inlineSyntaxes),
        codeBlockBuilders = _normalized(codeBlockBuilders),
        directiveBuilders = _normalized(directiveBuilders),
        namedInlineBuilders = _normalized(namedInlineBuilders);
 
+  final ProseDirectionResolver proseDirection;
   final List<BlockSyntax> blockSyntaxes;
   final List<InlineSyntax> inlineSyntaxes;
   final NodeBuilderRegistry nodeBuilders;
@@ -137,6 +152,7 @@ final class MarkstreamExtensions {
   mobileTableToolbarBuilder;
   final CodeExtraActions? codeExtraActions;
   final MarkstreamActionButtonBuilder? actionButtonBuilder;
+  final LiteralSpanBuilder? literalSpanBuilder;
 
   static Map<String, T> _normalized<T>(Map<String, T> values) =>
       Map.unmodifiable({
